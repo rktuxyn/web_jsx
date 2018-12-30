@@ -23,7 +23,7 @@ web_jsx *.jsx, *.jsxh (back-end Javascript) web extension handler (Run with IIS,
          }
       },
       "response":{
-         "write":"function _write( str ) { [native code] }",
+         "write":"function write( str ) { [native code] }",
          "header":"function header( key, value ) { [native code] }",
          "write_from_file":"function write_from_file( path ) { [native code] }",
          "body":{
