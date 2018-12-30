@@ -23,7 +23,7 @@ web_jsx *.jsx, *.jsxh (back-end Javascript) web extension handler (Run with IIS,
          }
       },
       "response":{
-		 "_write":"function _write() { [native code] }",
+         "_write":"function _write() { [native code] }",
          "write":"function write( str ) { }",
          "header":"function header( key, value ) { [native code] }",
          "write_from_file":"function write_from_file( path ) { [native code] }",
@@ -35,7 +35,7 @@ web_jsx *.jsx, *.jsxh (back-end Javascript) web extension handler (Run with IIS,
          "status":"function status( server_protocol, status_code, msg ) { [native code] }",
          "cookie":"function cookie( cook ) { [native code] }",
          "_redirect":"function redirect( url, force ) { [native code] }",
-		 "redirect":"function redirect( url, force ) {  }"
+         "redirect":"function redirect( url, force ) {  }"
       }
    },
    "fs":{
