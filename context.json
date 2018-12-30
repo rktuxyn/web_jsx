@@ -3,7 +3,7 @@
       "host":"sow.pc",
       "http_accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
       "http_accept_encoding":"gzip, deflate, br",
-      "http_cookie":"sow=rktuxyn; .__AUTH=OXVKaVZZTmNINC9pa3NueG1rRmhIRDhuUHFCdm81TTZFYTJibVRtR1NnMndwYmtxOVJqM1RRPT0=; web_jsx_session=188EAD362DBDCC20C96D99E25CBDDE5A6371E1C073D49C258BEDABD6DCF0141A; .ASPXAUTH=DBA59DD23D53D71B5B50141CF131BED23A7B706099C4081C97207A34039601E24B25A73A508845D432D88FD8C8F9EE6B2C3BE4E859AF3DA816B1E77E665E08CB9373C0584B0E7C427C6BCC1176D69DBBC5019E8EAFC98C830D5A6A12C9FB999D; _USER_TOKEN_=NTYwWDE1WkhGTVVOUk5SczZYWkxDWDl6NWlVWS83ME8=",
+      "http_cookie":"sow=rktuxyn; web_jsx_session=188EAD362DBDCC20C96D99E25CBDDE5A6371E1C073D49C258BEDABD6DCF0141A",
       "http_user_agent":"Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36",
       "remote_addr":"127.0.0.1",
       "root_dir":"D:\\___PROJECT\\__SOW\\",
@@ -19,7 +19,8 @@
          }
       },
       "response":{
-         "write":"function _write( str ) { [native code] }",
+		 "_write":"function _write() { [native code] }",
+         "write":"function write( str ) { }",
          "header":"function header( key, value ) { [native code] }",
          "write_from_file":"function write_from_file( path ) { [native code] }",
          "body":{
@@ -29,7 +30,8 @@
          "clear":"function clear() { [native code] }",
          "status":"function status( server_protocol, status_code, msg ) { [native code] }",
          "cookie":"function cookie( cook ) { [native code] }",
-         "redirect":"function redirect( url, force ) { [native code] }",
+         "_redirect":"function redirect( url, force ) { [native code] }",
+		 "redirect":"function redirect( url, force ) {  }"
       }
    },
    "fs":{
