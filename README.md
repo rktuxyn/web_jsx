@@ -41,7 +41,8 @@ web_jsx *.jsx, *.jsxh (back-end Javascript) web extension handler (Run with IIS,
    "fs":{
       "read_file":"function read_file( path ) { [native code] }",
       "write_file":"function write_file( path ) { [native code] }",
-      "read_directory":"function read_directory( path, pattern ) { [native code] }"
+      "read_directory":"function read_directory( dir, pattern ) { [native code] }",
+      "read_directory_regx":"function read_directory_regx( dir, regx_pattern ) { [native code] }"
    },
    "npgsql":{
       "execute_io":"function execute_io( con_str, sp_str, context_json, form_json ) { [native code] }",
