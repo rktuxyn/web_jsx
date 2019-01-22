@@ -1,0 +1,81 @@
+﻿#extends /report/assets/report.main
+<impl-placeholder id="header">
+    <meta charset="utf-8">
+<js::
+    context.response.write("<title>" + __def.name + "</title>");
+    context.response.write('<link href="https://eis.pc/report/assets/bootstrap.min.css" rel="stylesheet">', context.host_url);
+::js>
+    <style type="text/css">
+        .document-title,.invoice-title{text-align:-webkit-center}.invoice-title h2,.invoice-title h3{display:inline-block}.table>tbody>tr>.no-line{border-top:none}.table>thead>tr>.no-line{border-bottom:none}.table>tbody>tr>.thick-line{border-top:2px solid}label{padding-right:20px}hr{border-top:2px solid #0459aa;}.h1,.h2,.h3,h1,h2,h3{margin-top:10px;margin-bottom:10px}
+        .panel-heading {
+            padding: 2px 5px;
+        }
+		.table > tfoot > tr > td {
+			padding: unset !important;
+		}
+		/* tables */
+		table {
+			font-family: arial;
+			margin: 10px 0pt 15px;
+			font-size: 8pt;
+			width: 100%;
+			text-align: left;
+		}
+		table thead tr th, table tfoot tr th {
+			border: 1px solid #FFF;
+			font-size: 8pt;
+			padding: 4px;
+		}
+		table tbody td {
+			padding: 4px;
+			vertical-align: top;
+		}
+		.panel-default>.panel-heading {
+			color: white!important;
+			background-color: #015aac!important;
+			border-color: #ddd!important;
+		}
+		.rpt_main_container {
+			display: block;
+			background-color: white;
+<js::
+	context.response.write( "width:" +  ( __def.page.width || "8.5in") + "!important;");
+	context.response.write( "min-height:" +  ( __def.page.height || "11in;"));
+::js>
+			margin-right: auto;
+			margin-left: auto;
+			margin-bottom: 25px;
+			margin: auto;
+		}
+<js::
+	if( __def.pdf !== true ){
+		context.response.write('.rpt_viewer {margin: 0.5in!important;}');
+	}
+::js>
+		</style>
+</impl-placeholder>
+<impl-placeholder id="body">
+	<div class="rpt_main_container">
+		<div class="rpt_viewer">
+			<div class="row">
+				<div class="col-xs-12">
+					<div class="document-title" style="min-height: 85px;">
+						<js::
+							context.response.write(String.format('<span><img src="{0}/report/assets/bangladesh_logo.png" style="width:50%; width:100px;float: left;" /></span>', context.host_url));
+							context.response.write(String.format('<span><img src="{0}/report/assets/cpa_logo.png" style="width:50%;width:100px;float: right;" /></span>', context.host_url));
+						::js>
+						<h1 style="font-weight:bold;">Chittagong Port Authority</h1>
+						<h3 style="font-weight:bold;">Estate Department</h3>
+					</div>
+					<hr>
+					<placeholder id="main_body">
+					</placeholder>
+				</div>
+			</div>
+		</div>
+	</div>
+</impl-placeholder>
+<impl-placeholder id="footer">
+    <placeholder id="main_footer">
+    </placeholder>
+</impl-placeholder>

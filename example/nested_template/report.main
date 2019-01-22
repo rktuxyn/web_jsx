@@ -1,0 +1,33 @@
+#attach /report/assets/report_h.main
+<!doctype html>
+<html>
+<head>
+    <placeholder id="header">
+    </placeholder>
+</head>
+<body style='background-color:#525252;'>
+	<placeholder id="body">
+	</placeholder>
+	<placeholder id="footer">
+	</placeholder>
+    <script type="text/javascript">
+        <js:: 
+			if( ( __def.self_print === true && __def.pdf !== true)  && __is_auth === true ){ 
+				context.response.write("window.print();");
+			}
+		::js>
+    </script>
+</body>
+</html>
+<js::
+	context.response.header("Content-Encoding", "gzip" );
+	if ( __def.pdf === true) {
+		context.response.body.write_as_pdf();
+	}
+	return false;
+}
+if ( ____execute() ) {
+	context.response.write("Authentication required!!!");
+	context.response.write('<script type="text/javascript">setTimeout(function(){ location.href="/error/401.aspx";},500);</script>');
+}
+::js>

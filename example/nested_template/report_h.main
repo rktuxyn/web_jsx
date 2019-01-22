@@ -1,0 +1,34 @@
+<js::
+( typeof ( String.format )==='function' ? undefined : String.format=function ( format ) {
+	  let args=Array.prototype.slice.call( arguments, 1 );
+	  let len=args.length - 1;
+	  return format.replace( /{(\d+)}/g, function ( match, number ) {
+		let index = parseInt( number );
+		if ( isNaN( index ) )
+			throw new Error( "Invalid param index!!!" );
+
+		if ( index > len )
+			throw new Error( "Index should not greater than " + len + format + JSON.stringify( args ) );
+
+		return typeof ( args[index] ) !== 'undefined'
+			? args[number]
+			: /*match || ""*/""
+			;
+	} );
+} );
+function ____execute() {
+	let ___config = require( "/addon/web.conf.js" );
+	let ___auth = require( "/addon/authentication.js" , ___config.production );
+	___auth.init( context, ___config );
+	let __is_auth = ___auth.isAuthenticated();
+	if( __is_auth === false ){
+	  return true;
+	}
+	let __pgsql = new ( require( "/addon/pgsql.js" ).pgSql )( ___config.database.db_conn, ___auth.getUserInfo(), npgsql );
+	let __def = JSON.parse( decodeURIComponent( context.request.query_string.def ) );
+	delete context.request.query_string.def;
+	__def.page = __def.page || {};
+	//__def.page.width = "14.5in";
+	//__def.pdf =  true;
+
+::js>
