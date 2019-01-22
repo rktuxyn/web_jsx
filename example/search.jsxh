@@ -1,0 +1,199 @@
+﻿/**
+* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
+* @author {SOW}
+* Copyrights licensed under the New BSD License.
+* See the accompanying LICENSE file for terms.
+*/
+//6:00 PM 12/30/2018
+var __worker = {
+    exec_header: function ( html ) {
+        let exc = /<head[^>]*>([\s\S]+?)<\/head>/gi.exec( html );
+        if ( exc === null ) {
+            exc = /<head>([\s\S]+?)<\/head>/gi.exec( html );
+            if ( exc === null ) return undefined;
+        };
+        html = undefined;
+        return exc[1];
+    },
+    get_title: function ( header ) {
+        let exc = /<title>([\s\S]+?)<\/title>/gi.exec( header );
+        if ( exc === null )
+            exc = /<title[^>]*>([\s\S]+?)<\/title>/gi.exec( header );
+        if ( exc === null )
+            exc = /<title[^>]*>([\s\S]+?)<\/title>/gi.exec( header );
+        return exc === null ? undefined : exc[1];
+    },
+    escape_html: function ( unsafe ) {
+        return unsafe
+            .replace( /&/g, "&amp;" )
+            .replace( /</g, "&lt;" )
+            .replace( />/g, "&gt;" )
+            .replace( /"/g, "&quot;" )
+            .replace( /'/g, "&#039;" );
+    },
+    get_meta: function ( mt ) {
+        let resp = {
+            type: undefined,
+            content: undefined
+        };
+        if ( !mt ) return resp;
+        //og:description
+        if ( /property="og:image"/gi.test( mt ) ) {
+            resp.type = "image";
+        } else if ( /property="og:description"/gi.test( mt )
+            || /name="description"/gi.test( mt ) ) {
+            resp.type = "description";
+        } else if ( /property="og:title"/gi.test( mt ) ) {
+            resp.type = "title";
+        } else {
+            return resp;
+        }
+        let exc = /content="([\s\S]+?)"/.exec( mt );
+        if ( exc === null ) return resp;
+        resp.content = exc[1];
+        return resp;
+    },
+    get_resp: function ( regx, header, result ) {
+        if ( !header ) return result;
+        let m = header.match( regx );
+        if ( m === null ) return result;
+        for ( let p of m ) {
+            let resp = this.get_meta( p );
+            if ( !resp.type || !resp.content ) continue;
+            //if ( result[resp.type] ) continue;
+            result[resp.type] = this.escape_html( resp.content );
+        }
+        return result;
+    },
+	normalize_response: function( body ) {
+		return body
+			.replace( /<!--([\s\S]+?)-->/gi, "" )//replace <!-- --> tag
+			.replace( /\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, "" )//Replace comment
+			//.replace( /\r\n/gi, "" ).replace( /\n/gi, "" ).replace( /\s+/g, " " )
+			//.replace( /"\ >/gi, '">' )
+			.replace( /<style[^>]*>([\s\S]+?)<\/style>/gi, "" )
+			.replace( /<script[^>]*>([\s\S]+?)<\/script>/gi, "" )//Replace script tag
+			.replace( /<link rel[^>]*\/>/gi, "" )//Replace style tag
+			.replace( /<link href[^>]*\/>/gi, "" )//Replace style tag
+			.replace( /<link href[^>]*>/gi, "" )//Replace style tag
+			//.replace( /<a[^>]*>/gi, "" )
+			;
+	},
+    search_link: function ( url, body, query, regxp ) {
+		if ( this.normalize_response( body ).search( regxp ) < 0) {
+			return undefined;
+		}
+		let header = ( this.exec_header( ( body ) ) );
+		
+        //let title = this.get_title( header );
+        let res = this.get_resp( /<meta[^>]*\/>/gi, header, {} );
+        res = this.get_resp( /<meta[^>]*>/gi, header, res );
+        if ( !res.title )
+            res.title = this.get_title( header );
+        if ( !res.title )
+            res.title = this.get_title( ( body ) );
+        if ( !res.title ) {
+            return undefined;
+        } else {
+            res.title = this.escape_html( res.title );
+        }
+        if ( res.image ) {
+            res.image = res.image.replace( /amp;/gi, "" );
+        }
+        if ( !res.description ) {
+            res.description = url;
+        }
+        url = encodeURIComponent( url );
+        res.url = url;
+        res.error = false;
+        if ( res.image ) {
+            return ( `
+                <a href="${url}" class="link-preview" target="_blank">
+                  <div class="link-area">
+                    <div class="og-image">
+                      <img src="${res.image}">
+                    </div>
+                    <div class="descriptions">
+                      <div class="og-title">${res.title}</div>
+                      <div class="og-description">${res.description}</div>
+                    </div>
+                  </div>
+                </a>
+            `);
+            return;
+        }
+        return ( `
+                <a href="${url}" class="link-preview" target="_blank">
+                  <div class="link-area">
+                    <div class="descriptions">
+                      <div class="og-title">${res.title}</div>
+                      <div class="og-description">${res.description}</div>
+                    </div>
+                  </div>
+                </a>
+            `);
+    },
+    search: function ( path, query, regxp ) {
+        path = path.replace( /\/\//g, '\\' );
+        path = path.replace( context.root_dir, "" );
+        if ( path.indexOf( "\\obj\\Release\\" ) > -1 || path.indexOf( "\\bin\\Release\\" ) > -1 ) return undefined;
+        let resp = fs.read_file( path );
+        if ( resp.staus_code < 0 )
+            return undefined;
+        path = path.replace( /\\/g, '/' );
+        return this.search_link( path, resp.data, query, regxp )
+
+    },
+    read: function ( query ) {
+        let resp = fs.read_directory_regx( "\\", "(html|php)" );//(html|aspx|jsx|php)
+        //let resp = fs.read_directory_regx( "\\", "(html|aspx|jsx|php|js|css|asax)" );
+        if ( resp.staus_code < 0 ) {
+            context.response.header( "statuse_code", "505" );
+            context.response.write( JSON.stringify( {
+                error: true,
+                description: resp.message
+            } ) );
+            return;
+        }
+		let regxp = new RegExp( query, 'i' );
+        let data = [];
+        for ( let path of resp.dir ) {
+            __async( function () {
+                let link = __worker.search( path, query, regxp );
+                if ( !link ) return;
+                data.push( link );
+            } );
+        }
+        context.response.write( `<style>.link-preview .link-area{overflow:hidden;position:relative;margin:1em 0;padding:10px;border:1px solid #999}.link-preview .descriptions{overflow:hidden}.link-preview .og-title{overflow:hidden;font-size:1.2em;font-weight:700}.link-preview .og-description{font-size:.86em;margin-top:.2em}.link-preview .og-image{float:left;margin-right:10px}.link-preview .og-image img{max-width:125px}</style>`);
+        context.response.write( `<table><tbody>` );
+        let count = 0;
+        for ( let link of data ) {
+            count++;
+            context.response.write( `<tr><td>${count}</td><td>${link}</td></tr>` );
+        }
+        context.response.write( `</tbody></table>` );
+        
+    }
+};
+context.response.header( "Content-Type", "text/html" );
+( function () {
+    try {
+        let q = context.request.query_string.q;
+        if ( !q ) {
+            context.response.header( "statuse_code", "505" );
+            context.response.write( JSON.stringify( {
+                error: true,
+                description: "Q required!!!"
+            } ) );
+            return;
+        }
+		q = q.replace( /\[/g, '' ).replace( /\]/g, '' ).replace( /\//g, '' ).replace( /\\/g, '' );
+        __worker.read( q );
+    } catch ( ex ) {
+        context.response.header( "statuse_code", "505" );
+        context.response.write( JSON.stringify( {
+            error: true,
+            description: ex.message
+        } ) );
+    }
+}() );
