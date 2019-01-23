@@ -117,8 +117,16 @@ public:
 			}
 			info.is_tag_end = true;
 			info.is_tag_start = false;
-			info.line = std::regex_replace(info.line, regx, " " + this->rep_str + ");");
-			info.line = std::regex_replace(info.line, *this->regx_ste, "\r\ncontext.response.write(" + this->rep_str);
+			info.line = REGEX_REPLACE_MATCH(info.line, std::regex("(<js::(.+?)::js>)"),
+				[&](const std::smatch& m) {
+				std::string matchstr(m.str(0));
+				if (matchstr.empty()) {
+					return std::string("");
+				}
+				matchstr = std::regex_replace(matchstr, *this->regx_sts, this->rep_str + ", true);\r\n");
+				matchstr = std::regex_replace(matchstr, *this->regx_ste, "\r\ncontext.response.write(" + this->rep_str);
+				return matchstr;
+			});
 			break;
 		case e_tag::rts/*<js=*/:
 			if (REGEX_IS_MATCH(info.line, *this->regx_rte) == 0) {
