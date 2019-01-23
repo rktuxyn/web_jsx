@@ -1,6 +1,16 @@
 # web_jsx
 web_jsx *.jsx, *.jsxh (back-end Javascript) web extension handler (Run with IIS, Apache, Nginx)<br/>
-#Global JSON
+<br/>
+Read data from Postgres SQL
+```javascript
+let resp = npgsql.execute_io("Server=localhost; Port=5432; UserId=postgres;Password=1##$1@6Z;Database=sow; keepalive=10; CommandTimeout=100000;", 
+	"__sql_execute", JSON.stringify( {} ), JSON.stringify( {
+		"sql":"select * from jsx.community"
+	} )
+);
+__print(JSON.stringify(resp));
+```
+#Global Web Request Context
 ```json
 {
    "context":{
