@@ -1,4 +1,4 @@
-﻿/**
+/**
 * Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
 * @author {SOW}
 * Copyrights licensed under the New BSD License.
@@ -65,26 +65,26 @@ var __worker = {
         }
         return result;
     },
-	normalize_response: function( body ) {
-		return body
-			.replace( /<!--([\s\S]+?)-->/gi, "" )//replace <!-- --> tag
-			.replace( /\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, "" )//Replace comment
-			//.replace( /\r\n/gi, "" ).replace( /\n/gi, "" ).replace( /\s+/g, " " )
-			//.replace( /"\ >/gi, '">' )
-			.replace( /<style[^>]*>([\s\S]+?)<\/style>/gi, "" )
-			.replace( /<script[^>]*>([\s\S]+?)<\/script>/gi, "" )//Replace script tag
-			.replace( /<link rel[^>]*\/>/gi, "" )//Replace style tag
-			.replace( /<link href[^>]*\/>/gi, "" )//Replace style tag
-			.replace( /<link href[^>]*>/gi, "" )//Replace style tag
-			//.replace( /<a[^>]*>/gi, "" )
-			;
-	},
+    normalize_response: function ( body ) {
+        return body
+            .replace( /<!--([\s\S]+?)-->/gi, "" )//replace <!-- --> tag
+            .replace( /\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, "" )//Replace comment
+            //.replace( /\r\n/gi, "" ).replace( /\n/gi, "" ).replace( /\s+/g, " " )
+            //.replace( /"\ >/gi, '">' )
+            .replace( /<style[^>]*>([\s\S]+?)<\/style>/gi, "" )
+            .replace( /<script[^>]*>([\s\S]+?)<\/script>/gi, "" )//Replace script tag
+            .replace( /<link rel[^>]*\/>/gi, "" )//Replace style tag
+            .replace( /<link href[^>]*\/>/gi, "" )//Replace style tag
+            .replace( /<link href[^>]*>/gi, "" )//Replace style tag
+            //.replace( /<a[^>]*>/gi, "" )
+            ;
+    },
     search_link: function ( url, body, query, regxp ) {
-		if ( this.normalize_response( body ).search( regxp ) < 0) {
-			return undefined;
-		}
-		let header = ( this.exec_header( ( body ) ) );
-		
+        if ( this.normalize_response( body ).search( regxp ) < 0 ) {
+            return undefined;
+        }
+        let header = ( this.exec_header( ( body ) ) );
+
         //let title = this.get_title( header );
         let res = this.get_resp( /<meta[^>]*\/>/gi, header, {} );
         res = this.get_resp( /<meta[^>]*>/gi, header, res );
@@ -155,7 +155,7 @@ var __worker = {
             } ) );
             return;
         }
-		let regxp = new RegExp( query, 'i' );
+        let regxp = new RegExp( query, 'i' );
         let data = [];
         for ( let path of resp.dir ) {
             __async( function () {
@@ -164,7 +164,7 @@ var __worker = {
                 data.push( link );
             } );
         }
-        context.response.write( `<style>.link-preview .link-area{overflow:hidden;position:relative;margin:1em 0;padding:10px;border:1px solid #999}.link-preview .descriptions{overflow:hidden}.link-preview .og-title{overflow:hidden;font-size:1.2em;font-weight:700}.link-preview .og-description{font-size:.86em;margin-top:.2em}.link-preview .og-image{float:left;margin-right:10px}.link-preview .og-image img{max-width:125px}</style>`);
+        context.response.write( `<style>.link-preview .link-area{overflow:hidden;position:relative;margin:1em 0;padding:10px;border:1px solid #999}.link-preview .descriptions{overflow:hidden}.link-preview .og-title{overflow:hidden;font-size:1.2em;font-weight:700}.link-preview .og-description{font-size:.86em;margin-top:.2em}.link-preview .og-image{float:left;margin-right:10px}.link-preview .og-image img{max-width:125px}</style>` );
         context.response.write( `<table><tbody>` );
         let count = 0;
         for ( let link of data ) {
@@ -172,7 +172,7 @@ var __worker = {
             context.response.write( `<tr><td>${count}</td><td>${link}</td></tr>` );
         }
         context.response.write( `</tbody></table>` );
-        
+
     }
 };
 context.response.header( "Content-Type", "text/html" );
@@ -187,7 +187,7 @@ context.response.header( "Content-Type", "text/html" );
             } ) );
             return;
         }
-		q = q.replace( /\[/g, '' ).replace( /\]/g, '' ).replace( /\//g, '' ).replace( /\\/g, '' );
+        q = q.replace( /\[/g, '' ).replace( /\]/g, '' ).replace( /\//g, '' ).replace( /\\/g, '' );
         __worker.read( q );
     } catch ( ex ) {
         context.response.header( "statuse_code", "505" );
