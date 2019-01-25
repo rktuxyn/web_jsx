@@ -18,10 +18,6 @@ function getCookie( httpCookie, name ) {
     }
     return undefined;
 };
-/**Date.prototype.addHours = function ( h ) {
-    this.setHours( this.getHours() + h );
-    return this;
-};*/
 module.exports = ( function () {
     var _user_info = undefined;
     return {
@@ -30,9 +26,9 @@ module.exports = ( function () {
 				throw "context required!!!";
 			if( !config || 'object' !== typeof( config ) )
 				throw "config required!!!";
-            if ( !ctx.http_cookie ) return;
+            if ( !ctx.request.cookie ) return;
 			if( !config.auth_cookie ) config.auth_cookie = "web_jsx_session";
-            let cook = getCookie( ctx.http_cookie, config.auth_cookie );
+            let cook = getCookie( ctx.request.cookie, config.auth_cookie );
             if ( !cook || cook == null ) return;
             let dec = crypto.decrypt( cook, config.crypto.key, config.crypto.iv );
             let arr = dec.split( "~" );
@@ -76,4 +72,3 @@ module.exports = ( function () {
         }
     };
 }() );
-//8:08 AM 11/30/2018
