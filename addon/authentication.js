@@ -2,7 +2,7 @@
 * Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
 * @author {SOW}
 * Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* See the accompanying LICENSE file for terms
 */
 function getCookie( httpCookie, name ) {
     if ( !httpCookie || !name ) throw "Invalid request!!!";
