@@ -12,7 +12,6 @@ Write payload to file<br/>
 ```javascript
 let c = fs.write_file_from_payload( "post_data.txt" );
 ```
-<br/>
 Read data from Postgres SQL<br/>
 ```javascript
 let resp = npgsql.execute_io("Server=localhost; Port=5432; UserId=postgres;Password=1##$1@6Z;Database=sow; keepalive=10; CommandTimeout=100000;", 
