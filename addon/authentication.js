@@ -1,4 +1,3 @@
-//3:25 AM 11/30/2018
 /**
 * Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
 * @author {SOW}
