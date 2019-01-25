@@ -43,7 +43,7 @@ __print(JSON.stringify(resp));
 
          },
          "_read_payload":"function _read_payload() { [native code] }",
-         "read_payload":"function( cb ) { return this.method !== 'POST'? -1 : this._read_payload(this.content_length, cb);}"
+         "read_payload":"function read_payload( cb ) { }"
       },
       "user":{
          "is_authenticated":"false",
