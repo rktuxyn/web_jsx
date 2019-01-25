@@ -1,6 +1,18 @@
 # web_jsx
 web_jsx *.jsx, *.jsxh (back-end Javascript) web extension handler (Run with IIS, Apache, Nginx)<br/>
 <br/>
+Read POST data
+```javascript
+let payload = "";
+context.request.read_payload( function ( buff, count ) {
+	payload += buff;
+} );
+```
+Write payload to file<br/>
+```javascript
+let c = fs.write_file_from_payload( "post_data.txt" );
+```
+<br/>
 Read data from Postgres SQL
 ```javascript
 let resp = npgsql.execute_io("Server=localhost; Port=5432; UserId=postgres;Password=1##$1@6Z;Database=sow; keepalive=10; CommandTimeout=100000;", 
