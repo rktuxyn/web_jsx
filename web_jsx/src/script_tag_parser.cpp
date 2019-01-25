@@ -1,17 +1,27 @@
+/**
+* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
+* @author {SOW}
+* Copyrights licensed under the New BSD License.
+* See the accompanying LICENSE file for terms.
+*/
 #include "script_tag_parser.h"
 using namespace sow_web_jsx;
 jsx_export void sow_web_jsx::js_write_header(std::stringstream& stream) {
+	stream << "context.root_dir = (function () { if ( context.root_dir === undefined || context.root_dir === null ) { throw \"Root directory not found in current context!!!\"; } return context.root_dir.replace( /\\//g,'\\\\' ) }());\n";
+	stream << "context.https = context.https===\"on\" || context.https===\"true\" ? true : false;\n";
+	stream << "context.request.protocol= context.https===true ? \"https:\" : \"http:\";\n";
+	stream << "context.host_url = context.request.protocol + \"//\" + context.host;\n";
+	stream << "context.request.query_string = ( function () { try { return JSON.parse( (context.request.query_string) ); } catch ( e ) { return {}; } }() );\n";
+	stream << "context.request.content_length = (function(){ let len = parseInt(context.request.content_length); return isNaN(len) ? 0 : len; }())\r\n";
+	stream << "context.request.read_payload = function read_payload( cb ) { return this.method !== 'POST'? -1 : this._read_payload(this.content_length, cb);}\r\n";
 	stream << "context.response.write = function write( val, nline ) { if ( !val || val === null || val === undefined ) return this;  !1 === nline ? context.response._write( val ) : context.response._write( val + '\\r\\n' ); return this;};\r\n";
 	stream << "context.response.write_p = function write_p( val ) { if ( !val || val === null || val === undefined ) return this; context.response._write( val ); return this;};\r\n";
-	stream << "context.https = context.https===\"on\" || context.https===\"true\" ? true : false;\n";
-	stream << "context.protocol= context.https===true ? \"https:\" : \"http:\";\n";
-	stream << "context.host_url = context.protocol + \"//\" + context.host;\n";
 	stream << "context.response.redirect = function redirect( url, force ) { if ( !url ) { throw \"Redirect location required!!!\"; } context.response._redirect( context.server_protocol, ( force === true ? ( context.https ? \"https://\" : \"http://\" ) + ( context.host + url.trim() ) : url.trim() ) ); };\r\n";
 	stream << "context.response.status(context.server_protocol, \"200\", \"OK\");\n";
+	stream << "context.response.as_gzip = function as_gzip() { if ( !context.request.accept_encoding ) return -1; if ( context.request.accept_encoding.indexOf( 'gzip' ) < 0 ) return -1; this._as_gzip(); return 1; };\n";
 	stream << "context.response.header(\"Content-Type\", \"text/html; charset=utf-8\");\n";
 	stream << "context.response.header(\"Connection\", \"Keep-Alive\");\n";
-	stream << "context.root_dir = (function () { if ( context.root_dir === undefined || context.root_dir === null ) { throw \"Root directory not found in current context!!!\"; } return context.root_dir.replace( /\\//g,'\\\\' ) }());\n";
-	stream << "context.request.query_string = ( function () { try { return JSON.parse( (context.request.query_string) ); } catch ( e ) { return {}; } }() );\n";
+	stream << "fs.write_file_from_payload = function write_file_from_payload( path ) { if ( context.request.method !== 'POST' ) throw new Error('Allowed only over POST data.'); return this._write_file_from_payload( context.request.content_length, path ); }\r\n";
 	stream << "String.format = function ( format ) {if ( typeof ( format ) !== 'string' ) throw new Error(\"String required!!!\"); let args = Array.prototype.slice.call( arguments, 1 ); let len = args.length - 1; return format.replace( /{(\\d+)}/g, function ( match, number )  { let index = parseInt( number ); if ( isNaN( index ) ) throw new Error( \"Invalid param index!!!\" ); if ( index > len ) throw new Error( \"Index should not greater than \" + len + format + JSON.stringify( args ) ); return typeof ( args[index] ) !== 'undefined' ? args[number] : \"\"; } ); };\n";
 	stream << "try{\n";
 };
@@ -19,7 +29,17 @@ jsx_export void sow_web_jsx::js_write_footer(std::string&str) {
 	str.append("context.response.header(\"X-Powered-By\", \"safeonline.world\");\n");
 	str.append("context.response.header(\"X-Process-By\", \"web_jsx_cgi\");\n");
 	str.append("context.response.body.flush();\n");
-	str.append("}catch(_exp){\n\context.response.clear();\n\context.response.header(\"Content-Type\", \"text/html\");\n\if(typeof(_exp)!==\"object\"){\n\context.response.write('Error::' + _exp );\n\}else{\n\context.response.write('Error::' + _exp.message + '<br/>' );\n\context.response.write(_exp.stack );\n\}\n\context.response.body.flush();\n\};");
+	str.append("}catch(_exp){\n\
+				context.response.clear();\n\
+				context.response.header(\"Content-Type\", \"text/html\");\n\
+				if(typeof(_exp)!==\"object\"){\n\
+					context.response.write('Error::' + _exp );\n\
+				}else{\n\
+					context.response.write('Error::' + _exp.message + '<br/>' );\n\
+					context.response.write(_exp.stack );\n\
+				}\n\
+				context.response.body.flush();\n\
+			};");
 };
 jsx_export void sow_web_jsx::js_write_footer(std::stringstream& stream) {
 	stream << "context.response.header(\"X-Powered-By\", \"safeonline.world\");\n";
@@ -205,7 +225,7 @@ int script_tag_parser::parse(template_result & tr, std::string&html_body) {
 	}
 	tr.is_script_template = true;
 	std::stringstream stream(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
-	js_write_header(stream);
+	sow_web_jsx::js_write_header(stream);
 	std::regex* rgx = new std::regex("(?:\\r\\n|\\r|\\n)");
 	std::sregex_token_iterator iter(html_body.begin(), html_body.end(), *rgx, -1);
 	std::regex* qu = new std::regex("'");
@@ -216,11 +236,9 @@ int script_tag_parser::parse(template_result & tr, std::string&html_body) {
 	for (std::sregex_token_iterator end; iter != end; ++iter) {
 		info->tag_found = false;
 		info->line = iter->str();
-		if (info->line.empty()) {
-			continue;
-		}
+		if (info->line.empty()) continue;
 		if (info->is_tag_end) {
-			info->line = std::string("context.response.write(" + jsp->rep_str + info->line);
+			info->line = "context.response.write(" + jsp->rep_str + info->line;
 			stream << "\n";
 		}
 		info->etag = e_tag::sts;
@@ -244,12 +262,12 @@ int script_tag_parser::parse(template_result & tr, std::string&html_body) {
 		std::string().swap(info->line);
 	}
 	std::string().swap(html_body);
-	delete info; delete rgx; //delete tab; //delete ws;
+	delete info; delete rgx;
 	delete qu; delete jsp;
 	html_body = stream.str();
 	std::stringstream().swap(stream);
 	html_body = std::regex_replace(html_body, std::regex("(?:context.response.write\\(''\\);)"), "");
 	html_body = std::regex_replace(html_body, std::regex("(?:context.response.write\\(' '\\);)"), "");
-	js_write_footer(html_body);
+	sow_web_jsx::js_write_footer(html_body);
 	return 1;
 };
