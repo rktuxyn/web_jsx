@@ -222,15 +222,16 @@ void write_file_from_payload(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	while (true) {
 		char* buff;
 		if (content_length > READ_CHUNK) {
-			buff = (char*)malloc(READ_CHUNK);
+			buff = (char*)malloc(READ_CHUNK + 1);
 			len = READ_CHUNK;
 		}
 		else {
-			buff = (char*)malloc(content_length);
+			buff = (char*)malloc(content_length + 1);
 			len = content_length;
 		}
-		read_length = fread(buff, sizeof(char), len, stdin);
-		write_len += fwrite(buff, sizeof(char), read_length, fwstream);
+		buff[len] = '\0';
+		read_length = fread(buff, 1, len, stdin);
+		write_len += fwrite(buff, 1, read_length, fwstream);
 		if (ferror(fwstream)) {
 			free(buff); free(abs_path);
 			fclose(fwstream);
@@ -271,16 +272,17 @@ void read_payload(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	while (true) {
 		char* buff;
 		if (content_length > READ_CHUNK) {
-			buff = (char*)malloc(READ_CHUNK);
+			buff = (char*)malloc(READ_CHUNK + 1);
 			len = READ_CHUNK;
 		}
 		else {
-			buff = (char*)malloc(content_length);
+			buff = (char*)malloc(content_length + 1);
 			len = content_length;
 		}
-		read_length = fread(buff, sizeof(char), len, stdin);
+		buff[len] = '\0';
+		read_length = fread(buff, 1, len, stdin);
 		v8::Handle<v8::Value> arg[2] = {
-			sow_web_jsx::v8_str(isolate, buff),
+			sow_web_jsx::v8_str(isolate, const_cast<const char*>(buff)),
 			v8::Number::New(isolate, static_cast<double>(read_length))
 		};
 		free(buff);
