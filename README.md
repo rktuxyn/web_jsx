@@ -26,23 +26,23 @@ __print(JSON.stringify(resp));
 {
    "context":{
       "host":"sow.pc",
-      "http_accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
-      "http_accept_encoding":"gzip, deflate, br",
-      "http_cookie":"web_jsx_session=188EAD362DBDCC20C96D99E25CBDDE5A6371E1C073D49C258BEDABD6DCF0141A;",
-      "http_user_agent":"Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36",
       "remote_addr":"127.0.0.1",
       "root_dir":"D:\\___PROJECT\\__SOW\\",
       "server_protocol":"HTTP/1.1",
       "request":{
+         "accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+         "accept_encoding":"gzip, deflate, br",
          "content_type":"text/html",
+         "cookie":"web_jsx_session=188EAD362DBDCC20C96D99E25CBDDE5A6371E1C073D49C258BEDABD6DCF0141A;",
          "method":"GET",
-         "content_length":"0",
          "page_path":"/context.jsxh",
          "pay_load":"[]",
          "query_string":{
 
          },
+         "user_agent":"Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36",
          "_read_payload":"function _read_payload() { [native code] }",
+         "protocol":"https:",
          "read_payload":"function read_payload( cb ) { }"
       },
       "user":{
@@ -61,23 +61,22 @@ __print(JSON.stringify(resp));
          "clear":"function clear() { [native code] }",
          "status":"function status() { [native code] }",
          "cookie":"function cookie() { [native code] }",
+         "_redirect":"function _redirect() { [native code] }",
+         "_as_gzip":"function _as_gzip() { [native code] }",
          "write":"function write( val, nline ) { }",
          "write_p":"function write_p( val ) { }",
-         "_redirect":"function _redirect() { [native code] }",
          "redirect":"function redirect( url, force ) {  }",
-         "_as_gzip":"function _as_gzip() { [native code] }",
-         "as_gzip":"function as_gzip() { }"
+         "as_gzip":"function as_gzip() {  }"
       },
-      "protocol":"https:",
       "host_url":"https://sow.pc"
    },
    "fs":{
       "read_file":"function read_file() { [native code] }",
       "write_file":"function write_file() { [native code] }",
+      "_write_file_from_payload":"function _write_file_from_payload() { [native code] }",
       "read_directory":"function read_directory() { [native code] }",
       "read_directory_regx":"function read_directory_regx() { [native code] }",
-      "_write_file_from_payload":"function _write_file_from_payload() { [native code] }",
-      "write_file_from_payload":"function write_file_from_payload( path ) { }"
+      "write_file_from_payload":"function write_file_from_payload( path ) {  }"
    },
    "npgsql":{
       "execute_io":"function execute_io() { [native code] }",
