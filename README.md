@@ -21,7 +21,7 @@ let resp = npgsql.execute_io("Server=localhost; Port=5432; UserId=postgres;Passw
 );
 __print(JSON.stringify(resp));
 ```
-#Global Web Request Context
+#HTTP Context
 ```json
 {
    "context":{
