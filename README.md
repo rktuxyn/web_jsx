@@ -36,7 +36,7 @@ __print(JSON.stringify(resp));
       "request":{
          "content_type":"text/html",
          "method":"GET",
-		 "content_length":"0",
+         "content_length":"0",
          "page_path":"/context.jsxh",
          "pay_load":"[]",
          "query_string":{
@@ -63,9 +63,9 @@ __print(JSON.stringify(resp));
          "cookie":"function cookie() { [native code] }",
          "write":"function write( val, nline ) { }",
          "write_p":"function write_p( val ) { }",
-		 "_redirect":"function _redirect() { [native code] }",
+         "_redirect":"function _redirect() { [native code] }",
          "redirect":"function redirect( url, force ) {  }",
-		 "_as_gzip":"function _as_gzip() { [native code] }",
+         "_as_gzip":"function _as_gzip() { [native code] }",
          "as_gzip":"function as_gzip() { }"
       },
       "protocol":"https:",
@@ -76,7 +76,7 @@ __print(JSON.stringify(resp));
       "write_file":"function write_file() { [native code] }",
       "read_directory":"function read_directory() { [native code] }",
       "read_directory_regx":"function read_directory_regx() { [native code] }",
-	  "_write_file_from_payload":"function _write_file_from_payload() { [native code] }",
+      "_write_file_from_payload":"function _write_file_from_payload() { [native code] }",
       "write_file_from_payload":"function write_file_from_payload( path ) { }"
    },
    "npgsql":{
