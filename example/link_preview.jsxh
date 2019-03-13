@@ -87,9 +87,23 @@ var __worker = {
         if ( /https:\/\/www.youtube.com/gi.test( url ) ) {
             try {
                 res.description = /document.title =([\s\S]+?);/gi.exec( resp.body )[1];
-                res.description = res.description.replace( /"/gi, "" );
+                res.description = this.escape_html( res.description.replace( /"/gi, "" ) );
             } catch ( e ) {
-                context.response.write( resp.body );
+                //context.response.write( resp.body );
+                //return;
+                res.description = "";
+            }
+        } else if ( /https:\/\/en.wikipedia.org/gi.test( url ) ) {
+            try {
+                let match = resp.body.match( /<p>([\s\S]+?)<\p>/gi );
+                if ( match !== null ) {
+                    res.description = match[0];///<p>([\s\S]+?)<\/p>/gi.exec( match[1] )[1];
+                    if ( res.description.length > 1000 ) {
+                        res.description = res.description.substring( 0, 1000 );
+                    }
+                }
+            } catch ( e ) {
+                context.response.write( e.message );
                 return;
             }
         }
@@ -187,9 +201,6 @@ context.response.header( "Content-Type", "text/html" );
         http_req.clear_response();
     } catch ( ex ) {
         context.response.header( "statuse_code", "505" );
-        //context.response.write( ex.message );
-        //context.response.write( "<br/>" );
-        //context.response.write( ex.stack );
         context.response.write( JSON.stringify( {
             error: true,
             description: ex.message

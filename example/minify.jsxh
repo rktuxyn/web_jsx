@@ -1,9 +1,30 @@
-/**
+﻿/**
 * Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
 * @author {SOW}
 * Copyrights licensed under the New BSD License.
 * See the accompanying LICENSE file for terms.
 */
+/** [String Format ]*/
+( typeof ( String.format ) === 'function' ? '' : String.format = function ( format ) {
+    let args = Array.prototype.slice.call( arguments, 1 );
+    let len = args.length - 1;
+    return format.replace( /{(\d+)}/g, function ( match, number ) {
+
+        let index = parseInt( number );
+        if ( isNaN( index ) )
+            throw new Error( "Invalid param index!!!" );
+
+        if ( index > len )
+            throw new Error( "Index should not greater than " + len );
+
+        return typeof ( args[index] ) !== 'undefined'
+            ? args[number]
+            : /*match || ""*/""
+            ;
+    } );
+} );
+/** [/String Format ]*/
+//5:05 AM 12/25/2018
 const __is_web = typeof ( this["context"] ) !== 'undefined';
 const __worker = {
     print: function ( str ) {
@@ -288,6 +309,9 @@ const __worker = {
         this.print( wresp.message );
 
     },
+    minify: function ( task, api_name ) {
+        return this.minify_compaile( task, api_name );
+    },
     get_task: function ( task, api_name ) {
         let original = task;
         switch ( task ) {
@@ -339,6 +363,7 @@ if ( __is_web ) {
     } else {
         let dir = __arg[0].replace( /\//g, '\\' );
         __worker.print( `Reading directory ${dir}` );
-        __worker.start_async( fs.read_directory( dir, __arg[1] ), __worker.get_task( __arg[2], __arg[3] ) );
+        __worker.print( typeof ( __worker.start_async ) );
+        //__worker.start_async( fs.read_directory( dir, __arg[1] ), __worker.get_task( __arg[2], __arg[3] ) );
     }
 }
