@@ -1,8 +1,9 @@
+//3:25 AM 11/30/2018
 /**
 * Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
 * @author {SOW}
 * Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms
+* See the accompanying LICENSE file for terms.
 */
 function getCookie( httpCookie, name ) {
     if ( !httpCookie || !name ) throw "Invalid request!!!";
@@ -17,6 +18,7 @@ function getCookie( httpCookie, name ) {
     }
     return undefined;
 };
+let { CryptoJS } = require( "/addon/aes.js" );
 module.exports = ( function () {
     var _user_info = undefined;
     return {
@@ -29,7 +31,8 @@ module.exports = ( function () {
 			if( !config.auth_cookie ) config.auth_cookie = "web_jsx_session";
             let cook = getCookie( ctx.request.cookie, config.auth_cookie );
             if ( !cook || cook == null ) return;
-            let dec = crypto.decrypt( cook, config.crypto.key, config.crypto.iv );
+            let dstr = CryptoJS.AES.decrypt( cook.trim(), config.crypto.key );
+            let dec = dstr.toString( CryptoJS.enc.Utf8 ); dstr = undefined;
             let arr = dec.split( "~" );
             if ( arr === null ) {
                 _user_info = { is_authenticated: false };
@@ -58,16 +61,17 @@ module.exports = ( function () {
 			if( !ctx || 'object' !== typeof( ctx ) )
 				throw "context required!!!";
 			if( !config || 'object' !== typeof( config ) )
-				throw "config required!!!";
-            let enc = crypto.encrypt( `${user_id}~${role}~${user_data}`, config.crypto.key, config.crypto.iv );
-            //let dt = new Date().addHours( 24 ).toString().split( "(" )[0].trim();
+                throw "config required!!!";
+            let enc = CryptoJS.AES.encrypt( `${user_id}~${role}~${user_data}`, config.crypto.key );
+            let hex = ( enc.toString() );
             if ( !config.auth_cookie ) config.auth_cookie = "web_jsx_session";
             if ( ctx.https ) {
-                ctx.response.cookie( `Set-Cookie: ${config.auth_cookie}=${enc};` );
+                ctx.response.cookie( `Set-Cookie: ${config.auth_cookie}=${hex};` );
                 return;
             }
-            ctx.response.cookie( `Set-Cookie: ${config.auth_cookie}=${enc};` );
+            ctx.response.cookie( `Set-Cookie: ${config.auth_cookie}=${hex};` );
             return this;
         }
     };
 }() );
+//8:08 AM 11/30/2018

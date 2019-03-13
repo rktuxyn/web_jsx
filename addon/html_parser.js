@@ -11,32 +11,32 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-(function (exports, he_1) {
+( function ( exports, he_1 ) {
     "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
+    Object.defineProperty( exports, "__esModule", { value: true } );
     var NodeType;
-    (function (NodeType) {
+    ( function ( NodeType ) {
         NodeType[NodeType["ELEMENT_NODE"] = 1] = "ELEMENT_NODE";
         NodeType[NodeType["TEXT_NODE"] = 3] = "TEXT_NODE";
-    })(NodeType = exports.NodeType || (exports.NodeType = {}));
+    } )( NodeType = exports.NodeType || ( exports.NodeType = {} ) );
     /**
      * Node Class as base class for TextNode and HTMLElement.
      */
-    var Node = /** @class */ (function () {
+    var Node = /** @class */ ( function () {
         function Node() {
             this.childNodes = [];
         }
         return Node;
-    }());
+    }() );
     exports.Node = Node;
     /**
      * TextNode to contain a text element in DOM tree.
      * @param {string} value [description]
      */
-    var TextNode = /** @class */ (function (_super) {
-        __extends(TextNode, _super);
-        function TextNode(value) {
-            var _this = _super.call(this) || this;
+    var TextNode = /** @class */ ( function ( _super ) {
+        __extends( TextNode, _super );
+        function TextNode( value ) {
+            var _this = _super.call( this ) || this;
             /**
              * Node Type declaration.
              * @type {Number}
@@ -45,33 +45,33 @@ var __extends = (this && this.__extends) || (function () {
             _this.rawText = value;
             return _this;
         }
-        Object.defineProperty(TextNode.prototype, "text", {
+        Object.defineProperty( TextNode.prototype, "text", {
             /**
              * Get unescaped text value of current node and its children.
              * @return {string} text content
              */
             get: function () {
-                return he_1.decode(this.rawText);
+                return he_1.decode( this.rawText );
             },
             enumerable: true,
             configurable: true
-        });
-        Object.defineProperty(TextNode.prototype, "isWhitespace", {
+        } );
+        Object.defineProperty( TextNode.prototype, "isWhitespace", {
             /**
              * Detect if the node contains only white space.
              * @return {bool}
              */
             get: function () {
-                return /^(\s|&nbsp;)*$/.test(this.rawText);
+                return /^(\s|&nbsp;)*$/.test( this.rawText );
             },
             enumerable: true,
             configurable: true
-        });
+        } );
         TextNode.prototype.toString = function () {
             return this.text;
         };
         return TextNode;
-    }(Node));
+    }( Node ) );
     exports.TextNode = TextNode;
     var kBlockElements = {
         div: true,
@@ -85,7 +85,7 @@ var __extends = (this && this.__extends) || (function () {
         section: true,
         br: true
     };
-    function arr_back(arr) {
+    function arr_back( arr ) {
         return arr[arr.length - 1];
     }
     /**
@@ -97,8 +97,8 @@ var __extends = (this && this.__extends) || (function () {
      * @class HTMLElement
      * @extends {Node}
      */
-    var HTMLElement = /** @class */ (function (_super) {
-        __extends(HTMLElement, _super);
+    var HTMLElement = /** @class */ ( function ( _super ) {
+        __extends( HTMLElement, _super );
         /**
          * Creates an instance of HTMLElement.
          * @param {string} name				tagName
@@ -107,8 +107,8 @@ var __extends = (this && this.__extends) || (function () {
          *
          * @memberof HTMLElement
          */
-        function HTMLElement(name, keyAttrs, rawAttrs) {
-            var _this = _super.call(this) || this;
+        function HTMLElement( name, keyAttrs, rawAttrs ) {
+            var _this = _super.call( this ) || this;
             _this.classNames = [];
             /**
              * Node Type declaration.
@@ -119,40 +119,40 @@ var __extends = (this && this.__extends) || (function () {
             _this.rawAttrs = rawAttrs || '';
             // this.parentNode = null;
             _this.childNodes = [];
-            if (keyAttrs.id) {
+            if ( keyAttrs.id ) {
                 _this.id = keyAttrs.id;
             }
-            if (keyAttrs.class) {
-                _this.classNames = keyAttrs.class.split(/\s+/);
+            if ( keyAttrs.class ) {
+                _this.classNames = keyAttrs.class.split( /\s+/ );
             }
             return _this;
         }
-        Object.defineProperty(HTMLElement.prototype, "rawText", {
+        Object.defineProperty( HTMLElement.prototype, "rawText", {
             /**
              * Get escpaed (as-it) text value of current node and its children.
              * @return {string} text content
              */
             get: function () {
                 var res = '';
-                for (var i = 0; i < this.childNodes.length; i++)
+                for ( var i = 0; i < this.childNodes.length; i++ )
                     res += this.childNodes[i].rawText;
                 return res;
             },
             enumerable: true,
             configurable: true
-        });
-        Object.defineProperty(HTMLElement.prototype, "text", {
+        } );
+        Object.defineProperty( HTMLElement.prototype, "text", {
             /**
              * Get unescaped text value of current node and its children.
              * @return {string} text content
              */
             get: function () {
-                return he_1.decode(this.rawText);
+                return he_1.decode( this.rawText );
             },
             enumerable: true,
             configurable: true
-        });
-        Object.defineProperty(HTMLElement.prototype, "structuredText", {
+        } );
+        Object.defineProperty( HTMLElement.prototype, "structuredText", {
             /**
              * Get structured Text (with '\n' etc.)
              * @return {string} structured text
@@ -160,57 +160,57 @@ var __extends = (this && this.__extends) || (function () {
             get: function () {
                 var currentBlock = [];
                 var blocks = [currentBlock];
-                function dfs(node) {
-                    if (node.nodeType === NodeType.ELEMENT_NODE) {
-                        if (kBlockElements[node.tagName]) {
-                            if (currentBlock.length > 0) {
-                                blocks.push(currentBlock = []);
+                function dfs( node ) {
+                    if ( node.nodeType === NodeType.ELEMENT_NODE ) {
+                        if ( kBlockElements[node.tagName] ) {
+                            if ( currentBlock.length > 0 ) {
+                                blocks.push( currentBlock = [] );
                             }
-                            node.childNodes.forEach(dfs);
-                            if (currentBlock.length > 0) {
-                                blocks.push(currentBlock = []);
+                            node.childNodes.forEach( dfs );
+                            if ( currentBlock.length > 0 ) {
+                                blocks.push( currentBlock = [] );
                             }
                         }
                         else {
-                            node.childNodes.forEach(dfs);
+                            node.childNodes.forEach( dfs );
                         }
                     }
-                    else if (node.nodeType === NodeType.TEXT_NODE) {
-                        if (node.isWhitespace) {
+                    else if ( node.nodeType === NodeType.TEXT_NODE ) {
+                        if ( node.isWhitespace ) {
                             // Whitespace node, postponed output
                             currentBlock.prependWhitespace = true;
                         }
                         else {
                             var text = node.text;
-                            if (currentBlock.prependWhitespace) {
+                            if ( currentBlock.prependWhitespace ) {
                                 text = ' ' + text;
                                 currentBlock.prependWhitespace = false;
                             }
-                            currentBlock.push(text);
+                            currentBlock.push( text );
                         }
                     }
                 }
-                dfs(this);
+                dfs( this );
                 return blocks
-                    .map(function (block) {
-                    // Normalize each line's whitespace
-                    return block.join('').trim().replace(/\s{2,}/g, ' ');
-                })
-                    .join('\n').replace(/\s+$/, ''); // trimRight;
+                    .map( function ( block ) {
+                        // Normalize each line's whitespace
+                        return block.join( '' ).trim().replace( /\s{2,}/g, ' ' );
+                    } )
+                    .join( '\n' ).replace( /\s+$/, '' ); // trimRight;
             },
             enumerable: true,
             configurable: true
-        });
+        } );
         HTMLElement.prototype.toString = function () {
             var tag = this.tagName;
-            if (tag) {
-                var is_un_closed = /^meta$/i.test(tag);
-                var is_self_closed = /^(img|br|hr|area|base|input|doctype|link)$/i.test(tag);
+            if ( tag ) {
+                var is_un_closed = /^meta$/i.test( tag );
+                var is_self_closed = /^(img|br|hr|area|base|input|doctype|link)$/i.test( tag );
                 var attrs = this.rawAttrs ? ' ' + this.rawAttrs : '';
-                if (is_un_closed) {
+                if ( is_un_closed ) {
                     return "<" + tag + attrs + ">";
                 }
-                else if (is_self_closed) {
+                else if ( is_self_closed ) {
                     return "<" + tag + attrs + " />";
                 }
                 else {
@@ -221,58 +221,58 @@ var __extends = (this && this.__extends) || (function () {
                 return this.innerHTML;
             }
         };
-        Object.defineProperty(HTMLElement.prototype, "innerHTML", {
+        Object.defineProperty( HTMLElement.prototype, "innerHTML", {
             get: function () {
-                return this.childNodes.map(function (child) {
+                return this.childNodes.map( function ( child ) {
                     return child.toString();
-                }).join('');
+                } ).join( '' );
             },
             enumerable: true,
             configurable: true
-        });
-        HTMLElement.prototype.set_content = function (content) {
-            if (content instanceof Node) {
+        } );
+        HTMLElement.prototype.set_content = function ( content ) {
+            if ( content instanceof Node ) {
                 content = [content];
             }
-            else if (typeof content == 'string') {
-                var r = parse(content);
-                content = r.childNodes.length ? r.childNodes : [new TextNode(content)];
+            else if ( typeof content == 'string' ) {
+                var r = parse( content );
+                content = r.childNodes.length ? r.childNodes : [new TextNode( content )];
             }
             this.childNodes = content;
         };
-        Object.defineProperty(HTMLElement.prototype, "outerHTML", {
+        Object.defineProperty( HTMLElement.prototype, "outerHTML", {
             get: function () {
                 return this.toString();
             },
             enumerable: true,
             configurable: true
-        });
+        } );
         /**
          * Trim element from right (in block) after seeing pattern in a TextNode.
          * @param  {RegExp} pattern pattern to find
          * @return {HTMLElement}    reference to current node
          */
-        HTMLElement.prototype.trimRight = function (pattern) {
-            function dfs(node) {
-                for (var i = 0; i < node.childNodes.length; i++) {
+        HTMLElement.prototype.trimRight = function ( pattern ) {
+            function dfs( node ) {
+                for ( var i = 0; i < node.childNodes.length; i++ ) {
                     var childNode = node.childNodes[i];
-                    if (childNode.nodeType === NodeType.ELEMENT_NODE) {
-                        dfs(childNode);
+                    if ( childNode.nodeType === NodeType.ELEMENT_NODE ) {
+                        dfs( childNode );
                     }
                     else {
-                        var index = childNode.rawText.search(pattern);
-                        if (index > -1) {
-                            childNode.rawText = childNode.rawText.substr(0, index);
+                        var index = childNode.rawText.search( pattern );
+                        if ( index > -1 ) {
+                            childNode.rawText = childNode.rawText.substr( 0, index );
                             // trim all following nodes.
                             node.childNodes.length = i + 1;
                         }
                     }
                 }
             }
-            dfs(this);
+            dfs( this );
             return this;
         };
-        Object.defineProperty(HTMLElement.prototype, "structure", {
+        Object.defineProperty( HTMLElement.prototype, "structure", {
             /**
              * Get DOM structure
              * @return {string} strucutre
@@ -280,46 +280,46 @@ var __extends = (this && this.__extends) || (function () {
             get: function () {
                 var res = [];
                 var indention = 0;
-                function write(str) {
-                    res.push('  '.repeat(indention) + str);
+                function write( str ) {
+                    res.push( '  '.repeat( indention ) + str );
                 }
-                function dfs(node) {
-                    var idStr = node.id ? ('#' + node.id) : '';
-                    var classStr = node.classNames.length ? ('.' + node.classNames.join('.')) : '';
-                    write(node.tagName + idStr + classStr);
+                function dfs( node ) {
+                    var idStr = node.id ? ( '#' + node.id ) : '';
+                    var classStr = node.classNames.length ? ( '.' + node.classNames.join( '.' ) ) : '';
+                    write( node.tagName + idStr + classStr );
                     indention++;
-                    for (var i = 0; i < node.childNodes.length; i++) {
+                    for ( var i = 0; i < node.childNodes.length; i++ ) {
                         var childNode = node.childNodes[i];
-                        if (childNode.nodeType === NodeType.ELEMENT_NODE) {
-                            dfs(childNode);
+                        if ( childNode.nodeType === NodeType.ELEMENT_NODE ) {
+                            dfs( childNode );
                         }
-                        else if (childNode.nodeType === NodeType.TEXT_NODE) {
-                            if (!childNode.isWhitespace)
-                                write('#text');
+                        else if ( childNode.nodeType === NodeType.TEXT_NODE ) {
+                            if ( !childNode.isWhitespace )
+                                write( '#text' );
                         }
                     }
                     indention--;
                 }
-                dfs(this);
-                return res.join('\n');
+                dfs( this );
+                return res.join( '\n' );
             },
             enumerable: true,
             configurable: true
-        });
+        } );
         /**
          * Remove whitespaces in this sub tree.
          * @return {HTMLElement} pointer to this
          */
         HTMLElement.prototype.removeWhitespace = function () {
             var o = 0;
-            for (var i = 0; i < this.childNodes.length; i++) {
+            for ( var i = 0; i < this.childNodes.length; i++ ) {
                 var node = this.childNodes[i];
-                if (node.nodeType === NodeType.TEXT_NODE) {
-                    if (node.isWhitespace)
+                if ( node.nodeType === NodeType.TEXT_NODE ) {
+                    if ( node.isWhitespace )
                         continue;
                     node.rawText = node.rawText.trim();
                 }
-                else if (node.nodeType === NodeType.ELEMENT_NODE) {
+                else if ( node.nodeType === NodeType.ELEMENT_NODE ) {
                     node.removeWhitespace();
                 }
                 this.childNodes[o++] = node;
@@ -359,31 +359,31 @@ var __extends = (this && this.__extends) || (function () {
          * @param  {Matcher}        selector A Matcher instance
          * @return {HTMLElement[]}  matching elements
          */
-        HTMLElement.prototype.querySelectorAll = function (selector) {
+        HTMLElement.prototype.querySelectorAll = function ( selector ) {
             var matcher;
-            if (selector instanceof Matcher) {
+            if ( selector instanceof Matcher ) {
                 matcher = selector;
                 matcher.reset();
             }
             else {
-                matcher = new Matcher(selector);
+                matcher = new Matcher( selector );
             }
             var res = [];
             var stack = [];
-            for (var i = 0; i < this.childNodes.length; i++) {
-                stack.push([this.childNodes[i], 0, false]);
-                while (stack.length) {
-                    var state = arr_back(stack);
+            for ( var i = 0; i < this.childNodes.length; i++ ) {
+                stack.push( [this.childNodes[i], 0, false] );
+                while ( stack.length ) {
+                    var state = arr_back( stack );
                     var el = state[0];
-                    if (state[1] === 0) {
+                    if ( state[1] === 0 ) {
                         // Seen for first time.
-                        if (el.nodeType !== NodeType.ELEMENT_NODE) {
+                        if ( el.nodeType !== NodeType.ELEMENT_NODE ) {
                             stack.pop();
                             continue;
                         }
-                        if (state[2] = matcher.advance(el)) {
-                            if (matcher.matched) {
-                                res.push(el);
+                        if ( state[2] = matcher.advance( el ) ) {
+                            if ( matcher.matched ) {
+                                res.push( el );
                                 // no need to go further.
                                 matcher.rewind();
                                 stack.pop();
@@ -391,11 +391,11 @@ var __extends = (this && this.__extends) || (function () {
                             }
                         }
                     }
-                    if (state[1] < el.childNodes.length) {
-                        stack.push([el.childNodes[state[1]++], 0, false]);
+                    if ( state[1] < el.childNodes.length ) {
+                        stack.push( [el.childNodes[state[1]++], 0, false] );
                     }
                     else {
-                        if (state[2])
+                        if ( state[2] )
                             matcher.rewind();
                         stack.pop();
                     }
@@ -409,38 +409,38 @@ var __extends = (this && this.__extends) || (function () {
          * @param  {Matcher}        selector A Matcher instance
          * @return {HTMLElement}    matching node
          */
-        HTMLElement.prototype.querySelector = function (selector) {
+        HTMLElement.prototype.querySelector = function ( selector ) {
             var matcher;
-            if (selector instanceof Matcher) {
+            if ( selector instanceof Matcher ) {
                 matcher = selector;
                 matcher.reset();
             }
             else {
-                matcher = new Matcher(selector);
+                matcher = new Matcher( selector );
             }
             let stack = [];
             for ( let i = 0, l = this.childNodes.length; i < l; i++ ) {
-                stack.push([this.childNodes[i], 0, false]);
-                while (stack.length) {
-                    let state = arr_back(stack);
+                stack.push( [this.childNodes[i], 0, false] );
+                while ( stack.length ) {
+                    let state = arr_back( stack );
                     let el = state[0];
-                    if (state[1] === 0) {
+                    if ( state[1] === 0 ) {
                         // Seen for first time.
-                        if (el.nodeType !== NodeType.ELEMENT_NODE) {
+                        if ( el.nodeType !== NodeType.ELEMENT_NODE ) {
                             stack.pop();
                             continue;
                         }
-                        if (state[2] = matcher.advance(el)) {
-                            if (matcher.matched) {
+                        if ( state[2] = matcher.advance( el ) ) {
+                            if ( matcher.matched ) {
                                 return el;
                             }
                         }
                     }
-                    if (state[1] < el.childNodes.length) {
-                        stack.push([el.childNodes[state[1]++], 0, false]);
+                    if ( state[1] < el.childNodes.length ) {
+                        stack.push( [el.childNodes[state[1]++], 0, false] );
                     }
                     else {
-                        if (state[2])
+                        if ( state[2] )
                             matcher.rewind();
                         stack.pop();
                     }
@@ -453,12 +453,12 @@ var __extends = (this && this.__extends) || (function () {
          * @param  {Node} node node to append
          * @return {Node}      node appended
          */
-        HTMLElement.prototype.appendChild = function (node) {
+        HTMLElement.prototype.appendChild = function ( node ) {
             // node.parentNode = this;
-            this.childNodes.push(node);
+            this.childNodes.push( node );
             return node;
         };
-        Object.defineProperty(HTMLElement.prototype, "firstChild", {
+        Object.defineProperty( HTMLElement.prototype, "firstChild", {
             /**
              * Get first child node
              * @return {Node} first child node
@@ -468,49 +468,49 @@ var __extends = (this && this.__extends) || (function () {
             },
             enumerable: true,
             configurable: true
-        });
-        Object.defineProperty(HTMLElement.prototype, "lastChild", {
+        } );
+        Object.defineProperty( HTMLElement.prototype, "lastChild", {
             /**
              * Get last child node
              * @return {Node} last child node
              */
             get: function () {
-                return arr_back(this.childNodes);
+                return arr_back( this.childNodes );
             },
             enumerable: true,
             configurable: true
-        });
-        Object.defineProperty(HTMLElement.prototype, "attributes", {
+        } );
+        Object.defineProperty( HTMLElement.prototype, "attributes", {
             /**
              * Get attributes
              * @return {Object} parsed and unescaped attributes
              */
             get: function () {
-                if (this._attrs)
+                if ( this._attrs )
                     return this._attrs;
                 this._attrs = {};
                 var attrs = this.rawAttributes;
-                for (var key in attrs) {
-                    this._attrs[key] = he_1.decode(attrs[key]);
+                for ( var key in attrs ) {
+                    this._attrs[key] = he_1.decode( attrs[key] );
                 }
                 return this._attrs;
             },
             enumerable: true,
             configurable: true
-        });
-        Object.defineProperty(HTMLElement.prototype, "rawAttributes", {
+        } );
+        Object.defineProperty( HTMLElement.prototype, "rawAttributes", {
             /**
              * Get escaped (as-it) attributes
              * @return {Object} parsed attributes
              */
             get: function () {
-                if (this._rawAttrs)
+                if ( this._rawAttrs )
                     return this._rawAttrs;
                 var attrs = {};
-                if (this.rawAttrs) {
+                if ( this.rawAttrs ) {
                     var re = /\b([a-z][a-z0-9\-]*)\s*=\s*("([^"]+)"|'([^']+)'|(\S+))/ig;
                     var match = void 0;
-                    while (match = re.exec(this.rawAttrs)) {
+                    while ( match = re.exec( this.rawAttrs ) ) {
                         attrs[match[1]] = match[3] || match[4] || match[5];
                     }
                 }
@@ -519,9 +519,9 @@ var __extends = (this && this.__extends) || (function () {
             },
             enumerable: true,
             configurable: true
-        });
+        } );
         return HTMLElement;
-    }(Node));
+    }( Node ) );
     exports.HTMLElement = HTMLElement;
     /**
      * Cache to store generated match functions
@@ -532,50 +532,50 @@ var __extends = (this && this.__extends) || (function () {
      * Function cache
      */
     var functionCache = {
-        "f145": function (el, tagName, classes, attr_key, value) {
+        "f145": function ( el, tagName, classes, attr_key, value ) {
             "use strict";
             tagName = tagName || "";
             classes = classes || [];
             attr_key = attr_key || "";
             value = value || "";
-            if (el.id != tagName.substr(1))
+            if ( el.id != tagName.substr( 1 ) )
                 return false;
-            for (var cls = classes, i = 0; i < cls.length; i++)
-                if (el.classNames.indexOf(cls[i]) === -1)
+            for ( var cls = classes, i = 0; i < cls.length; i++ )
+                if ( el.classNames.indexOf( cls[i] ) === -1 )
                     return false;
             return true;
         },
-        "f45": function (el, tagName, classes, attr_key, value) {
+        "f45": function ( el, tagName, classes, attr_key, value ) {
             "use strict";
             tagName = tagName || "";
             classes = classes || [];
             attr_key = attr_key || "";
             value = value || "";
-            for (var cls = classes, i = 0; i < cls.length; i++)
-                if (el.classNames.indexOf(cls[i]) === -1)
+            for ( var cls = classes, i = 0; i < cls.length; i++ )
+                if ( el.classNames.indexOf( cls[i] ) === -1 )
                     return false;
             return true;
         },
-        "f15": function (el, tagName, classes, attr_key, value) {
+        "f15": function ( el, tagName, classes, attr_key, value ) {
             "use strict";
             tagName = tagName || "";
             classes = classes || [];
             attr_key = attr_key || "";
             value = value || "";
-            if (el.id != tagName.substr(1))
+            if ( el.id != tagName.substr( 1 ) )
                 return false;
             return true;
         },
-        "f1": function (el, tagName, classes, attr_key, value) {
+        "f1": function ( el, tagName, classes, attr_key, value ) {
             "use strict";
             tagName = tagName || "";
             classes = classes || [];
             attr_key = attr_key || "";
             value = value || "";
-            if (el.id != tagName.substr(1))
+            if ( el.id != tagName.substr( 1 ) )
                 return false;
         },
-        "f5": function (el, tagName, classes, attr_key, value) {
+        "f5": function ( el, tagName, classes, attr_key, value ) {
             "use strict";
             el = el || {};
             tagName = tagName || "";
@@ -584,16 +584,16 @@ var __extends = (this && this.__extends) || (function () {
             value = value || "";
             return true;
         },
-        "f245": function (el, tagName, classes, attr_key, value) {
+        "f245": function ( el, tagName, classes, attr_key, value ) {
             "use strict";
             tagName = tagName || "";
             classes = classes || [];
             attr_key = attr_key || "";
             value = value || "";
             var attrs = el.attributes;
-            for (var key in attrs) {
+            for ( var key in attrs ) {
                 var val = attrs[key];
-                if (key == attr_key && val == value) {
+                if ( key == attr_key && val == value ) {
                     return true;
                 }
             }
@@ -601,67 +601,67 @@ var __extends = (this && this.__extends) || (function () {
             // for (var cls = classes, i = 0; i < cls.length; i++) {if (el.classNames.indexOf(cls[i]) === -1){ return false;}}
             // return true;
         },
-        "f25": function (el, tagName, classes, attr_key, value) {
+        "f25": function ( el, tagName, classes, attr_key, value ) {
             "use strict";
             tagName = tagName || "";
             classes = classes || [];
             attr_key = attr_key || "";
             value = value || "";
             var attrs = el.attributes;
-            for (var key in attrs) {
+            for ( var key in attrs ) {
                 var val = attrs[key];
-                if (key == attr_key && val == value) {
+                if ( key == attr_key && val == value ) {
                     return true;
                 }
             }
             return false;
             //return true;
         },
-        "f2": function (el, tagName, classes, attr_key, value) {
+        "f2": function ( el, tagName, classes, attr_key, value ) {
             "use strict";
             tagName = tagName || "";
             classes = classes || [];
             attr_key = attr_key || "";
             value = value || "";
             var attrs = el.attributes;
-            for (var key in attrs) {
+            for ( var key in attrs ) {
                 var val = attrs[key];
-                if (key == attr_key && val == value) {
+                if ( key == attr_key && val == value ) {
                     return true;
                 }
             }
             return false;
         },
-        "f345": function (el, tagName, classes, attr_key, value) {
+        "f345": function ( el, tagName, classes, attr_key, value ) {
             "use strict";
             tagName = tagName || "";
             classes = classes || [];
             attr_key = attr_key || "";
             value = value || "";
-            if (el.tagName != tagName)
+            if ( el.tagName != tagName )
                 return false;
-            for (var cls = classes, i = 0; i < cls.length; i++)
-                if (el.classNames.indexOf(cls[i]) === -1)
+            for ( var cls = classes, i = 0; i < cls.length; i++ )
+                if ( el.classNames.indexOf( cls[i] ) === -1 )
                     return false;
             return true;
         },
-        "f35": function (el, tagName, classes, attr_key, value) {
+        "f35": function ( el, tagName, classes, attr_key, value ) {
             "use strict";
             tagName = tagName || "";
             classes = classes || [];
             attr_key = attr_key || "";
             value = value || "";
-            if (el.tagName != tagName)
+            if ( el.tagName != tagName )
                 return false;
             return true;
         },
-        "f3": function (el, tagName, classes, attr_key, value) {
+        "f3": function ( el, tagName, classes, attr_key, value ) {
             "use strict";
             tagName = tagName || "";
             classes = classes || [];
             attr_key = attr_key || "";
             value = value || "";
-            if (el.tagName != tagName)
+            if ( el.tagName != tagName )
                 return false;
         }
     };
@@ -670,39 +670,39 @@ var __extends = (this && this.__extends) || (function () {
      *
      * @class Matcher
      */
-    var Matcher = /** @class */ (function () {
+    var Matcher = /** @class */ ( function () {
         /**
          * Creates an instance of Matcher.
          * @param {string} selector
          *
          * @memberof Matcher
          */
-        function Matcher(selector) {
+        function Matcher( selector ) {
             this.nextMatch = 0;
             functionCache["f5"] = functionCache["f5"];
-            this.matchers = selector.split(' ').map(function (matcher) {
-                if (pMatchFunctionCache[matcher])
+            this.matchers = selector.split( ' ' ).map( function ( matcher ) {
+                if ( pMatchFunctionCache[matcher] )
                     return pMatchFunctionCache[matcher];
-                var parts = matcher.split('.');
+                var parts = matcher.split( '.' );
                 var tagName = parts[0];
-                var classes = parts.slice(1).sort();
+                var classes = parts.slice( 1 ).sort();
                 var source = '"use strict";';
                 var function_name = 'f';
                 var attr_key = "";
                 var value = "";
-                if (tagName && tagName != '*') {
+                if ( tagName && tagName != '*' ) {
                     var matcher_1;
-                    if (tagName[0] == '#') {
-                        source += 'if (el.id != ' + JSON.stringify(tagName.substr(1)) + ') return false;'; //1
+                    if ( tagName[0] == '#' ) {
+                        source += 'if (el.id != ' + JSON.stringify( tagName.substr( 1 ) ) + ') return false;'; //1
                         function_name += '1';
                     }
-                    else if (matcher_1 = tagName.match(/^\[\s*(\S+)\s*(=|!=)\s*((((["'])([^\6]*)\6))|(\S*?))\]\s*/)) {
+                    else if ( matcher_1 = tagName.match( /^\[\s*(\S+)\s*(=|!=)\s*((((["'])([^\6]*)\6))|(\S*?))\]\s*/ ) ) {
                         attr_key = matcher_1[1];
                         var method = matcher_1[2];
-                        if (method !== '=' && method !== '!=') {
-                            throw new Error('Selector not supported, Expect [key${op}value].op must be =,!=');
+                        if ( method !== '=' && method !== '!=' ) {
+                            throw new Error( 'Selector not supported, Expect [key${op}value].op must be =,!=' );
                         }
-                        if (method === '=') {
+                        if ( method === '=' ) {
                             method = '==';
                         }
                         value = matcher_1[7] || matcher_1[8];
@@ -710,12 +710,12 @@ var __extends = (this && this.__extends) || (function () {
                         function_name += '2';
                     }
                     else {
-                        source += 'if (el.tagName != ' + JSON.stringify(tagName) + ') return false;'; //3
+                        source += 'if (el.tagName != ' + JSON.stringify( tagName ) + ') return false;'; //3
                         function_name += '3';
                     }
                 }
-                if (classes.length > 0) {
-                    source += 'for (var cls = ' + JSON.stringify(classes) + ', i = 0; i < cls.length; i++) if (el.classNames.indexOf(cls[i]) === -1) return false;'; //4
+                if ( classes.length > 0 ) {
+                    source += 'for (var cls = ' + JSON.stringify( classes ) + ', i = 0; i < cls.length; i++) if (el.classNames.indexOf(cls[i]) === -1) return false;'; //4
                     function_name += '4';
                 }
                 source += 'return true;'; //5
@@ -729,16 +729,16 @@ var __extends = (this && this.__extends) || (function () {
                 };
                 source = source || "";
                 return pMatchFunctionCache[matcher] = obj;
-            });
+            } );
         }
         /**
          * Trying to advance match pointer
          * @param  {HTMLElement} el element to make the match
          * @return {bool}           true when pointer advanced.
          */
-        Matcher.prototype.advance = function (el) {
-            if (this.nextMatch < this.matchers.length &&
-                this.matchers[this.nextMatch].func(el, this.matchers[this.nextMatch].tagName, this.matchers[this.nextMatch].classes, this.matchers[this.nextMatch].attr_key, this.matchers[this.nextMatch].value)) {
+        Matcher.prototype.advance = function ( el ) {
+            if ( this.nextMatch < this.matchers.length &&
+                this.matchers[this.nextMatch].func( el, this.matchers[this.nextMatch].tagName, this.matchers[this.nextMatch].classes, this.matchers[this.nextMatch].attr_key, this.matchers[this.nextMatch].value ) ) {
                 this.nextMatch++;
                 return true;
             }
@@ -750,7 +750,7 @@ var __extends = (this && this.__extends) || (function () {
         Matcher.prototype.rewind = function () {
             this.nextMatch--;
         };
-        Object.defineProperty(Matcher.prototype, "matched", {
+        Object.defineProperty( Matcher.prototype, "matched", {
             /**
              * Trying to determine if match made.
              * @return {bool} true when the match is made
@@ -760,7 +760,7 @@ var __extends = (this && this.__extends) || (function () {
             },
             enumerable: true,
             configurable: true
-        });
+        } );
         /**
          * Rest match pointer.
          * @return {[type]} [description]
@@ -775,7 +775,7 @@ var __extends = (this && this.__extends) || (function () {
             pMatchFunctionCache = {};
         };
         return Matcher;
-    }());
+    }() );
     exports.Matcher = Matcher;
     // https://html.spec.whatwg.org/multipage/custom-elements.html#valid-custom-element-name
     var kMarkupPattern = /<!--[^]*?(?=-->)-->|<(\/?)([a-z][-.0-9_a-z]*)\s*([^>]*?)(\/?)>/ig;
@@ -816,59 +816,59 @@ var __extends = (this && this.__extends) || (function () {
      * @param  {string} data      html
      * @return {HTMLElement}      root element
      */
-    function parse(data, options) {
-        var root = new HTMLElement(null, {});
+    function parse( data, options ) {
+        var root = new HTMLElement( null, {} );
         var currentParent = root;
         var stack = [root];
         var lastTextPos = -1;
         options = options || {};
         var match;
-        while (match = kMarkupPattern.exec(data)) {
-            if (lastTextPos > -1) {
-                if (lastTextPos + match[0].length < kMarkupPattern.lastIndex) {
+        while ( match = kMarkupPattern.exec( data ) ) {
+            if ( lastTextPos > -1 ) {
+                if ( lastTextPos + match[0].length < kMarkupPattern.lastIndex ) {
                     // if has content
-                    var text = data.substring(lastTextPos, kMarkupPattern.lastIndex - match[0].length);
-                    currentParent.appendChild(new TextNode(text));
+                    var text = data.substring( lastTextPos, kMarkupPattern.lastIndex - match[0].length );
+                    currentParent.appendChild( new TextNode( text ) );
                 }
             }
             lastTextPos = kMarkupPattern.lastIndex;
-            if (match[0][1] == '!') {
+            if ( match[0][1] == '!' ) {
                 // this is a comment
                 continue;
             }
-            if (options.lowerCaseTagName)
+            if ( options.lowerCaseTagName )
                 match[2] = match[2].toLowerCase();
-            if (!match[1]) {
+            if ( !match[1] ) {
                 // not </ tags
                 var attrs = {};
-                for (var attMatch; attMatch = kAttributePattern.exec(match[3]);)
+                for ( var attMatch; attMatch = kAttributePattern.exec( match[3] ); )
                     attrs[attMatch[2]] = attMatch[4] || attMatch[5] || attMatch[6];
                 // console.log(attrs);
-                if (!match[4] && kElementsClosedByOpening[currentParent.tagName]) {
-                    if (kElementsClosedByOpening[currentParent.tagName][match[2]]) {
+                if ( !match[4] && kElementsClosedByOpening[currentParent.tagName] ) {
+                    if ( kElementsClosedByOpening[currentParent.tagName][match[2]] ) {
                         stack.pop();
-                        currentParent = arr_back(stack);
+                        currentParent = arr_back( stack );
                     }
                 }
-                currentParent = currentParent.appendChild(new HTMLElement(match[2], attrs, match[3]));
-                stack.push(currentParent);
-                if (kBlockTextElements[match[2]]) {
+                currentParent = currentParent.appendChild( new HTMLElement( match[2], attrs, match[3] ) );
+                stack.push( currentParent );
+                if ( kBlockTextElements[match[2]] ) {
                     // a little test to find next </script> or </style> ...
                     var closeMarkup = '</' + match[2] + '>';
-                    var index = data.indexOf(closeMarkup, kMarkupPattern.lastIndex);
-                    if (options[match[2]]) {
+                    var index = data.indexOf( closeMarkup, kMarkupPattern.lastIndex );
+                    if ( options[match[2]] ) {
                         var text = void 0;
-                        if (index == -1) {
+                        if ( index == -1 ) {
                             // there is no matching ending for the text element.
-                            text = data.substr(kMarkupPattern.lastIndex);
+                            text = data.substr( kMarkupPattern.lastIndex );
                         }
                         else {
-                            text = data.substring(kMarkupPattern.lastIndex, index);
+                            text = data.substring( kMarkupPattern.lastIndex, index );
                         }
-                        if (text.length > 0)
-                            currentParent.appendChild(new TextNode(text));
+                        if ( text.length > 0 )
+                            currentParent.appendChild( new TextNode( text ) );
                     }
-                    if (index == -1) {
+                    if ( index == -1 ) {
                         lastTextPos = kMarkupPattern.lastIndex = data.length + 1;
                     }
                     else {
@@ -877,21 +877,21 @@ var __extends = (this && this.__extends) || (function () {
                     }
                 }
             }
-            if (match[1] || match[4] ||
-                kSelfClosingElements[match[2]]) {
+            if ( match[1] || match[4] ||
+                kSelfClosingElements[match[2]] ) {
                 // </ or /> or <br> etc.
-                while (true) {
-                    if (currentParent.tagName == match[2]) {
+                while ( true ) {
+                    if ( currentParent.tagName == match[2] ) {
                         stack.pop();
-                        currentParent = arr_back(stack);
+                        currentParent = arr_back( stack );
                         break;
                     }
                     else {
                         // Trying to close current tag, and move on
-                        if (kElementsClosedByClosing[currentParent.tagName]) {
-                            if (kElementsClosedByClosing[currentParent.tagName][match[2]]) {
+                        if ( kElementsClosedByClosing[currentParent.tagName] ) {
+                            if ( kElementsClosedByClosing[currentParent.tagName][match[2]] ) {
                                 stack.pop();
-                                currentParent = arr_back(stack);
+                                currentParent = arr_back( stack );
                                 continue;
                             }
                         }
@@ -904,4 +904,4 @@ var __extends = (this && this.__extends) || (function () {
         return root;
     }
     exports.parse = parse;
-}( (typeof (module) =='object'? module.exports : this), typeof(require) ==='function'? require("/addon/he.js") : this.he ));
+}( ( typeof ( module ) == 'object' ? module.exports : this ), typeof ( require ) === 'function' ? require( "/addon/he.js" ) : this.he ) );

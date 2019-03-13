@@ -10,12 +10,10 @@ module.exports = (function(){
 		auth_cookie:"web_jsx_session",
 		database:{
 			module:"pgsql",
-            db_conn:"Server=localhost; Port=5432; UserId=postgres;Password=xxxx;Database=sow; keepalive=10; CommandTimeout=100000;"
+            db_conn:"Server=localhost; Port=5432; UserId=postgres;Password=XXXX;Database=sow_sys; keepalive=10; CommandTimeout=100000;"
         },
-        production: false,
 		crypto:{
-			key:"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", /* A 256 bit key */
-			iv:"XXXXXXXXXXXXXXXX"/* A 128 bit IV */
-		}
+            key: "YXV0aGVudGljYXRlX2tleQ==", /* A 256 bit key */
+        }
 	};
 }() );
