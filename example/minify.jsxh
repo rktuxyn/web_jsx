@@ -1,4 +1,4 @@
-﻿/**
+/**
 * Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
 * @author {SOW}
 * Copyrights licensed under the New BSD License.
@@ -204,14 +204,6 @@ const __worker = {
                         this.print( JSON.stringify( resp.error ) );
                         return undefined;
                     }
-                    if ( task === "mc_e" ) {
-                        let ces = crypto.encrypt_source( resp.compiledCode );
-                        if ( ces.staus_code < 0 ) {
-                            this.print( ces.msg );
-                        }
-                        return ces.data;
-                    }
-                    //this.print( resp.compiledCode );
                     return resp.compiledCode;
                 } catch ( e ) {
                     this.print( e.message );
@@ -271,11 +263,7 @@ const __worker = {
     },
     default_e: function () {
         return function ( data ) {
-            let ces = crypto.encrypt_source( this.normalize( data ) );
-            if ( ces.staus_code < 0 ) {
-                this.print( ces.msg );
-            }
-            return ces.data;
+            return data;
         };
     },
     write_output: function ( path, task, root_dir ) {
