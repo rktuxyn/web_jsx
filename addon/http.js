@@ -19,10 +19,11 @@ Date.prototype.addHours = function ( h ) {
 var http_request = function ( _url ) {
     this.url = _url;
 };
-function http_init( body ) {
+function http_init( body, follow_location ) {
     let req_object = {
         url: this.url,
-        method: this.method
+        method: this.method,
+        follow_location: typeof ( follow_location ) !== "boolean" ? true : follow_location
     };
     if ( this.method === "POST" ) {
         if ( body === undefined || body === null )
@@ -39,13 +40,14 @@ function http_init( body ) {
 	/*if( this.header && this.header.length > 0)
 		req_object.header = this.header;*/
     if ( this.cookie && this.cookie.length > 0 ) {
-        req_object.cookie = "";
+        req_object.cookie = this.cookie.join( ";" );
+        /*req_object.cookie = "";
         for ( let i = 0, l = this.cookie.length; i < l; i++ ) {
             if ( i === 0 ) {
                 req_object.cookie += this.cookie[i]; continue;
             }
             req_object.cookie += "; " + this.cookie[i];
-        }
+        }*/
 
     }
     return create_http_request( req_object );
@@ -108,7 +110,19 @@ function prepare_post_data( body ) {
     return data;
 
 };
-
+function clean_resp( rs ) {
+    for ( let p in rs )
+        delete rs[p];
+};
+function resolve( deferred, cb ) {
+    if ( typeof ( cb ) !== "function" ) return deferred;
+    deferred.catch( ( reason ) => {
+        cb( -1, reason );
+    } ).then( ( s ) => {
+        cb( 1, s );
+    } ); deferred = undefined;
+    return;
+};
 Object.extend( http_request.prototype, {
     response: {},
     url: undefined,
@@ -118,11 +132,14 @@ Object.extend( http_request.prototype, {
     get_time_stamp: function ( day ) {
         return new Date().addHours( typeof ( day ) === "number" ? day : 1 ).toString().split( "(" )[0].trim();
     },
+    exists_cookie: function ( cook ) {
+        return this.cookie.indexOf( cook ) >= 0;
+    },
     set_cookie: function ( key, value ) {
-        this.cookie.push( `${key}=${value}` );
-        return this;
+        return this.set_raw_cookie( `${key}=${value}` );
     },
     set_raw_cookie: function ( cook ) {
+        if ( this.exists_cookie( cook ) ) return this;
         this.cookie.push( cook );
         return this;
     },
@@ -136,27 +153,55 @@ Object.extend( http_request.prototype, {
         return this;
     },
     set_header: function ( key, value ) {
+        this.remove_header( key );
         this.header[key] = value;
-        /**this.header.push( `${key}:${value}` );*/
         return this;
     },
-    get: function () {
+    getAsync: function ( cb, follow_location ) {
+        return resolve( new Promise( ( resolve, reject ) => {
+            this.get( follow_location );
+            resolve();
+        } ), cb );
+    },
+    postAsync: function ( body, cb, follow_location ) {
+        return resolve( new Promise( ( resolve, reject ) => {
+            this.post( body, follow_location ); body = undefined;
+            resolve();
+        } ), cb );
+    },
+    /**
+     * @type {{body: JSON, cb: Function, follow_location:boolean|void 0}}
+     */
+    sendAsync: function ( body, cb, follow_location ) {
+        return resolve( new Promise( ( resolve, reject ) => {
+            this.post( body, follow_location ); body = undefined;
+            resolve();
+        } ), cb );
+    },
+    /**
+     * @type {{follow_location:boolean|void 0}}
+     * @returns {{http_request}}
+     */
+    get: function ( follow_location) {
         this.method = "GET";
-        let resp = http_init.call( this );
+        let resp = http_init.call( this, void 0, follow_location );
         parse_response.call( this, resp );
-        delete resp;
+        clean_resp( resp );
+        return this;
     },
-    post: function ( body ) {
+    post: function ( body, follow_location ) {
         this.method = "POST";
-        let resp = http_init.call( this, prepare_post_data.call( this, body ) ); delete body;
+        let resp = http_init.call( this, prepare_post_data.call( this, body ), follow_location ); body = void 0;
         parse_response.call( this, resp );
-        delete resp;
+        clean_resp( resp );
+        return this;
     },
-    send: function ( body ) {
+    send: function ( body, follow_location ) {
         this.method = "POST";
-        let resp = http_init.call( this, prepare_post_data.call( this, body ) ); delete body;
+        let resp = http_init.call( this, prepare_post_data.call( this, body ), follow_location ); body = void 0;
         parse_response.call( this, resp );
-        delete resp;
+        clean_resp( resp );
+        return this;
     },
     move_to_request: function ( with_header ) {
         if ( 'number' === typeof ( this.response.http_status_code ) && this.response.http_status_code > 0 ) {
@@ -170,6 +215,7 @@ Object.extend( http_request.prototype, {
         return this;
     },
     clear_response: function () {
+        clean_resp( this.response );
         delete this.response;
         this.url = undefined;
         this.method = undefined;
