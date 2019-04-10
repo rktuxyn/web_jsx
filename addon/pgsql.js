@@ -1,4 +1,4 @@
-﻿/**
+/**
 * Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
 * @author {SOW}
 * Copyrights licensed under the New BSD License.
@@ -123,7 +123,7 @@ class pgSql {
         let pg_resp = {};
         typeof ( obj ) === 'object' ? obj = JSON.stringify( obj ) : undefined;
         do {
-            pg_resp = this.execute( sp, obj );
+            pg_resp = this.execute_io( sp, obj );
             if ( pg_resp.ret_val < 0 ) {
                 try_count++;
                 if ( try_count > max_try ) {
