@@ -147,6 +147,16 @@ interface ISysStatic {
     kill_process_by_name( process_name: string ): number;
 }
 interface INpgSqlStatic {
+    /**
+     * Executes the query and returns the first column of the first row in the result
+     *~set returned by the query. All other columns and rows are ignored.
+     *~Opens a database connection with the property settings specified by the con_str.
+     *~@param con_str define the npgsql connection string
+     *~@param sp_str define the specific stored procedure name
+     *~@param ctx_str define the json string as stored procedure first param
+     *~@param form_data_str define the json string as stored procedure second param
+     *~@returns The first column of the first row as json string. e.g. {_ret_val number; _ret_msg string; _ret_data_table json string}
+     */
     execute_io( con_str: string, sp_str: string, ctx_str: JSON, form_data_str: JSON ): {
         _ret_val: number;
         _ret_msg: string;
