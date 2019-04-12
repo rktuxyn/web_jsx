@@ -6,7 +6,7 @@
 */
 
 /**HTTP current request method*/
-enum RequestMethod {
+declare enum RequestMethod {
     /**HTTP Request method `GET`*/
     GET,
     /**HTTP Request method `HEAD`*/
@@ -192,10 +192,10 @@ interface IFsStatic {
      */
     file: IJsxFile;
     /**
-    *Create a file from HTTP post data collection.
-    * if http request method POST nor @throws Allowed only over POST data.
-    *~@param path A string containing server path
-    *~@throws Stram Write not readable|Directory not found exception|Permission denied
+    * Create a file from HTTP post data collection.
+    * ~if http request method POST nor @throws Allowed only over POST data.
+    * ~@param path A string containing server path
+    * ~@throws Stram Write not readable|Directory not found exception|Permission denied
     */
     write_file_from_payload( path: string ): any;
 }
@@ -459,17 +459,20 @@ declare function create_http_request( option: IHttpOption ): {
 declare function require( path: string ): Object;
 /**
  * Convert Hex string to plain string
- * @param data hex string
+ * ~@param data hex string
+ * ~@returns plain string
  */
 declare function hex_to_string( data: string ): string;
 /**
  * Convert plain string to Hex string
- * @param data plain string
+ * ~@param data plain string
+ * ~@returns plain string
  */
 declare function string_to_hex( data: string ): string;
 /**
  * Create a async thread with uvlib event_loop algorithm (Non-blocking thread)
  * ~@param func Execute non-blocking thread here
+ * ~e.g. await __async_t(()=>{}); or  __async_t(()=>{})
  */
 declare function __async_t( func: Function ): any;
 /**
@@ -480,18 +483,22 @@ declare function __async( func: Function ): any;
 /**
  * Create a set time out timer with uvlib event_loop algorithm (Non-blocking thread)
  * ~@param func Execute non-blocking thread here
- * ~@param milliseconds delay time
+ * ~@param timeout milliseconds delay time
  */
-declare function setTimeout( func: Function, milliseconds: number ): any;
+declare function setTimeout( handler: ( ...args: any[] )=> void, timeout: number ): any;
 /**
  * Block current thread untill timeout
  * ~@param milliseconds sleep time
  */
 declare function __sleep( milliseconds: number ): any;
-
+interface IMdoule {
+    /**Module Object|Function|Any */
+    exports: any;
+}
 declare var context: ContextStatic;
 declare var fs: IFsStatic;
 declare var sys: ISysStatic;
 declare var npgsql: INpgSqlStatic;
 declare var native_pdf: INativePdfStatic;
+declare var module: IMdoule;
 declare var crypto: ICryptoStatic;
