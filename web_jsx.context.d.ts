@@ -471,18 +471,18 @@ declare function hex_to_string( data: string ): string;
 declare function string_to_hex( data: string ): string;
 /**
  * Create a async thread with uvlib event_loop algorithm (Non-blocking thread)
- * ~@param func Execute non-blocking thread here
+ * ~@param handler Execute non-blocking thread here
  * ~e.g. await __async_t(()=>{}); or  __async_t(()=>{})
  */
-declare function __async_t( func: Function ): any;
+declare function __async_t( handler: ( ...args: any[] ) => void ): any;
 /**
  * Create async thread by std::async method and execute with another thread (Blocking thread)
- * ~@param func here execute 
+ * ~@param handler here execute
  */
-declare function __async( func: Function ): any;
+declare function __async( handler: ( ...args: any[] ) => void ): any;
 /**
  * Create a set time out timer with uvlib event_loop algorithm (Non-blocking thread)
- * ~@param func Execute non-blocking thread here
+ * ~@param handler Execute non-blocking thread here
  * ~@param timeout milliseconds delay time
  */
 declare function setTimeout( handler: ( ...args: any[] )=> void, timeout: number ): any;
