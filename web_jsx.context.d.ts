@@ -125,7 +125,7 @@ interface IJsxFile {
     * File constructor.
     * ~@param path server file path
     * ~@param mood define read/write mood e.g. r|r+|w|w+|a|a+
-    * @throws Director Not Found|File Not Found
+    * @throws Director Not Found|File Not Found|Permission denied
     * ~Read more https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/fopen-s-wfopen-s
     */
     new( path: string, mood: string ): IJsxFile;
@@ -153,15 +153,38 @@ interface IJsxFile {
     flush(): any;
 }
 interface IFsStatic {
+    /**
+    * Read server file
+    *~@param path server file path
+    *~@throws Director Not Found|File Not Found|Permission denied
+    * ~@returns {staus_code, message, data}
+    */
     read_file( path: string ): {
+        /**Execution status code*/
         staus_code: number;
+        /**Execution status message*/
         message: string;
+        /**File character*/
         data: string;
     };
+    /**
+    * Write file to server
+    *~@param path server file path
+    *~@param data define write character
+    *~@throws Director Not Found|Permission denied
+    * ~@returns {staus_code, message}
+    */
     write_file( path: string, data: string ): {
+        /**Execution status code*/
         staus_code: number;
+        /**Execution status message*/
         message: string;
     };
+    /**
+    * Check file exists in server
+    *~@param path server file path
+    * ~@returns true|false
+    */
     exists_file( path: string ): boolean;
     /**
      * Create new file constructor.
@@ -172,7 +195,7 @@ interface IFsStatic {
     *Create a file from HTTP post data collection.
     * if http request method POST nor @throws Allowed only over POST data.
     *~@param path A string containing server path
-    *~@throws Stram Write or Directory not found exception
+    *~@throws Stram Write not readable|Directory not found exception|Permission denied
     */
     write_file_from_payload( path: string ): any;
 }
@@ -194,24 +217,100 @@ interface ISpwanOption {
     wait_for_exit: boolean;
 }
 interface ISysStatic {
+    /**
+    * Read server directory
+    *~@param dir server dir e.g. / root dir
+    *~@throws Director Not Found | Permission denied
+    * ~@returns {staus_code, message, dir}
+    */
     read_directory( dir: string ): {
+        /**Execution status code*/
         staus_code: number;
+        /**Execution status message*/
         message: string;
+        /**Directory collection */
         dir: [];
     };
+    /**
+    * Read server directory with filter
+    *~@param dir server dir e.g. / root dir
+    *~@param ext server dir e.g. (html|aspx|jsx|php) or C Regular Expression
+    *~@throws Director Not Found|Permission denied
+    * ~@returns {staus_code, message, dir}
+    */
     read_directory_regx( dir: string, ext: string ): {
+        /**Execution status code*/
         staus_code: number;
+        /**Execution status message*/
         message: string;
+        /**Directory collection */
         dir: [];
     };
+    /**
+    * Create directory into server
+    *~@param path server dir e.g. /log/
+    *~@throws Permission denied
+    * ~@returns {message}
+    */
     create_directory( path: string ): string;
+    /**
+    * Delete directory from server
+    *~@param path server dir e.g. /log/
+    *~@throws Director Not Found|Permission denied
+    * ~@returns {message}
+    */
     delete_directory( path: string ): string;
+    /**
+     * Spwan new process|child process
+     * ~@param option Containing {start_in:string, process_name:string, process_path:string, title:string, arg:string, wait_for_exit:boolean}
+     * ~param start_in -> Process start directory default current location; not required
+     * ~param process_name -> Process name default null; not required
+     * ~param process_path -> Process full location required e.g. C:/web_jsx/web_jsx_cgi.exe
+     * ~param title -> Process title not required
+     * ~param arg -> Process argument not required
+     * ~param wait_for_exit -> If you need to wait untill Process exit, than set true default false
+     */
     create_process( option: ISpwanOption ): any;
-    terminate_process( pid: number ): any;
+    /**
+    * Terminate open process by process id
+    * ~@param pid process id
+    * ~@throws Permission denied
+    * ~@returns {if process found 1 or 0}
+    */
+    terminate_process( pid: number ): number;
+    /**
+    * Current process id
+    * ~@returns {Current Processs Id}
+    */
     current_process_id(): number;
-    process_is_running( pid: number): boolean;
+    /**
+    * Check given process id is running
+    * ~@param pid define Process Id
+    * ~@returns {true|false}
+    */
+    process_is_running( pid: number ): boolean;
+    /**
+    * Create new child process
+    * ~@param process_path process full path
+    * ~@param arg process argument
+    * ~@throws Process not found
+    * ~@returns {1}
+    */
     create_child_process( process_path: string, arg: string ): number;
+    /**
+    * Open new process and forget
+    * ~@param process_path process full path
+    * ~@param arg process argument
+    * ~@throws Process not found
+    * ~@returns {process_id}
+    */
     open_process( process_path: string, arg: string ): number;
+    /**
+    * Kill any open process by name e.g. web_jsx_cgi.exe
+    * ~@param process_name e.g. web_jsx_cgi.exe
+    * ~@throws Permission denied
+    * ~@returns {-1|0}
+    */
     kill_process_by_name( process_name: string ): number;
 }
 interface INpgSqlStatic {
@@ -257,12 +356,67 @@ interface INpgSqlStatic {
      */
     data_reader( con_str: string, query_str: string, func: ( index: number, row: string ) => any ): any;
 }
+interface IPdfOption {
+    /**Pdf file output path*/
+    path: string;
+    /**Create pdf from http url*/
+    url: string;
+    /**If create pdf from given chracter set true*/
+    from_body: boolean;
+    /**Containing page settings*/
+    global_settings: Object;
+    /**Containing page design settings*/
+    object_settings: Object;
+}
 interface INativePdfStatic {
-    generate_pdf(): any;
+    /**
+     * Generate pdf with wkhtmltopdf Api
+     * ~@param option Containing {path: string, url: string, from_body: boolean, global_settings: Object, object_settings: Object}
+     * ~@param body if you like to create pdf from given chracter. Can be null | void 0
+     * ~option=>
+     * ~path->Pdf file output path
+     * ~url->Create pdf from http url
+     * ~from_body->If create pdf from given chracter set true
+     * ~global_settings->Containing page settings
+     * ~object_settings->Containing page design settings
+     * ~@throws Director Not Found|Permission denied
+     * ~@returns {ret_val:number, ret_msg:string}
+     */
+    generate_pdf( option: IPdfOption, body: string ): {
+        /**define the excution status (In-case error occured in middle or back then return -1) */
+        ret_val: number;
+        /**define the excution status message*/
+        ret_msg: string;
+    };
 }
 interface ICryptoStatic {
-    encrypt( data: string ): string;
-    decrypt( data: string ): string;
+    /**
+    * Encrypt data with openssl EVP algorithm
+    * ~Initialise the encryption operation. IMPORTANT - ensure you use a key
+    * ~and IV size appropriate for your cipher
+    * ~In this example we are using 256 bit AES (i.e. a 256 bit key). The
+    * ~IV size for *most* modes is the same as the block size. For AES this
+    * ~is 128 bits
+    * ~@param data define plain string
+    * ~@param data define plain string
+    * ~@param key define Decrypt key
+    * ~@param iv define Decrypt iv
+    * ~@returns encrypted string
+    */
+    encrypt( data: string, key: string, iv: string ): string;
+    /**
+    * Decrypt data with openssl EVP algorithm
+    * ~Initialise the decryption operation. IMPORTANT - ensure you use a key
+    * ~and IV size appropriate for your cipher
+    * ~In this example we are using 256 bit AES (i.e. a 256 bit key). The
+    * ~IV size for *most* modes is the same as the block size. For AES this
+    * ~is 128 bits
+    * ~@param data define plain string
+    * ~@param key define Decrypt key
+    * ~@param iv define Decrypt iv
+    * ~@returns decypted string
+    */
+    decrypt( data: string, key: string, iv: string ): string;
 }
 interface IHttpOption {
     /**HTTP request full uri */
@@ -314,18 +468,30 @@ declare function hex_to_string( data: string ): string;
  */
 declare function string_to_hex( data: string ): string;
 /**
- * Create a async thread with uvlib event_loop algorithm
- * @param func here execute 
+ * Create a async thread with uvlib event_loop algorithm (Non-blocking thread)
+ * ~@param func Execute non-blocking thread here
  */
-declare function __async_t( func: Function): any;
+declare function __async_t( func: Function ): any;
+/**
+ * Create async thread by std::async method and execute with another thread (Blocking thread)
+ * ~@param func here execute 
+ */
 declare function __async( func: Function ): any;
+/**
+ * Create a set time out timer with uvlib event_loop algorithm (Non-blocking thread)
+ * ~@param func Execute non-blocking thread here
+ * ~@param milliseconds delay time
+ */
 declare function setTimeout( func: Function, milliseconds: number ): any;
+/**
+ * Block current thread untill timeout
+ * ~@param milliseconds sleep time
+ */
 declare function __sleep( milliseconds: number ): any;
+
 declare var context: ContextStatic;
 declare var fs: IFsStatic;
 declare var sys: ISysStatic;
 declare var npgsql: INpgSqlStatic;
 declare var native_pdf: INativePdfStatic;
 declare var crypto: ICryptoStatic;
-//context.request.read_payload( ( buf, count ) => { } );
-//var x = new fs.file()
