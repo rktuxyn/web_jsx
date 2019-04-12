@@ -204,5 +204,3 @@ interface IJsxFile {
     flush(): any;
 }
 declare var context: ContextStatic;
-//npm install -g yo generator-code
-//npm install -g yo
