@@ -9,8 +9,6 @@
 #endif//!_MSC_VER
 #if !defined(_web_jsx_app_global_h)
 #define _web_jsx_app_global_h
-#define __WEB_JSX_PUBLISH
-//#define FAST_CGI_APP
 #if !defined(SUCCESS)
 #define SUCCESS 1
 #endif//!SUCCESS
@@ -94,4 +92,15 @@ _access(fname, 0)!=-1
 #if !defined(_npgsql_tools_h)
 #include <npgsql_tools.h>
 #endif//_npgsql_tools_h
+#if defined(FAST_CGI_APP)
+#if !defined(H_N_L)
+#define H_N_L "\r\n"
+#endif//!H_N_L
+#else
+#if !defined(H_N_L)
+#define H_N_L "\n"
+#endif//!H_N_L
+#endif//FAST_CGI_APP
+#pragma warning(disable : 6031)
+//#pragma warning(disable : 6280)
 #endif//!_global_h

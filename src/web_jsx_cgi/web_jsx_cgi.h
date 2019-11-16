@@ -8,13 +8,18 @@
 #if defined(_MSC_VER)
 #pragma once
 #endif//!_MSC_VER
-#pragma warning(disable : 4996)
 #if !defined(_web_jsx_cgi_h)
 #define _web_jsx_cgi_h
 #if !defined(_web_jsx_app_core_h)
 #include "web_jsx_app_core.h"
 #endif//!_web_jsx_app_core_h
+namespace web_jsx_cgi {
+	namespace cgi_request {
+		int request_handler(const char*execute_path);
+	}
+}
 #if !defined(FAST_CGI_APP)
+#pragma warning(disable : 4996)
 #pragma warning(disable: _STL_DISABLED_WARNINGS)
 _STL_DISABLE_CLANG_WARNINGS
 #pragma push_macro("new")

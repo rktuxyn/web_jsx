@@ -15,15 +15,27 @@
 #include "web_jsx_app_core.h"
 #endif//!_web_jsx_app_core_h
 #if defined(FAST_CGI_APP)
+#if !defined(_glb_r_h)
+#include "glb_r.h"
+#endif//!_glb_r_h
+#if !defined(_FASTCGI_H)
+#include <fastcgi.h>
+#endif//!_FASTCGI_H
+#if !defined(_web_jsx_cgi_h)
+#include "web_jsx_cgi.h"
+#endif//!_web_jsx_cgi_h
 #pragma warning(disable: _STL_DISABLED_WARNINGS)
 _STL_DISABLE_CLANG_WARNINGS
 #pragma push_macro("new")
 #undef new
-//#define __TEST__
-//#undef __TEST__
 using namespace std;
 using namespace sow_web_jsx::js_compiler;
-int main(int argc, char *argv[], char*envp[]);
+namespace web_jsx_cgi {
+	namespace fcgi_request {
+		int request_process(const app_ex_info aei, const char*env_path, char **envp);
+		int request_handler(const char*execute_path);
+	}
+}
 #pragma pop_macro("new")
 _STL_RESTORE_CLANG_WARNINGS
 #endif//!FAST_CGI_APP

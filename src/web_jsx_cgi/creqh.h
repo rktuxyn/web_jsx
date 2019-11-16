@@ -16,9 +16,13 @@
 #if !defined(_util_h)
 #include "util.h"
 #endif//!_util_h
-#if !defined(FAST_CGI_APP)
-void get_global_obj(std::map<std::string, std::string>& global, std::string&root_dir, const char*app_path);
-void not_found_response(const char* content_type);
-void get_request_object(std::map<std::string, std::string>&request, std::map<std::string, std::string>&query_string, req_method&method);
-#endif//!FAST_CGI_APP
+//#if !defined(FAST_CGI_APP)
+namespace web_jsx_cgi {
+	namespace cgi_request {
+		void get_global_obj(std::map<std::string, std::string>& global, std::string&root_dir, const char*app_path);
+		void not_found_response(const char* content_type);
+		void get_request_object(std::map<std::string, std::string>&request, std::map<std::string, std::string>&query_string, req_method&method);
+	}
+}
+//#endif//!FAST_CGI_APP
 #endif//_creqh_h
