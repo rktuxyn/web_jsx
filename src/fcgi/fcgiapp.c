@@ -601,13 +601,13 @@ size_t FCGX_VFPrintF(FCGX_Stream *stream, const char *format, va_list arg) {
 					switch (sizeModifier) {
 					case ' ':
 						doubleArg = va_arg(arg, double);
-						frexp(doubleArg, &exp);
+						doubleArg = frexp(doubleArg, &exp);
 						break;
 					case 'L':
 						lDoubleArg = va_arg(arg, LONG_DOUBLE);
 						/* XXX Need to check for the presence of
 						 * frexpl() and use it if available */
-						frexp((double)lDoubleArg, &exp);
+						doubleArg = frexp((double)lDoubleArg, &exp);
 						break;
 					default:
 						goto ErrorReturn;
@@ -2062,12 +2062,45 @@ int FCGX_Init(void) {
 	FCGX_InitRequest(&the_request, FCGI_LISTENSOCK_FILENO, 0);
 
 	if (OS_LibInit(NULL) == -1) {
-		return OS_Errno ? OS_Errno : -9997;
+		DWORD err = OS_Errno;
+		return err ? err : -9997;
 	}
 
 	p = getenv("FCGI_WEB_SERVER_ADDRS");
 	webServerAddressList = p ? StringCopy(p) : NULL;
 
+	libInitialized = 1;
+	return 0;
+}
+/*
+ *----------------------------------------------------------------------
+ *
+ * FCGX_Init_x --
+ *
+ *	Initialize the FCGX library.  Initialize a FCGX_Request for use with FCGX_Accept_r()
+ *	sock is a file descriptor returned by FCGX_OpenSocket() or 0 (default).
+ *	The only supported flag at this time is FCGI_FAIL_ON_INTR.
+ *
+ * Returns 0 upon success.
+ *
+ *----------------------------------------------------------------------
+ */
+DLLAPI int FCGX_Init_x(FCGX_Request * request, int sock, int flags) {
+	if (libInitialized) {
+		return 0;
+	}
+	FCGX_InitRequest(request, sock, flags);
+	if (OS_LibInit(NULL) == -1) {
+		DWORD err = OS_Errno;
+		return err ? err : -9997;
+	}
+	/*char*env_val; size_t len;
+	errno_t err = _dupenv_s(&env_val, &len, "FCGI_WEB_SERVER_ADDRS");
+	if (((env_val != NULL) && (env_val[0] == '\0')) || env_val == NULL) {
+		env_val = NULL;
+	}*/
+	char*env_val = getenv("FCGI_WEB_SERVER_ADDRS");
+	webServerAddressList = env_val ? StringCopy(env_val) : NULL;
 	libInitialized = 1;
 	return 0;
 }

@@ -141,7 +141,20 @@ DLLAPI int FCGX_IsCGI(void);
  *----------------------------------------------------------------------
  */
 DLLAPI int FCGX_Init(void);
-
+/*
+ *----------------------------------------------------------------------
+ *
+ * FCGX_Init_x --
+ *
+ *	Initialize the FCGX library.  Initialize a FCGX_Request for use with FCGX_Accept_r()
+ *	sock is a file descriptor returned by FCGX_OpenSocket() or 0 (default).
+ *	The only supported flag at this time is FCGI_FAIL_ON_INTR.
+ *
+ * Returns 0 upon success.
+ *
+ *----------------------------------------------------------------------
+ */
+DLLAPI int FCGX_Init_x(FCGX_Request*request, int sock, int flags);
 /*
  *----------------------------------------------------------------------
  *

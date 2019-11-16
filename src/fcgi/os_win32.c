@@ -119,7 +119,7 @@ typedef struct OVERLAPPED_REQUEST *POVERLAPPED_REQUEST;
 
 static const char *bindPathPrefix = "\\\\.\\pipe\\FastCGI\\";
 
-static FILE_TYPE listenType = FD_SOCKET_SYNC;//FD_UNUSED;
+static FILE_TYPE listenType = FD_UNUSED;//FD_SOCKET_SYNC;//FD_UNUSED;
 
 // XXX This should be a DESCRIPTOR
 static HANDLE hListen = INVALID_HANDLE_VALUE;
@@ -1591,7 +1591,7 @@ static int acceptSocket(const char *webServerAddrs) {
 			&sockaddr,
 			&sockaddrLen,
 			isAddrOKCallback,
-			(DWORD)webServerAddrs);
+			(DWORD_PTR)webServerAddrs);
 
 		if (hSock != INVALID_SOCKET) {
 			break;
