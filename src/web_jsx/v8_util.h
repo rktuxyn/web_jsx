@@ -35,9 +35,40 @@ namespace sow_web_jsx {
 	const char* to_char_str(v8::Isolate* isolate, v8::Local<v8::Value> x);
 	v8::Local<v8::String> v8_str(v8::Isolate* isolate, const char* x);
 	void set__exception(v8::Isolate * isolate, v8::TryCatch*try_catch, template_result&tr);
+	const char* set__exception(v8::Isolate * isolate, v8::TryCatch*try_catch);
 	void get_server_map_path(const char* req_path, std::string&output);
 	v8::Local<v8::String> concat_msg(v8::Isolate* isolate, const char* a, const char*b);
 	v8::Handle<v8::Object> native_write_filei(v8::Isolate* isolate, const std::string abs_path, const char* buffer);
+	template <typename T>
+	T* unwrap(const v8::FunctionCallbackInfo<v8::Value>& args) {
+		auto self = args.Holder();
+		auto wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
+		return static_cast<T*>(wrap->Value());
+	}
+	template <typename T, typename... Args>
+	void make_object(v8::Isolate* isolate, v8::Handle<v8::Object> object, Args&&... args) {
+		T* xx = new T(std::forward<Args>(args)...);
+		object->SetInternalField(0, v8::External::New(isolate, xx));
+		/*v8::Persistent<v8::Object, v8::CopyablePersistentTraits<v8::Object>> pobj(isolate, object);
+		pobj.SetWeak<T*>(&xx, [](const v8::WeakCallbackInfo<T*> &data) {
+			delete[] data.GetParameter();
+		}, v8::WeakCallbackType::kParameter);*/
+		//
+
+		/*v8::Persistent<v8::Object> obj;
+		obj.Reset(isolate, object);
+		obj.SetWeak<T>(xx, [](const v8::WeakCallbackInfo<void*> &data) {
+			delete[] data.GetParameter();
+		}, v8::WeakCallbackType::kParameter);*/
+		//auto obj = v8::Persistent<v8::Object>::New(isolate, object);
+		/*object.MakeWeak(xx, [](v8::Persistent<v8::Value> objs, void* data) {
+			auto x = static_cast<T*>(data);
+			delete x;
+			//objs.Dispose();
+			//objs.Clear();
+		});*/
+		return;
+	}
 	/*
 	* Retrieve the c++ object pointer from the js object
 	*	This is where we take the actual c++ object that was embedded

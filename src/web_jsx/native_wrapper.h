@@ -37,11 +37,6 @@
 #if !defined(_zgzip_h)
 #include "zgzip.hpp"
 #endif//!_zgzip_h
-#if defined(__client_build)
-#if !defined(_encryption_h)
-#include "encryption.h"
-#endif//!_encryption_h
-#endif//__client_build
 #if defined(FAST_CGI_APP)
 #if !defined(DATA_READ_CHUNK)
 #define DATA_READ_CHUNK 8192
@@ -60,12 +55,16 @@
 #if !defined(_n_help_h)
 #include "n_help.h"
 #endif//_n_help_h
+#if !defined(_jsx_file_h)
+#include "jsx_file.h"
+#endif//_n_help_h
 #pragma warning (disable : 4231)
 #pragma warning(disable : 4996)
 namespace sow_web_jsx {
 	namespace wrapper {
 		void response_body_flush();
 		void clear_cache();
+		const char* get_root_dir();
 		v8::Local<v8::Context> get_context(v8::Isolate * isolate, std::map<std::string, std::map<std::string, std::string>>& ctx);
 		v8::Local<v8::Context> get_console_context(v8::Isolate * isolate, std::map<std::string, std::string>&ctx);
 	}

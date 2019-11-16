@@ -21,14 +21,32 @@ void sow_web_jsx::set__exception(v8::Isolate * isolate, v8::TryCatch * try_catch
 	tr.is_error = true;
 	v8::String::Utf8Value exception(isolate, try_catch->Exception());
 	tr.err_msg = _toCharStr(exception);
+	v8::MaybeLocal<v8::Value> st = try_catch->StackTrace(isolate->GetCurrentContext());
+	if (!st.IsEmpty()) {
+		v8::String::Utf8Value stackTrace(isolate, st.ToLocalChecked());
+		tr.err_msg.append("\r\nStackTrace:\r\n");
+		tr.err_msg.append(_toCharStr(stackTrace));
+	}
+}
+const char* sow_web_jsx::set__exception(v8::Isolate * isolate, v8::TryCatch*try_catch) {
+	v8::String::Utf8Value exception(isolate, try_catch->Exception());
+	std::string error_str = _toCharStr(exception);
+	v8::MaybeLocal<v8::Value> st = try_catch->StackTrace(isolate->GetCurrentContext());
+	if (!st.IsEmpty()) {
+		v8::String::Utf8Value stackTrace(isolate, st.ToLocalChecked());
+		error_str.append("\r\nStackTrace:\r\n");
+		error_str.append(_toCharStr(stackTrace));
+	}
+	return error_str.c_str();
 }
 void sow_web_jsx::get_server_map_path(const char * req_path, std::string & output) {
 	output.append(req_path);
 	output = std::regex_replace(output, std::regex("(?:/)"), "\\");
-};
+}
 v8::Local<v8::String> sow_web_jsx::concat_msg(v8::Isolate * isolate, const char * a, const char * b) {
 	char *msg = (char*)malloc(strlen(a) + strlen(b));
 	sprintf(msg, "%s%s", a, b);
+	//v8::Local<v8::String> val = v8::String::NewFromUtf8(isolate, const_cast<const char*>(msg));
 	v8::Local<v8::String> val = sow_web_jsx::v8_str(isolate, const_cast<const char*>(msg));
 	free(msg);
 	return val;

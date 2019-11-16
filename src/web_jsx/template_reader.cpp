@@ -15,19 +15,28 @@ int template_read(
 	template_result & tr,
 	std::string&body) {
 	format__path(cur_template_path);
-	//std::cout << cur_template_path;//ERR_SPDY_PROTOCOL_ERROR
+	//std::cout << cur_template_path;//ERR_SPDY_PROTOCOL_ERROR chrome://net-export/
 	std::string physicalpath = root_dir + "\\" + cur_template_path;
+	if (physicalpath.size() > _MAX_PATH) {
+		//Ignore invalid template path
+		return -2;
+	}
 	size_t ret = read_file(physicalpath.c_str(), body, true);
 	if (ret < 0) {
 		tr.is_error = true;
-		tr.err_msg = tr.err_msg + "Parent Template =>" + cur_template_path + " not found. Chield Template =>" + parent_template + ".";
+		if (ret == -2) {
+			tr.err_msg += body.c_str();
+		}
+		else {
+			tr.err_msg = tr.err_msg + "Parent Template =>" + cur_template_path + " not found. Chield Template =>" + parent_template + ".";
+		}
 		return -1;
 	}
-	parent_template = cur_template_path;
+	parent_template = cur_template_path.c_str();
 	std::string().swap(cur_template_path);
 	std::regex__str(body, pattern_regx, cur_template_path);
 	body = std::regex_replace(body, pattern_regx, "");
-	if (cur_template_path.empty() || cur_template_path == "INVALID") {
+	if (cur_template_path.empty() || cur_template_path == "INVALID" || cur_template_path.size() > _MAX_PATH) {
 		//No more template here
 		return 0;
 	}
@@ -42,7 +51,15 @@ int template_reader::read_template(template_result& tr,
 	auto pattern_regx = new std::regex("#extends (.*)");
 	std::string* cur_template_path = new std::string();
 	std::regex__str(source, *pattern_regx, *cur_template_path);
-	if (cur_template_path->empty())return 0;
+	if (cur_template_path->empty()) { 
+		free(pattern_regx); free(cur_template_path);
+		return 0; 
+	}
+	if (cur_template_path->size() > _MAX_PATH) {
+		//Ignore invalid template path
+		free(pattern_regx); free(cur_template_path);
+		return 0;
+	}
 	int count, error;
 	templates.push_back(source);
 	std::string().swap(source);

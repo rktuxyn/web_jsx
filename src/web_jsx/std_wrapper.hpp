@@ -12,6 +12,9 @@
 #if !defined(_IOSTREAM_)
 #include <iostream>
 #endif // !_IOSTREAM_
+#if !defined(_SSTREAM_)
+#include <sstream> // std::stringstream
+#endif//_SSTREAM_
 #if !defined(_REGEX_)
 #include <regex>
 #endif// !_REGEX_
@@ -147,6 +150,7 @@ namespace std {
 			tmp = m.str(1);
 			return std::basic_string<CharT>("__NOP__");
 		}, 1);
+		//return __regex_macth_str(str.cbegin(), str.cend(), re);
 		return tmp;
 	}
 #define REGEX_MATCH_STR regex__matchstr
@@ -162,6 +166,7 @@ namespace std {
 			result = m.str(1);
 			return std::basic_string<CharT>("__NOP__");
 		}, 1);
+		//return __regex_macth_str(str.cbegin(), str.cend(), re);
 		return;
 	}
 	template<class Traits,
@@ -190,9 +195,9 @@ namespace std {
 			body_stream << match.str();
 			next++;
 		}
-		std::basic_string<CharT> tmp(body_stream.str());//
-		std::stringstream().swap(body_stream);
-		return tmp;
+		//std::basic_string<CharT> tmp(body_stream.str());//
+		//std::stringstream().swap(body_stream);
+		return body_stream.str();// __regex_macth_str(str.cbegin(), str.cend(), re);
 	};
 	template<class Traits,
 		class CharT>
@@ -246,7 +251,7 @@ namespace std {
 		class CharT, class DataRefStr>
 		std::basic_string<CharT>
 		regex__match_str_replace_all(DataRefStr& str,
-			const std::basic_regex<CharT, Traits>& re, _STD string repstr
+			const std::basic_regex<CharT, Traits>& re, std::string repstr
 		) {
 		return std::regex_replace(str, re, repstr);
 	}
@@ -273,7 +278,9 @@ namespace std {
 			const std::basic_regex<CharT, Traits>& re
 		) {
 		size_t count = 0;
+		//if (str == NULL)return 0;
 		if (str.empty())return count;
+		//return __regex_ismatch(str.cbegin(), str.cend(), re);
 		std::sregex_iterator next(str.begin(), str.end(), re);
 		//_STD sregex_iterator end;
 		std::sregex_iterator end;
@@ -282,6 +289,7 @@ namespace std {
 			count++;
 			break;
 		}
+		//if (next->length() > 0)return 1;
 		return count;
 
 	}
@@ -380,7 +388,7 @@ namespace std {
 		while ((first != last) && (first != --last)) {
 			std::iter_swap(first++, last);
 		}
-	}
+	};
 	// char b 'a' char c 'a'  if (b ==c) 
 	//5:34 AM 12/5/2018
 	//solution for const char* key and const char* value compaire
@@ -401,7 +409,7 @@ namespace std {
 		}
 		Iterator end() {
 			return _end;
-		}
+		};
 		Iterator find(const char* key) {
 			for (; _cur != _end; _cur++) {
 				if (strcmp(_cur->first, key) == 0) {
@@ -409,7 +417,7 @@ namespace std {
 				}
 			}
 			return _cur;
-		}
+		};
 		void operator++(int dummy) {
 			if (!has_next())
 				throw std::out_of_range("Out of range.");

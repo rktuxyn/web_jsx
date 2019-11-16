@@ -78,6 +78,10 @@ int evp_encrypt_x(std::stringstream& plaintext, unsigned char * key, unsigned ch
 	if (!(ctx = EVP_CIPHER_CTX_new())) {
 		return-1;
 	}
+	
+	/*if (1 != EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv)) {
+		return-1;
+	}*/
 	if (!EVP_CipherInit_ex(ctx, EVP_aes_128_cbc(), NULL, NULL, NULL, 1)) {
 		EVP_CIPHER_CTX_cleanup(ctx);
 		return -2;
@@ -91,11 +95,13 @@ int evp_encrypt_x(std::stringstream& plaintext, unsigned char * key, unsigned ch
 		return -3;
 	};
 	ctx->flags = EVP_PADDING_PKCS7;
+	//EVP_CIPHER_CTX_set_padding(ctx, EVP_PADDING_PKCS7);
 	plaintext.seekg(0, std::ios::end);//Go to end of stream
 	std::streamoff totalSize = plaintext.tellg();
 	std::streamoff utotalSize = totalSize;
 	plaintext.seekg(0, std::ios::beg);//Back to begain of stream
 	int write_len = 0;
+	//bool is_first = true;
 	std::streamsize n;
 	unsigned char outbuf[EBUFF + EVP_MAX_BLOCK_LENGTH];
 	unsigned char inbuf[EBUFF];
@@ -133,6 +139,9 @@ int evp_decrypt_x(std::stringstream& ciphertext, unsigned char * key, unsigned c
 	if (!(ctx = EVP_CIPHER_CTX_new())) {
 		return-1;
 	}
+	/*if (1 != EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv)) {
+		return-1;
+	}*/
 	if (!EVP_CipherInit_ex(ctx, EVP_aes_128_cbc(), NULL, NULL, NULL, 0)) {
 		EVP_CIPHER_CTX_cleanup(ctx);
 		return -2;
@@ -146,11 +155,13 @@ int evp_decrypt_x(std::stringstream& ciphertext, unsigned char * key, unsigned c
 		return -3;
 	};
 	ctx->flags = EVP_PADDING_PKCS7;//EVP_CIPH_NO_PADDING
+	//EVP_CIPHER_CTX_set_padding(ctx, EVP_PADDING_PKCS7);
 	ciphertext.seekg(0, std::ios::end);//Go to end of stream
 	std::streamoff totalSize = ciphertext.tellg();
 	std::streamoff utotalSize = totalSize;
 	ciphertext.seekg(0, std::ios::beg);//Back to begain of stream
 	int write_len = 0;
+	//bool is_first = true;
 	std::streamsize n;
 	unsigned char outbuf[EBUFF + EVP_MAX_BLOCK_LENGTH];
 	unsigned char inbuf[EBUFF];
@@ -269,6 +280,9 @@ int crypto::encrypt(const char* plain_text, const char * key, const char * iv, s
 	strcpy(key_text, key);
 	char * iv_text = (char*)malloc(strlen(iv) + 1);
 	strcpy(iv_text, iv);
+	//unsigned char ciphertext[1024 + EVP_MAX_BLOCK_LENGTH];
+	// Encrypt the plaintext 
+	//unsigned char* ciphertext = (unsigned char*)malloc(plain_text_len + EVP_MAX_BLOCK_LENGTH);
 	unsigned char* ciphertext = (unsigned char*)malloc((((plain_text_len + EVP_MAX_BLOCK_LENGTH) / EVP_MAX_BLOCK_LENGTH) * EVP_MAX_BLOCK_LENGTH) + 1);
 	if (ciphertext == NULL) return -10;
 	int ciphertext_len = crypto::evp_encrypt (
@@ -280,6 +294,7 @@ int crypto::encrypt(const char* plain_text, const char * key, const char * iv, s
 	if (ciphertext_len < 0) {
 		free(ciphertext);
 		encrypt_text = std::to_string(ciphertext_len);
+		//encrypt_text.append((const char *)ciphertext, strlen((const char *)ciphertext));
 		return ciphertext_len;
 	}
 	ciphertext[ciphertext_len] = '\0';
@@ -294,6 +309,12 @@ int crypto::decrypt(const char * encrypt_text, const char * key, const char * iv
 	/* Buffer for the decrypted text */
 	std::string* _encrypt_text = new std::string();
 	hex_to_string(encrypt_text, *_encrypt_text);
+	/*std::stringstream ss(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
+	ss << _encrypt_text->data();
+	int res = evp_decrypt_x(ss, (unsigned char *)key, (unsigned char *)iv, plain_text);
+	delete _encrypt_text;
+	std::stringstream().swap(ss);
+	return res;*/
 	const char* enc_txt = _encrypt_text->c_str();
 	int encrypt_text_len = (int)strlen ((char *)enc_txt);
 	char * enc_text = (char*)malloc(encrypt_text_len + 1);
@@ -305,6 +326,7 @@ int crypto::decrypt(const char * encrypt_text, const char * key, const char * iv
 
 	unsigned char*decryptedtext = (unsigned char*)malloc(encrypt_text_len);
 	if (decryptedtext == NULL) return -10;
+	//unsigned char decryptedtext[1024 + EVP_MAX_BLOCK_LENGTH];
 	int decryptedtext_len = crypto::evp_decrypt(
 		reinterpret_cast<unsigned char*>(enc_text),
 		encrypt_text_len, reinterpret_cast<unsigned char*>(key_text),
@@ -315,10 +337,12 @@ int crypto::decrypt(const char * encrypt_text, const char * key, const char * iv
 	if (decryptedtext_len < 0) {
 		free(decryptedtext);
 		plain_text = std::to_string(decryptedtext_len);
+		//plain_text.append((const char *)decryptedtext, strlen((const char *)decryptedtext));
 		return decryptedtext_len;
 	}
 	decryptedtext[decryptedtext_len] = '\0';
 	plain_text = std::string((const char *)decryptedtext, decryptedtext_len);
+	//plain_text.append((const char *)decryptedtext, decryptedtext_len);
 	free(decryptedtext);
 	return decryptedtext_len;
 };

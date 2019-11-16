@@ -15,28 +15,46 @@ void sow_web_jsx::js_compiler::v8_engine::create_engine(const char * exec_path) 
 		v8::ArrayBuffer::Allocator::NewDefaultAllocator();
 	v8::V8::Initialize();
 	_isolate = v8::Isolate::New(create_params);
-};
+}
 
 sow_web_jsx::js_compiler::v8_engine::v8_engine(const char * exec_path) {
 	_disposed = false;
 	create_engine(exec_path);
-};
+	//has_context = false;
+}
 
 v8::Isolate * sow_web_jsx::js_compiler::v8_engine::get_current_isolate() {
+	if (_disposed) {
+		throw new std::runtime_error("Engine already disposed!!!");
+	}
+	v8::Isolate*iso = v8::Isolate::GetCurrent();
+	if (iso != NULL)return iso;
 	return _isolate;
-};
+}
+
+/*v8::Local<v8::Context> sow_web_jsx::js_compiler::v8_engine::get_context() {
+	return v8::Local<v8::Context>::New(_isolate, _context);
+}
+
+void sow_web_jsx::js_compiler::v8_engine::set_context(v8::Local<v8::Context> ctx) {
+	if (has_context)return;
+	has_context = true;
+	_context.Reset(_isolate, ctx);
+}*/
 
 void sow_web_jsx::js_compiler::v8_engine::dispose() {
 	if (_disposed)return;
 	_disposed = true;
+	//v8::Local<v8::Context> ctx = v8::Local<v8::Context>::New(_isolate, _context);
+	//ctx->DetachGlobal();
+	//ctx.Clear();
 	v8::V8::Dispose();
 	v8::V8::ShutdownPlatform();
 	delete _platform;
 	_isolate = NULL;
-};
+}
 
 sow_web_jsx::js_compiler::v8_engine::~v8_engine() {
 	if (_disposed)return;
-	_disposed = true;
 	dispose();
-};
+}

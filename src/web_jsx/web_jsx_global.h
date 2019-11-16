@@ -10,10 +10,6 @@
 #endif//!_MSC_VER
 #if !defined(_web_jsx_global_h)
 #define _web_jsx_global_h
-#if !defined(FAST_CGI_APP)
-//#define FAST_CGI_APP
-#endif//!FAST_CGI_APP
-//#undef FAST_CGI_APP
 #if !defined(_IOSTREAM_)
 #include <iostream>
 #endif // !_IOSTREAM_
@@ -102,14 +98,26 @@ _access(fname, 0)!=-1
 #if !defined(directory__h)
 #include "directory_.h"
 #endif//!directory__h
+#if !defined(_glb_r_h)
+#include "glb_r.h"
+#endif//!_glb_r_h
 #if !defined(READ_CHUNK)
 #define READ_CHUNK		16384
 #endif//!READ_CHUNK
 //#define __WIN_API
 //#define __EXPORT
+#if defined(FAST_CGI_APP)
+#if !defined(H_N_L)
+#define H_N_L "\r\n"
+#endif//!H_N_L
+#else
+#if !defined(H_N_L)
+#define H_N_L "\n"
+#endif//!H_N_L
+#endif//FAST_CGI_APP
 #define jsx_export __declspec(dllexport)
 #define __client_build
-#undef __client_build
+//#undef __client_build
 #define FORCE_EXIT_PROCESS	9
 #ifdef __cplusplus
 #pragma warning(disable : 4996)
@@ -145,6 +153,9 @@ extern "C" {
 namespace sow_web_jsx {
 	void format__path(std::string&str);
 	void get_dir_from_path (const std::string& path_str, std::string&dir);
+	/*int dir_exists(const char* dir);
+	int create_directory(const char* dir);
+	//int delete_directory(const char* dir);*/
 	int create_process(const process_info*pi);
 	long create_child_process(const char*process_path, const char*arg);
 	int open_process(const char*process_path, const char*arg);
@@ -152,8 +163,8 @@ namespace sow_web_jsx {
 #if defined(_WINDOWS_)
 	wchar_t* ccr2ws(const char* s);
 	int kill_process_by_name(const char *process_name);
-	DWORD process_is_running(DWORD dwPid);
-	DWORD terminate_process(DWORD dwPid);
+	int process_is_running(DWORD dwPid);
+	int terminate_process(DWORD dwPid);
 	DWORD current_process_id();
 	//https://stackoverflow.com/questions/22088234/redirect-the-stdout-of-a-child-process-to-the-parent-process-stdin
 	enum { ParentRead, ParentWrite, ChildWrite, ChildRead, NumPipeTypes };
@@ -208,6 +219,8 @@ namespace sow_web_jsx {
 			&si/*lpStartupInfo*/,
 			&pinfo/*lpProcessInformation*/))
 			return -1;
+		/*if (!CreateProcess(NULL, cmd, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pinfo))
+			return -1;*/
 		CloseHandle(pinfo.hProcess);
 		CloseHandle(pinfo.hThread);
 		CloseHandle(pipes[ChildRead]);
@@ -228,5 +241,6 @@ namespace sow_web_jsx {
 	jsx_export size_t read_file(const char*absolute_path, std::stringstream&ssstream, bool check_file_exists);
 	size_t read_file(const char*absolute_path, std::string&str, bool check_file_exists);
 	char* read_file(const char* absolute_path, bool check_file_exists);
+	const char* get_error_desc(int error_code);
 };
 #endif //!_web_jsx_global_h

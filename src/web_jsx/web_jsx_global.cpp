@@ -33,44 +33,81 @@ int sow_web_jsx::open_process(const char*process_path, const char*arg) {
 	std::string().swap(str);
 	return 1;
 }
-DWORD sow_web_jsx::process_is_running(DWORD dwPid) {
-	HANDLE explorer;
-	explorer = OpenProcess(PROCESS_ALL_ACCESS, false, dwPid);
-	if (explorer == NULL)return -1;
-	CloseHandle(explorer);
-	return 1;
+int sow_web_jsx::process_is_running(DWORD dwPid) {
+	HANDLE hProcess = CreateToolhelp32Snapshot(TH32CS_SNAPALL, 0);
+	if (hProcess == INVALID_HANDLE_VALUE || hProcess == NULL)return -1;
+	PROCESSENTRY32 pe = { 0 };
+	pe.dwSize = sizeof(pe);
+	int ret = ((int)dwPid) * -1;
+	if (Process32First(hProcess, &pe)) {
+		do {
+			if (pe.th32ProcessID == dwPid) {
+				ret = (int)dwPid;
+				break;
+			}
+		} while (Process32Next(hProcess, &pe));
+	}
+	CloseHandle(hProcess);
+	return ret;
 }
-DWORD sow_web_jsx::terminate_process(DWORD dwPid) {
+int sow_web_jsx::terminate_process(DWORD dwPid) {
 	HANDLE explorer;
 	explorer = OpenProcess(PROCESS_ALL_ACCESS, false, dwPid);
-	if ( explorer == NULL) return GetLastError();
+	if (explorer == INVALID_HANDLE_VALUE || explorer == NULL)return -1;
+	DWORD le = GetLastError();
+	if (le == ERROR_ACCESS_DENIED)return -501;
+	if (le == ERROR_INVALID_PARAMETER)return -500;
 	TerminateProcess(explorer, 1);
 	CloseHandle(explorer);
 	return 1;
 }
 DWORD sow_web_jsx::current_process_id() {
-	return GetCurrentProcessId();
+	return ::GetCurrentProcessId();
 }
+//const char* ws2ccr(WCHAR* wc) {
+//	char output[256];
+//	wcslen(wc);
+//	sprintf(output, "%ws", wc);
+//}
+//bool isRunning(const char* p_name) {
+//	HWND hwnd;
+//	LPCWSTR pName = (LPCWSTR)sow_web_jsx::ccr2ws(p_name);
+//	hwnd = FindWindow(NULL, pName);
+//	return hwnd != 0;
+//}
 //10:40 PM 3/12/2019
 int sow_web_jsx::kill_process_by_name(const char *process_name) {
 	HANDLE hSnapShot = CreateToolhelp32Snapshot(TH32CS_SNAPALL, NULL);
-	if (hSnapShot == INVALID_HANDLE_VALUE)
-		return -1;
+	if (hSnapShot == INVALID_HANDLE_VALUE || hSnapShot == NULL)return -1;
 	PROCESSENTRY32 pEntry;
 	pEntry.dwSize = sizeof (pEntry);
 	BOOL hRes = Process32First(hSnapShot, &pEntry);
-	const wchar_t* p_name = sow_web_jsx::ccr2ws(process_name);
-	while (hRes) {
-		if (wcscmp (pEntry.szExeFile, p_name) == 0) {
-			HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, 0,
-				(DWORD)pEntry.th32ProcessID);
-			if (hProcess != NULL) {
-				TerminateProcess(hProcess, FORCE_EXIT_PROCESS);
-				CloseHandle(hProcess);
+	if (Process32First(hSnapShot, &pEntry)) {
+		const wchar_t* p_name = sow_web_jsx::ccr2ws(process_name);
+		do {
+			if (wcscmp (pEntry.szExeFile, p_name) == 0) {
+				HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, 0,
+					(DWORD)pEntry.th32ProcessID);
+				if (hProcess != NULL && hProcess != INVALID_HANDLE_VALUE) {
+					TerminateProcess(hProcess, FORCE_EXIT_PROCESS);
+					CloseHandle(hProcess);
+				}
 			}
-		}
-		hRes = Process32Next(hSnapShot, &pEntry);
+		} while (Process32Next(hSnapShot, &pEntry));
 	}
+	//while (hRes) {
+	//	//wcscmp (pEntry.szExeFile, p_name);
+	//	//if (strcmp(ws2ccr(pEntry.szExeFile), process_name) == 0) {
+	//	if (wcscmp (pEntry.szExeFile, p_name) == 0) {
+	//		HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, 0,
+	//			(DWORD)pEntry.th32ProcessID);
+	//		if (hProcess != NULL && hProcess != INVALID_HANDLE_VALUE) {
+	//			TerminateProcess(hProcess, FORCE_EXIT_PROCESS);
+	//			CloseHandle(hProcess);
+	//		}
+	//	}
+	//	hRes = Process32Next(hSnapShot, &pEntry);
+	//}
 	CloseHandle(hSnapShot);
 	return 1;
 }
@@ -127,19 +164,22 @@ int sow_web_jsx::create_process(const process_info*pi) {
 		&si/*lpStartupInfo*/,
 		&pinfo/*lpProcessInformation*/)) {
 		//  we are good
-		
 		DWORD dwPid = GetProcessId(pinfo.hProcess);
+		//HANDLE explorer;
+		//explorer = OpenProcess(PROCESS_ALL_ACCESS, false, dwPid);
+		//TerminateProcess(explorer, 1);
+		//CloseHandle(explorer);
 		if (pi->wait_for_exit > 0 || pi->dw_creation_flags == CREATE_NEW_PROCESS_GROUP) {
 			//Wait until child process exits.
 			WaitForSingleObject(pinfo.hProcess, INFINITE);
 			CloseHandle(pinfo.hProcess);
 			CloseHandle(pinfo.hThread);
-			
 		}
 		CoTaskMemFree(pszApp);
 		CoTaskMemFree(pszCmdLine);
 		return (int)dwPid;
 	};
+	//660
 	//https://docs.microsoft.com/en-us/windows/desktop/debug/system-error-codes--0-499
 	return (int)GetLastError();
 }
@@ -174,7 +214,6 @@ long sow_web_jsx::create_child_process(const char*process_path, const char*arg) 
 		else {
 			hr = HRESULT_FROM_WIN32(GetLastError());
 		}
-
 		CoTaskMemFree(pszApp);
 		CoTaskMemFree(pszCmdLine);
 	}
@@ -182,6 +221,28 @@ long sow_web_jsx::create_child_process(const char*process_path, const char*arg) 
 }
 
 #endif
+const char * sow_web_jsx::get_error_desc(int error_code) {
+	switch (error_code) {
+	case ERROR_FILE_NOT_FOUND: return "The system cannot find the file specified!!!";
+	case ERROR_PATH_NOT_FOUND: return "The system cannot find the path specified!!!";
+	case ERROR_DIRECTORY: return "The directory name is invalid!!!";
+	case ERROR_ACCESS_DENIED:return "Access is denied!!!";
+	case ERROR_TOO_MANY_OPEN_FILES:return "The system cannot open the file!!!";
+	case ERROR_NOT_ENOUGH_MEMORY: return "Not enough memory resources are available to process this command!!!";
+	case ERROR_INVALID_NAME: return "The filename, directory name, or volume label syntax is incorrect!!!";
+	case ERROR_INVALID_HANDLE:return "The handle is invalid!!!";
+	case ERROR_INVALID_ACCESS:return "ERROR_INVALID_ACCESS!!!";
+	case ERROR_INVALID_DATA:return "The data is invalid!!!";
+	case ERROR_OUTOFMEMORY:return "Not enough memory resources are available to complete this operation!!!";
+	case ERROR_INVALID_DRIVE:return "The system cannot find the drive specified!!!";
+	case ERROR_SEEK:return "The drive cannot locate a specific area or track on the disk!!!";
+	case ERROR_READ_FAULT:return "The system cannot read from the specified device!!!";
+	default:return "Unknown error code";
+	}
+}
+size_t read_binary() {
+	return -1;
+}
 size_t sow_web_jsx::read_file(const char*absolute_path, std::stringstream&ssstream, bool check_file_exists) {
 	if (check_file_exists) {
 		if (__file_exists(absolute_path) == false) { 
@@ -191,8 +252,10 @@ size_t sow_web_jsx::read_file(const char*absolute_path, std::stringstream&ssstre
 	}
 	FILE*fs;
 	errno_t err = fopen_s(&fs, absolute_path, "rb");
-	if (fs == NULL) return -1;
-	if (err != 0) return -1;
+	if (fs == NULL || err != 0) { 
+		ssstream << get_error_desc(err);
+		return -2;
+	}
 	fseek(fs, 0, SEEK_END);
 	size_t t_length = ftell(fs);
 	rewind(fs);
@@ -209,7 +272,7 @@ size_t sow_web_jsx::read_file(const char*absolute_path, std::stringstream&ssstre
 			fclose(fs);
 			std::stringstream().swap(ssstream);
 			ssstream << "ERROR OCCURED WHILE READING FILE#" << absolute_path;
-			return -1;
+			return -2;
 		}
 		r_length += read_length;
 		ssstream.write(buff, read_length);

@@ -6,11 +6,25 @@
 * See the accompanying LICENSE file for terms.
 */
 #include "pdf_generator.h"
+#if defined(FAST_CGI_APP)
+bool _store_resource = false;
+void on_resource_free() {
+	/* We will no longer be needing wkhtmltoimage funcionality */
+	wkhtmltopdf_deinit();
+}
+#endif//FAST_CGI_APP
+pdf_ext::pdf_generator::pdf_generator() {
+	_status = -1;
+	version = wkhtmltopdf_version();
+	_prepared_wgs = -1;
+	_prepared_wos = -1;
+	prepare_default_settings();
+}
 void pdf_ext::pdf_generator::set_status(int ret_val, const char * ret_msg) {
 	_msg = new char[strlen(ret_msg) + 1];
 	strcpy(_msg, ret_msg);
 	_status = ret_val;
-};
+}
 void pdf_ext::pdf_generator::init_func() {
 	if (finished != nullptr) {
 		wkhtmltopdf_set_finished_callback(_converter, finished);
@@ -38,7 +52,7 @@ int pdf_ext::pdf_generator::init_wgs() {
 		wkhtmltopdf_set_global_setting(_wgs, itr->first, itr->second);
 	}
 	return _status;
-};
+}
 int pdf_ext::pdf_generator::init_wos() {
 	if (_status < 0) {
 		set_status(-1, "Not initilized. Please call `init(true);`!!!");
@@ -49,23 +63,16 @@ int pdf_ext::pdf_generator::init_wos() {
 		wkhtmltopdf_set_object_setting(_wos, itr->first, itr->second);
 	}
 	return _status;
-};
+}
 int pdf_ext::pdf_generator::validate_settings(std::vector<const char*>& key, std::map<const char*, const char*>& settings) {
 	return _status;
-};
-pdf_ext::pdf_generator::pdf_generator() {
-	_status = -1;
-	version = wkhtmltopdf_version();
-	_prepared_wgs = -1;
-	_prepared_wos = -1;
-	prepare_default_settings();
-};
+}
 const char * pdf_ext::pdf_generator::get_status_msg() {
 	return const_cast<const char*>(_msg);
-};
+}
 pdf_ext::pdf_generator::~pdf_generator() {
 	if (!_disposed)dispose();
-};
+}
 void pdf_ext::pdf_generator::prepare_default_settings() {
 	_wgs_settings = new std::map<const char*, const char*>{
 		{ "useCompression", "false" }, { "documentTitle", "Hello World" }, { "size.paperSize", "A4" },
@@ -84,7 +91,7 @@ void pdf_ext::pdf_generator::prepare_default_settings() {
 		{ "footer.line", "false" }, { "footer.spacing", "0" }
 	};
 	malloc(sizeof _wos_settings);
-};
+}
 int pdf_ext::pdf_generator::init(int use_graphics) {
 	_status = -1;
 	if (wkhtmltopdf_init(use_graphics) != 1) {
@@ -93,11 +100,17 @@ int pdf_ext::pdf_generator::init(int use_graphics) {
 		set_status(_status, "PDF Engine init failed!!!");
 		return -1;
 	}
+#if defined(FAST_CGI_APP)
+	if (_store_resource == false) {
+		_store_resource = true;
+		sow_web_jsx::register_resource(on_resource_free);
+	}
+#endif//FAST_CGI_APP
 	_wgs = wkhtmltopdf_create_global_settings();
 	_wos = wkhtmltopdf_create_object_settings();
 	_status = 1;
 	return _status;
-};
+}
 int pdf_ext::pdf_generator::update_map_key(std::map<const char*, const char*>&header, const char*key, const char*values) {
 	std::const_cmp_iter<std::map<const char*, const char*>::iterator> itr(header.begin(), header.end());
 	auto it = itr.find(key);
@@ -106,7 +119,7 @@ int pdf_ext::pdf_generator::update_map_key(std::map<const char*, const char*>&he
 		return 1;
 	}
 	return -1;
-};
+}
 int pdf_ext::pdf_generator::init(int use_graphics, std::map<const char*, const char*>& wgs_settings, std::map<const char*, const char*>& wos_settings) {
 	_status = -1;
 	if (wkhtmltopdf_init(use_graphics) != 1) {
@@ -142,7 +155,7 @@ int pdf_ext::pdf_generator::init(int use_graphics, std::map<const char*, const c
 	
 	_status = 1;
 	return _status;
-};
+}
 
 long pdf_ext::pdf_generator::generate(const char * html, std::string& str_output) {
 	//const char *html = "<b>foo</b>bar";
@@ -258,7 +271,6 @@ int pdf_ext::pdf_generator::generate_to_path(const char * html, const char * out
 	set_status (1, "Success");
 	return wkhtmltopdf_http_error_code(_converter);
 }
-;
 int pdf_ext::pdf_generator::generate(const char* url, const char * output_path) {
 	if (_status < 0) {
 		set_status (-1, "Not initialized!");
@@ -282,7 +294,6 @@ int pdf_ext::pdf_generator::generate(const char* url, const char * output_path) 
 	set_status (1, "Success");
 	return wkhtmltopdf_http_error_code(_converter);
 }
-;
 int pdf_ext::pdf_generator::generate(const std::string html, const char* output_path) {
 	if (_status < 0) {
 		set_status (-1, "Not initialized!");
@@ -304,7 +315,7 @@ int pdf_ext::pdf_generator::generate(const std::string html, const char* output_
 	}
 	set_status (1, "Success");
 	return wkhtmltopdf_http_error_code(_converter);
-};
+}
 int pdf_ext::pdf_generator::generate_from_url(const char * url, std::string& str_output) {
 	if (_status < 0) {
 		set_status (-1, "Not initialized!");
@@ -327,9 +338,10 @@ int pdf_ext::pdf_generator::generate_from_url(const char * url, std::string& str
 	const unsigned char *data = NULL;
 	unsigned long len = wkhtmltopdf_get_output(_converter, &data);
 	str_output = std::string(reinterpret_cast<const char*>(data), len);
+	delete[] data;
 	set_status (1, "Success");
 	return static_cast<int>(len);
-};
+}
 int pdf_ext::pdf_generator::generate_from_url(const char * url, const char* output_path) {
 	if (_status < 0) {
 		set_status (-1, "Not initialized!");
@@ -350,11 +362,11 @@ int pdf_ext::pdf_generator::generate_from_url(const char * url, const char* outp
 	}
 	set_status (1, "Success");
 	return wkhtmltopdf_http_error_code(_converter);
-};
+}
 void pdf_ext::pdf_generator::global_settings(std::map<const char*, const char*>& settings) {
-};
+}
 void pdf_ext::pdf_generator::object_settings(std::map<const char*, const char*>& settings) {
-};
+}
 
 void pdf_ext::pdf_generator::dispose() {
 	if (!_disposed) {
@@ -363,8 +375,10 @@ void pdf_ext::pdf_generator::dispose() {
 		if (_converter != NULL) {
 			/* Destroy the converter object since we are done with it */
 			wkhtmltopdf_destroy_converter(_converter);
+#if !defined(FAST_CGI_APP)
 			/* We will no longer be needing wkhtmltoimage funcionality */
 			wkhtmltopdf_deinit();
+#endif//FAST_CGI_APP
 		}
 		delete _wgs_settings; delete _wos_settings;
 	}

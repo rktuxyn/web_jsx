@@ -20,11 +20,12 @@
 #include "template_reader.h"
 #endif//_template_reader_h
 namespace sow_web_jsx {
-	jsx_export void js_write_header(std::stringstream&stream);
+	void add_common_func(std::stringstream& stream);
+	jsx_export void js_write_header(std::stringstream&js_stream);
 	jsx_export void js_write_footer(std::string&str);
-	jsx_export void js_write_footer(std::stringstream&stream);
-	jsx_export void js_write_console_header(std::stringstream&stream);
-	jsx_export void js_write_console_footer(std::stringstream&stream);
+	jsx_export void js_write_footer(std::stringstream&js_stream);
+	jsx_export void js_write_console_header(std::stringstream&js_stream);
+	jsx_export void js_write_console_footer(std::stringstream&js_stream);
 	namespace script_tag_parser {
 		int parse(
 			template_result & tr,

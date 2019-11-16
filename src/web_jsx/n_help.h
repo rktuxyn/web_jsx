@@ -21,6 +21,8 @@ namespace sow_web_jsx {
 		static void add_header(std::map<std::string, std::string>&header, const std::string&key, const std::string&values);
 		static void remove_header(std::map<std::string, std::string>&header, const std::string&key);
 		static int is_gzip_encoding(std::map<std::string, std::string>&header);
+		static int is_binary_response(std::map<std::string, std::string>&header);
+		static int is_attachment_response(std::map<std::string, std::string>&header);
 		static void write_header(std::map<std::string, std::string>&header);
 		static void write_cookies(std::vector<std::string>&cookies);
 		static void v8_object_loop(v8::Isolate* isolate, const v8::Local<v8::Object>v8_obj, std::map<const char*, const char*>&out_put);

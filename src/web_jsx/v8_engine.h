@@ -29,9 +29,13 @@ namespace sow_web_jsx {
 			v8::Platform* _platform;
 			bool _disposed;
 			void create_engine(const char*exec_path);
+			//v8::Persistent<v8::Context>_context;
 		public:
+			//bool has_context;
 			v8_engine(const char*exec_path);
 			v8::Isolate* get_current_isolate();
+			//v8::Local<v8::Context> get_context();
+			//void set_context(v8::Local<v8::Context> ctx);
 			void dispose();
 			~v8_engine();
 		};

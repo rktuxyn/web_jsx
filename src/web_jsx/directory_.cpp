@@ -8,23 +8,23 @@
 //3:21 PM 12/24/2018
 bool __is_match_extension_x (const std::string& path_str, const std::regex & pattern) {
 	return std::regex__ismatch(path_str, pattern);
-};
+}
 bool __is_match_extension (const std::string& path_str, const char* ext) {
 	size_t found = path_str.find_last_of(".");
 	if (found == std::string::npos)
 		return false;
 	return strcmp(path_str.substr(found + 1).c_str(), ext) == 0;
-};
+}
 #if !defined(_WINDOWS_)
 int sow_web_jsx::read_directory_files(const char* name, std::vector<char*>&directory) {
 #error Not Implemented
-};
+}
 int sow_web_jsx::read_directory_sub_directory(const char* name, std::vector<const char*>&directory, const char* ext) {
 #error Not Implemented
-};
+}
 int sow_web_jsx::read_directory_sub_directory(const char* name, std::vector<std::string>&directory, const char* ext) {
 #error Not Implemented
-};
+}
 int sow_web_jsx::dir_exists(const char* dir) {
 	struct stat stats;
 	stat(dir, &stats);
@@ -32,16 +32,16 @@ int sow_web_jsx::dir_exists(const char* dir) {
 	if (S_ISDIR(stats.st_mode))
 		return 1;
 	return 0;
-};
+}
 int sow_web_jsx::create_directory(const char* dir) {
 #error Not Implemented
-};
+}
 int sow_web_jsx::delete_dir(const char * name) {
 #error Not Implemented
-};
+}
 int sow_web_jsx::read_directory_sub_directory_x(const char * name, std::vector<std::string>& directory, const std::regex& pattern) {
 #error Not Implemented
-};
+}
 #else
 int sow_web_jsx::read_directory_files(const char* name, std::vector<char*>&directory) {
 	DIR *dir;
@@ -58,7 +58,7 @@ int sow_web_jsx::read_directory_files(const char* name, std::vector<char*>&direc
 	}
 	closedir (dir);
 	return EXIT_SUCCESS;
-};
+}
 int sow_web_jsx::read_directory_sub_directory(const char* name, std::vector<const char*>&directory, const char* ext) {
 	DIR *dir;
 	if (!(dir = opendir(name)))
@@ -86,7 +86,7 @@ int sow_web_jsx::read_directory_sub_directory(const char* name, std::vector<cons
 	}
 	closedir (dir);
 	return EXIT_SUCCESS;
-};
+}
 int sow_web_jsx::read_directory_sub_directory(const char* name, std::vector<std::string>&directory, const char* ext) {
 	DIR *dir;
 	if (!(dir = opendir(name)))
@@ -116,8 +116,14 @@ int sow_web_jsx::read_directory_sub_directory(const char* name, std::vector<std:
 	}
 	closedir (dir);
 	return EXIT_SUCCESS;
-};
+}
 int sow_web_jsx::dir_exists(const char* dir) {
+	DWORD attribs = ::GetFileAttributesA(dir);
+	if (attribs == INVALID_FILE_ATTRIBUTES)return -2;
+	if (attribs && (attribs & FILE_ATTRIBUTE_DIRECTORY/*16*/))return 1;
+	return -1;
+}
+/*int sow_web_jsx::dir_exists(const char* dir) {
 	wchar_t* wString = (wchar_t*)malloc(MAX_PATH);
 	MultiByteToWideChar(CP_ACP, 0, dir, -1, wString, MAX_PATH);
 	if (CreateDirectory(wString, NULL)) {
@@ -130,7 +136,7 @@ int sow_web_jsx::dir_exists(const char* dir) {
 	}
 	free(wString);
 	return -3;
-};
+}*/
 int sow_web_jsx::create_directory(const char* dir) {
 	DIR* d = opendir(dir);
 	if (d != NULL) {
@@ -140,7 +146,7 @@ int sow_web_jsx::create_directory(const char* dir) {
 	if (_mkdir(dir) == 0)
 		return 2;
 	return -2;
-};
+}
 int sow_web_jsx::delete_dir(const char * name) {
 	DIR *dir;
 	if (!(dir = opendir(name)))
@@ -164,7 +170,7 @@ int sow_web_jsx::delete_dir(const char * name) {
 	if (_rmdir(name) == 0)
 		return EXIT_SUCCESS;
 	return EXIT_FAILURE;
-};
+}
 int sow_web_jsx::read_directory_sub_directory_x(const char * name, std::vector<std::string>& directory, const std::regex& pattern) {
 	DIR *dir;
 	if (!(dir = opendir(name)))
@@ -193,5 +199,5 @@ int sow_web_jsx::read_directory_sub_directory_x(const char * name, std::vector<s
 	}
 	closedir (dir);
 	return EXIT_SUCCESS;
-};
+}
 #endif//!_WINDOWS_

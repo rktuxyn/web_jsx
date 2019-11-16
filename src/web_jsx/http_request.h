@@ -20,6 +20,9 @@
 #if !defined(__CURL_CURL_H)
 #include <curl/curl.h>
 #endif//!__CURL_CURL_H
+#if !defined(_glb_r_h)
+#include "glb_r.h"
+#endif//!_glb_r_h
 namespace http_client {
 	class http_request {
 	private:

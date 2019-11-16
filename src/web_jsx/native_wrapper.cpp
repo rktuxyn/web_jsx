@@ -9,6 +9,7 @@
 using namespace sow_web_jsx;
 /*[Help]*/
 std::string*_root_dir;
+bool _is_interactive = false;
 bool _is_cli = false;
 bool _is_flush = false;
 std::stringstream _body_stream(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
@@ -16,6 +17,26 @@ std::map<std::string, std::string>* _headers;
 std::vector<std::string>* _cookies;
 std::vector<std::string>* _http_status;
 /*[/Help]*/
+int create_pgsql_connection(v8::Isolate* isolate, npgsql* pgsql, const char* conn) {
+	int rec = pgsql->connect(conn);
+	/*isolate->ThrowException(v8::Exception::Error(
+		v8::String::NewFromUtf8(isolate, "Ready")));*/
+	if (rec < 0 ) {
+		//std::cout << "Unable to connect db==>" << pgsql->get_last_error() << "\r\n";
+		isolate->ThrowException(v8::Exception::Error(
+			v8::String::NewFromUtf8(isolate, pgsql->get_last_error())));
+		return rec;
+	}
+	
+	return rec;
+}
+/// Executes the stored procedure @param sp_str and returns the first row as json string
+/// Opens a database connection with the connection settings specified by the @param con_str.
+/// @param con_str define the npgsql connection string
+/// @param sp_str define the specific stored procedure name
+/// @param ctx_str define the json string as stored procedure first param
+/// @param form_data_str define the json string as stored procedure second param
+/// @returns The first column of the first row as json string. e.g. {_ret_val number; _ret_msg string; _ret_data_table json string}
 void npgsql_execute_io(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
@@ -39,26 +60,15 @@ void npgsql_execute_io(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		return;
 	}
 	npgsql* pgsql = new npgsql();
-	malloc(sizeof pgsql);
-	int rec = !pgsql->is_iniit ? -1 : 0;
-	if (rec < 0) {
-		//std::cout << "UNABLE TO LOAD PGSQL LIB==>" << pgsql->get_last_error() << "\r\n";
-		free(pgsql);
-		isolate->ThrowException(v8::Exception::TypeError(
-			v8::String::NewFromUtf8(isolate, "Unable to initialize npgsql instance!!!")));
-		return;
-	}
+	//malloc(sizeof pgsql);
 	v8::String::Utf8Value vcon_str(isolate, args[0]);
-	rec = pgsql->connect(*vcon_str);
-	if (rec < 0 || pgsql->conn_state != connection_state::OPEN) {
-		//std::cout << "Unable to connect db==>" << pgsql->get_last_error() << "\r\n";
-		isolate->ThrowException(v8::Exception::Error(
-			v8::String::NewFromUtf8(isolate, pgsql->get_last_error())));
-		free(pgsql);
-		return;
-	};
+	int rec = create_pgsql_connection(isolate, pgsql, *vcon_str);
+	if (rec < 0) { 
+		pgsql->close(); free(pgsql);
+		return; 
+	}
 	std::map<std::string, char*>* result = new std::map<std::string, char*>();
-	malloc(sizeof result);
+	//malloc(sizeof result);
 	v8::String::Utf8Value sp_str(isolate, args[1]);
 	v8::String::Utf8Value ctx_str(isolate, args[2]);
 	v8::String::Utf8Value form_data_str(isolate, args[3]);
@@ -67,11 +77,13 @@ void npgsql_execute_io(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	if (rec < 0 ) {
 		isolate->ThrowException(v8::Exception::Error(
 			v8::String::NewFromUtf8(isolate, pgsql->get_last_error())));
+		pgsql->close();
 		free(pgsql); free(result);
 		return;
 	};
 	pgsql->close();
-	free(pgsql);
+	//free(pgsql);
+	delete pgsql;
 	v8::Handle<v8::Object> v8_result = v8::Object::New(isolate);
 	for (auto itr = result->begin(); itr != result->end(); ++itr) {
 		v8_result->Set(
@@ -79,6 +91,7 @@ void npgsql_execute_io(const v8::FunctionCallbackInfo<v8::Value>& args) {
 			v8::String::NewFromUtf8(isolate, const_cast<const char*>(itr->second))
 		);
 	}
+	//free(result);
 	delete result;
 	args.GetReturnValue().Set(v8_result);
 	v8_result.Clear();
@@ -89,11 +102,52 @@ void npgsql_execute_scalar(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::String::NewFromUtf8(isolate, "Not implemented yet!!!")));
 	return;
 };
-void npgsql_execute_non_query(const v8::FunctionCallbackInfo<v8::Value>& args) {
+
+void npgsql_execute_query(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
-	isolate->ThrowException(v8::Exception::Error(
-		v8::String::NewFromUtf8(isolate, "Not implemented yet!!!")));
+	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
+		isolate->ThrowException(v8::Exception::TypeError(
+			v8::String::NewFromUtf8(isolate, "Connection string required!!!")));
+		return;
+	}
+	if (!args[1]->IsString() || args[1]->IsNullOrUndefined()) {
+		isolate->ThrowException(v8::Exception::TypeError(
+			v8::String::NewFromUtf8(isolate, "Query string required!!!")));
+		return;
+	}
+	npgsql* pgsql = new npgsql();
+	//malloc(sizeof pgsql);
+	v8::String::Utf8Value vcon_str(isolate, args[0]);
+	int rec = create_pgsql_connection(isolate, pgsql, *vcon_str);
+	if (rec < 0) {
+		pgsql->close(); free(pgsql);
+		return;
+	}
+	v8::String::Utf8Value query_str(isolate, args[1]);
+	const char* result = pgsql->execute_query(*query_str, rec);
+	if (rec < 0) {
+		isolate->ThrowException(v8::Exception::Error(
+			v8::String::NewFromUtf8(isolate, pgsql->get_last_error())));
+		pgsql->close();
+		free(pgsql);
+		return;
+	};
+	pgsql->close();
+	//free(pgsql);
+	delete pgsql;
+	if (((result != NULL) && (result[0] == '\0')) || (result == NULL)) {
+		args.GetReturnValue().Set(v8::Number::New(isolate, 1));
+		return;
+	}
+	args.GetReturnValue().Set(v8::String::NewFromUtf8(isolate, result));
+	return;
 };
+
+///Executes the query @param query_str and give each row in @param func
+///Opens a database connection with the connection settings specified by the @param con_str.
+///@param con_str define the npgsql connection string
+///@param query_str define the PgSQL query string
+///@param func define the Function callback with param @param index is the number row and @param row is the data row array [columns]
 void npgsql_data_reader(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
@@ -116,23 +170,17 @@ void npgsql_data_reader(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	
 	cb.Reset(isolate, v8::Local<v8::Function>::Cast(args[2]));
 	npgsql* pgsql = new npgsql();
-	malloc(sizeof pgsql);
-	int rec = !pgsql->is_iniit ? -1 : 0;
+	//malloc(sizeof pgsql);
+	v8::String::Utf8Value vcon_str(isolate, args[0]);
+	int rec = create_pgsql_connection(isolate, pgsql, *vcon_str);
 	if (rec < 0) {
-		free(pgsql);
-		isolate->ThrowException(v8::Exception::Error(
-			v8::String::NewFromUtf8(isolate, "Unable to initialize npgsql instance!!!")));
+		pgsql->close();
+		delete pgsql;
 		return;
 	}
-	v8::String::Utf8Value vcon_str(isolate, args[0]);
-	rec = pgsql->connect(*vcon_str);
-	if (rec < 0 || pgsql->conn_state != connection_state::OPEN) {
-		//std::cout << "Unable to connect db==>" << pgsql->get_last_error() << "\r\n";
-		isolate->ThrowException(v8::Exception::Error(
-			v8::String::NewFromUtf8(isolate, pgsql->get_last_error())));
-		free(pgsql);
-		return;
-	};
+	//pgsql->close(); free(pgsql);
+	/*isolate->ThrowException(v8::Exception::Error(
+		v8::String::NewFromUtf8(isolate, "Run from here")));*/
 	v8::String::Utf8Value query_str(isolate, args[1]);
 	v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate, cb);
 	//5:38 AM 11/21/2018
@@ -145,20 +193,27 @@ void npgsql_data_reader(const v8::FunctionCallbackInfo<v8::Value>& args) {
 			sow_web_jsx::v8_str(isolate, row_str->c_str())
 		};
 		callback->Call(global, 2, arg);
-		free(row_str);
+		//free(row_str);
+		delete row_str;
 		return;
 	});
 	pgsql->close();
 	if (rec < 0) {
 		isolate->ThrowException(v8::Exception::Error(
 			v8::String::NewFromUtf8(isolate, pgsql->get_last_error())));
-		free(pgsql);
+		delete pgsql;
 		return;
 	};
-	free(pgsql); global.Clear();
+	//free(pgsql);
+	delete pgsql;  global.Clear();
 	callback.Clear();
 	args.GetReturnValue().Set(v8::Number::New(isolate, rec));
 };
+
+///Create a file from HTTP post data collection.
+///if http request method POST nor @throws Allowed only over POST data.
+///@param path A string containing server path
+///@throws Stram Write not readable|Directory not found exception|Permission denied
 void write_file_from_payload(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsNumber() || args[0]->IsNullOrUndefined()) {
@@ -234,6 +289,10 @@ void write_file_from_payload(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	args.GetReturnValue().Set(v8::Number::New(isolate, static_cast<double>(write_len)));
 	return;
 };
+
+///Read from current HTTP Payload stream chunk
+///@param func A function with @param buff as chunk reading buffer and @param count chunk buffer length
+///@throws if Http requset method not POST
 void read_payload(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsNumber() || args[0]->IsNullOrUndefined()) {
@@ -255,7 +314,6 @@ void read_payload(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	size_t read_length = 0;
 	size_t len = 0;
 	//DATA_READ_CHUNK should be 8192 according to FCGX_Accept_r(FCGX_Request *reqDataPtr) line 2154 file fcgiapp.c
-
 	while (true) {
 		char* buff;
 		if (content_length > DATA_READ_CHUNK) {
@@ -284,7 +342,13 @@ void read_payload(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	fclose(stdin);
 	callback.Clear();  global.Clear();
 	args.GetReturnValue().Set(v8::Number::New(isolate, static_cast<double>(content_length)));
-};
+}
+
+///Open new process and forget
+///@param process_path process full path
+///@param arg process argument
+///@throws Process not found
+///@returns {process_id}
 void native_open_process(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (_is_cli == false) {
@@ -381,7 +445,11 @@ void throw_js_error(v8::Isolate* isolate, const char* err) {
 		v8::String::NewFromUtf8(isolate, err)));
 	return;
 }
-//void kill_process_by_name(const char *process_name)
+
+///Kill any open process by name e.g. web_jsx_cgi.exe
+///@param process_name e.g. web_jsx_cgi.exe
+///@throws Permission denied
+///@returns {-1|0}
 void native_kill_process_by_name(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
@@ -398,6 +466,14 @@ void native_kill_process_by_name(const v8::FunctionCallbackInfo<v8::Value>& args
 	//ret = wcscmp (p_name, pr_name) == 0 ? 1 : -1;
 	args.GetReturnValue().Set(v8::Number::New(isolate, ret));
 }
+///Spwan new process|child process
+///@param option Containing {start_in:string, process_name:string, process_path:string, title:string, arg:string, wait_for_exit:boolean}
+///param start_in -> Process start directory default current location; not required
+///param process_name -> Process name default null; not required
+///param process_path -> Process full location required e.g. C:/web_jsx/web_jsx_cgi.exe
+///param title -> Process title not required
+///param arg -> Process argument not required
+///param wait_for_exit -> If you need to wait untill Process exit, than set true default false
 void native_create_process(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsObject() || args[0]->IsNullOrUndefined()) {
@@ -455,7 +531,7 @@ void native_create_process(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	std::string().swap(pri->process_path);
 	std::string().swap(pri->lp_title);
 	std::string().swap(pri->arg);
-	delete pri;
+	free(pri);
 	pi.Clear();
 	if (ret < 0) {
 		switch (ret) {
@@ -477,6 +553,12 @@ void native_create_process(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	//throw_js_error(isolate, std::string("ret" + std::to_string(ret) + "arg:" + pri->arg + "; start_in:" + pri->start_in + "; process_name:" + pri->process_name + "; process_path:" + pri->process_path).c_str());
 	
 }
+
+///Create new child process
+///@param process_path process full path
+///@param arg process argument
+///@throws Process not found
+///@returns {1}
 void native_create_child_process(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (_is_cli == false) {
@@ -508,6 +590,11 @@ void native_create_child_process(const v8::FunctionCallbackInfo<v8::Value>& args
 	};
 	args.GetReturnValue().Set(v8::Number::New(isolate, ret));
 };
+
+///Terminate open process by process id
+///@param pid process id
+///@throws Permission denied
+///@returns {if process found 1 or 0}
 void native_terminate_process(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate * isolate = args.GetIsolate();
 	if (!args[0]->IsNumber() || args[0]->IsNullOrUndefined()) {
@@ -519,12 +606,16 @@ void native_terminate_process(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	uint64_t pid = num->ToInteger(isolate)->Value();
 	int rec = 0;
 #if defined(_WINDOWS_)
-	rec = (int)sow_web_jsx::terminate_process((DWORD)pid);
+	rec = sow_web_jsx::terminate_process((DWORD)pid);
 #else
 #error Not Implemented
 #endif//_WINDOWS_
 	args.GetReturnValue().Set(v8::Number::New(isolate, rec));
 };
+
+///Check given process id is running
+///@param pid define Process Id
+///@returns {true|false}
 void native_process_is_running(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate * isolate = args.GetIsolate();
 	if (!args[0]->IsNumber() || args[0]->IsNullOrUndefined()) {
@@ -532,11 +623,11 @@ void native_process_is_running(const v8::FunctionCallbackInfo<v8::Value>& args) 
 			v8::String::NewFromUtf8(isolate, "PID Required!!!")));
 		return;
 	}
-	v8::Local<v8::Number> num = args[0]->ToNumber(isolate);
-	uint64_t pid = num->ToInteger(isolate)->Value();
+	//v8::Local<v8::Number> num = args[0]->ToNumber(isolate);
+	uint64_t pid = args[0]->ToInteger(isolate)->Value();//num->ToInteger(isolate)->Value();
 	int rec = 0;
 #if defined(_WINDOWS_)
-	rec = (int)sow_web_jsx::process_is_running((DWORD)pid);
+	rec = sow_web_jsx::process_is_running((DWORD)pid);
 #else
 #error Not Implemented
 #endif//_WINDOWS_
@@ -660,7 +751,112 @@ void read_directory(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	);
 	directory_v8_array.Clear();
 	args.GetReturnValue().Set(v8_result);
-};
+}
+void jsx_file_bind(v8::Isolate * isolate, v8::Local<v8::ObjectTemplate> ctx) {
+	auto tpl = v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		v8::Isolate* iso = args.GetIsolate();
+		if (!args.IsConstructCall()) {
+			iso->ThrowException(v8::Exception::TypeError(
+				v8::String::NewFromUtf8(iso, "Cannot call constructor as function!!!")));
+			return;
+		}
+		if (args[0]->IsNullOrUndefined() || !args[0]->IsString()) {
+			iso->ThrowException(v8::Exception::TypeError(
+				v8::String::NewFromUtf8(iso, "Path required!!!")));
+			return;
+		}
+		if (args[1]->IsNullOrUndefined() || !args[1]->IsString()) {
+			iso->ThrowException(v8::Exception::TypeError(
+				v8::String::NewFromUtf8(iso, "Mood required!!!")));
+			return;
+		}
+		v8::String::Utf8Value utf_abs_path_str(iso, args[0]);
+		v8::String::Utf8Value utf_mood_str(iso, args[1]);
+		//sow_web_jsx::make_object<jsx_file>(iso, args.This(), *utf_abs_path_str, *utf_mood_str);
+		v8::Local<v8::Object> obj = args.This();
+		std::string* abs_path = new std::string();
+		abs_path->append(_root_dir->c_str());
+		sow_web_jsx::get_server_map_path(*utf_abs_path_str, *abs_path);
+		jsx_file* xx = new jsx_file(abs_path->c_str(), *utf_mood_str);
+		obj->SetInternalField(0, v8::External::New(iso, xx));
+		v8::Persistent<v8::Object, v8::CopyablePersistentTraits<v8::Object>> pobj(iso, obj);
+		pobj.SetWeak<jsx_file*>(&xx, [](const v8::WeakCallbackInfo<jsx_file*> &data) {
+			delete[] data.GetParameter();
+		}, v8::WeakCallbackType::kParameter);
+		free(abs_path);
+	});
+	tpl->SetClassName(sow_web_jsx::v8_str(isolate, "file"));
+	tpl->InstanceTemplate()->SetInternalFieldCount(1);
+	v8::Local<v8::ObjectTemplate> prototype = tpl->PrototypeTemplate();
+	// Add object properties to the prototype
+	// Methods, Properties, etc.
+	prototype->Set(isolate, "read", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		v8::Isolate* iso = args.GetIsolate();
+		jsx_file* jf = sow_web_jsx::unwrap<jsx_file>(args);
+		if (jf->err != 0) {
+			iso->ThrowException(v8::Exception::TypeError(
+				v8::String::NewFromUtf8(iso, "Unable to create or open the file!!!")));
+			return;
+		}
+		args.GetReturnValue().Set(sow_web_jsx::v8_str(iso, jf->read()));
+	}));
+	prototype->Set(isolate, "write", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		v8::Isolate* iso = args.GetIsolate();
+		jsx_file* jf = sow_web_jsx::unwrap<jsx_file>(args);
+		if (jf->err != 0) {
+			iso->ThrowException(v8::Exception::TypeError(
+				v8::String::NewFromUtf8(iso, "Unable to create or open the file!!!")));
+			return;
+		}
+		if (jf->is_flush == 1) {
+			iso->ThrowException(v8::Exception::TypeError(
+				v8::String::NewFromUtf8(iso, "Already flush this file!!!")));
+			return;
+		}
+		v8::String::Utf8Value utf_str(iso, args[0]);
+		size_t ret = jf->write(*utf_str);
+		if (ret > 0) {
+			args.GetReturnValue().Set(v8::Number::New(iso, (double)ret));
+			return;
+		}
+		iso->ThrowException(v8::Exception::TypeError(
+			v8::String::NewFromUtf8(iso, "Unable to write data to file!!!")));
+		return;
+	}));
+	prototype->Set(isolate, "flush", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		v8::Isolate* iso = args.GetIsolate();
+		jsx_file* jf = sow_web_jsx::unwrap<jsx_file>(args);
+		if (jf->err != 0) {
+			iso->ThrowException(v8::Exception::TypeError(
+				v8::String::NewFromUtf8(iso, "Unable to create or open the file!!!")));
+			return;
+		}
+		if (jf->is_flush == 1) {
+			iso->ThrowException(v8::Exception::TypeError(
+				v8::String::NewFromUtf8(iso, "Already flush this file!!!")));
+			return;
+		}
+		jf->flush();
+	}));
+	ctx->Set(isolate, "file", tpl);
+}
+void native_exists_file(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	v8::Isolate* isolate = args.GetIsolate();
+	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
+		isolate->ThrowException(v8::Exception::TypeError(
+			v8::String::NewFromUtf8(isolate, "File absolute path required!!!")));
+		return;
+	}
+	v8::String::Utf8Value utf_abs_path_str(isolate, args[0]);
+	std::string* abs_path = new std::string();
+	abs_path->append(_root_dir->data());
+	sow_web_jsx::get_server_map_path(*utf_abs_path_str, *abs_path);
+	int ret = 0;
+	if (__file_exists(abs_path->c_str()) == false)
+		ret = 1;
+	free(abs_path);
+	args.GetReturnValue().Set(v8::Boolean::New(isolate, ret > 0));
+}
 void native_write_file(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
@@ -680,8 +876,8 @@ void native_write_file(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	sow_web_jsx::get_server_map_path(*utf_abs_path_str, *abs_path);
 	v8::Handle<v8::Object> v8_result = sow_web_jsx::native_write_filei(isolate, *abs_path, *utf_data_str);
 	args.GetReturnValue().Set(v8_result);
-	v8_result.Clear(); delete abs_path;
-};
+	v8_result.Clear(); free(abs_path);
+}
 void native_read_file(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
@@ -695,7 +891,7 @@ void native_read_file(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	sow_web_jsx::get_server_map_path(*utf_abs_path_str, *abs_path);
 	std::stringstream ssstream(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
 	size_t ret = sow_web_jsx::read_file(abs_path->data(), ssstream, true);
-	delete abs_path;
+	free(abs_path);
 	//const char* cstr2 = ssstream.str().c_str();
 	//std::stringstream().swap(ssstream);
 	v8::Handle<v8::Object> v8_result = v8::Object::New(isolate);
@@ -727,7 +923,7 @@ void native_read_file(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	args.GetReturnValue().Set(v8_result);
 	std::stringstream().swap(ssstream);
 	return;
-};
+}
 void native_write_from_file(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
@@ -742,12 +938,12 @@ void native_write_from_file(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	size_t ret = sow_web_jsx::read_file(abs_path->data(), _body_stream,  true);
 	if (ret < 0) {
 		isolate->ThrowException(v8::Exception::Error(sow_web_jsx::concat_msg(isolate, "No file foud!!! Server absolute path==>", abs_path->data())));
-		delete abs_path;
+		free(abs_path);
 		return;
 	}
-	delete abs_path;
+	free(abs_path);
 	return;
-};
+}
 void native_delete_directory(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
@@ -764,10 +960,10 @@ void native_delete_directory(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		args.GetReturnValue().Set(v8::String::NewFromUtf8(isolate, "Success"));
 	else
 		isolate->ThrowException(v8::Exception::Error(sow_web_jsx::concat_msg(isolate, "Directory does not exists!!! Server absolute path==>", abs_dir->data())));
-	delete abs_dir;
+	free(abs_dir);
 	return;
 
-};
+}
 void native_create_directory(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
@@ -791,10 +987,10 @@ void native_create_directory(const v8::FunctionCallbackInfo<v8::Value>& args) {
 			args.GetReturnValue().Set(sow_web_jsx::concat_msg(isolate, "Unknown error please retry!!! Dir#", abs_dir->data()));
 		}
 	}
-	delete abs_dir;
+	free(abs_dir);
 	return;
 	
-};
+}
 void async_func(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate *isolate = args.GetIsolate();
 	if (!args[0]->IsFunction()) {
@@ -835,7 +1031,7 @@ void async_func(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	cb.Reset(); 
 	callback.Clear();
 	args.GetReturnValue().Set(v8::Number::New(isolate, rec));
-};
+}
 void set_time_out_func(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate * isolate = args.GetIsolate();
 	if (!args[0]->IsFunction() || args[0]->IsNullOrUndefined()) {
@@ -867,7 +1063,7 @@ void set_time_out_func(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		} catch (...) {}
 	}, afa, milliseconds);
 	args.GetReturnValue().Set(v8::Number::New(isolate, rec));
-};
+}
 void generate_pdf(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	//11:14 PM 12/4/2018
 	v8::Isolate* isolate = args.GetIsolate();
@@ -908,10 +1104,10 @@ void generate_pdf(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		sow_web_jsx::get_dir_from_path(*abs_path, *dir);
 		if (!sow_web_jsx::dir_exists(dir->data())) {
 			isolate->ThrowException(v8::Exception::Error(sow_web_jsx::concat_msg(isolate, dir->data(), " does not exists!!! Please at first create directory.")));
-			delete dir; delete abs_path; config.Clear();
+			free(dir); free(abs_path); config.Clear();
 			return;
 		}
-		delete dir;
+		free(dir);
 		v8::Local<v8::Value> v8_global_settings_str = config->Get(sow_web_jsx::v8_str(isolate, "global_settings"));
 		auto wgs_settings = new std::map<const char*, const char*>();
 		if (!v8_global_settings_str->IsNullOrUndefined() && v8_global_settings_str->IsObject()) {
@@ -933,7 +1129,7 @@ void generate_pdf(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		malloc(sizeof pdf_gen);
 		int rec = 0;
 		rec = pdf_gen->init(true, *wgs_settings, *wos_settings);
-		delete wgs_settings; delete wos_settings;
+		free(wgs_settings); free(wos_settings);
 		v8::Handle<v8::Object> v8_result = v8::Object::New(isolate);
 		if (rec < 0) {
 			v8_result->Set(
@@ -946,7 +1142,7 @@ void generate_pdf(const v8::FunctionCallbackInfo<v8::Value>& args) {
 			);
 			args.GetReturnValue().Set(v8_result);
 			v8_result.Clear();
-			delete pdf_gen;
+			free(pdf_gen);
 			return;
 		}
 
@@ -965,9 +1161,9 @@ void generate_pdf(const v8::FunctionCallbackInfo<v8::Value>& args) {
 			auto str = new std::string(_body_stream.str());
 			malloc(sizeof str);
 			rec = pdf_gen->generate_to_path(str->data(), abs_path->c_str());
-			delete str;
+			free(str);
 		}
-		delete abs_path;
+		free(abs_path);
 		if (rec > 0) {
 			v8_result->Set(
 				v8::String::NewFromUtf8(isolate, "ret_val"),
@@ -990,33 +1186,78 @@ void generate_pdf(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		}
 		args.GetReturnValue().Set(v8_result);
 		v8_result.Clear();
-		delete pdf_gen;
+		free(pdf_gen);
 		return;
 	} catch (std::exception&e) {
 		args.GetReturnValue().Set(v8::String::NewFromUtf8(isolate, e.what()));
 	}
-};
+}
 void generate_pdf_from_body(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	try {
 		if (n_help::write_http_status(*_http_status, true) < 0) {
 			args.GetReturnValue().Set(v8::Number::New(isolate, -1));
 			return;
-		};
+		}
+		pdf_ext::pdf_generator* pdf_gen = new pdf_ext::pdf_generator();
+		int rec = 0;
+		malloc(sizeof pdf_gen);
+		if (args[0]->IsObject() && !args[0]->IsNullOrUndefined()) {
+			v8::Local<v8::Object> config = v8::Handle<v8::Object>::Cast(args[0]);
+			v8::Local<v8::Value> v8_path_str = config->Get(sow_web_jsx::v8_str(isolate, "path"));
+			if (!v8_path_str->IsNullOrUndefined()) {
+				isolate->ThrowException(v8::Exception::Error(
+					v8::String::NewFromUtf8(isolate, "You should not set output path here!!!")));
+				return;
+			}
+			v8::Local<v8::Value> v8_url_str = config->Get(sow_web_jsx::v8_str(isolate, "url"));
+			if (!v8_url_str->IsNullOrUndefined()) {
+				isolate->ThrowException(v8::Exception::Error(
+					v8::String::NewFromUtf8(isolate, "You should not set reading url here!!!")));
+				return;
+			}
+			v8::Local<v8::Value> v8_global_settings_str = config->Get(sow_web_jsx::v8_str(isolate, "global_settings"));
+			auto wgs_settings = new std::map<const char*, const char*>();
+			if (!v8_global_settings_str->IsNullOrUndefined() && v8_global_settings_str->IsObject()) {
+				v8::Local<v8::Object>v8_global_settings_object = v8::Local<v8::Object>::Cast(v8_global_settings_str);
+				n_help::v8_object_loop(isolate, v8_global_settings_object, *wgs_settings);
+				v8_global_settings_str.Clear();
+				v8_global_settings_object.Clear();
+			}
+			v8::Local<v8::Value> v8_object_settings_str = config->Get(sow_web_jsx::v8_str(isolate, "object_settings"));
+			auto wos_settings = new std::map<const char*, const char*>();
+			if (!v8_object_settings_str->IsNullOrUndefined() && v8_object_settings_str->IsObject()) {
+				v8::Local<v8::Object>v8_object_settings_object = v8::Local<v8::Object>::Cast(v8_object_settings_str);
+				n_help::v8_object_loop(isolate, v8_object_settings_object, *wos_settings);
+				v8_object_settings_str.Clear();
+				v8_object_settings_object.Clear();
+			}
+			config.Clear();
+			rec = pdf_gen->init(true, *wgs_settings, *wos_settings);
+			free(wgs_settings); free(wos_settings);
+		}
+		else {
+			rec = pdf_gen->init(true);
+		}
+		if (rec < 0) {
+			std::stringstream().swap(_body_stream);
+			_body_stream << pdf_gen->get_status_msg();
+			args.GetReturnValue().Set(v8::Number::New(isolate, rec));
+			pdf_gen->dispose();
+			free(pdf_gen);
+			return;
+		}
 		std::string*str = new std::string(_body_stream.str());
 		std::stringstream().swap(_body_stream);
 		malloc(sizeof str);
 		std::string str_output;
-		pdf_ext::pdf_generator* pdf_gen = new pdf_ext::pdf_generator();
-		malloc(sizeof pdf_gen);
-		
-		pdf_gen->init(true);
-		int rec = pdf_gen->generate(str->c_str(), str_output);
-		delete str;
+		rec = pdf_gen->generate(str->c_str(), str_output);
+		free(str);
 		if (rec < 0) {
-			pdf_gen->dispose();
 			_body_stream << pdf_gen->get_status_msg();
 			args.GetReturnValue().Set(v8::Number::New(isolate, rec));
+			pdf_gen->dispose();
+			free(pdf_gen);
 			return;
 		}
 		//body_stream << "\r\n";
@@ -1025,7 +1266,7 @@ void generate_pdf_from_body(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		//body_stream << "\r\n\r\n";
 		n_help::add_header(*_headers, "wkhtmltopdf_version", pdf_gen->version);
 		pdf_gen->dispose();
-		delete pdf_gen;
+		free(pdf_gen);
 		n_help::add_header(*_headers, "Accept-Ranges", "bytes");
 		n_help::add_header(*_headers, "Content-Type", "application/pdf");
 		//n_help::add_header(*_headers, "Content-Disposition", "attachment;filename=\"auto.pdf\"");
@@ -1040,6 +1281,19 @@ void generate_pdf_from_body(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	}
 	return;
 };
+//12:09 PM 8/27/2019
+int write_http_status() {
+	if (n_help::write_http_status(*_http_status, true) < 0) {
+		std::stringstream().swap(_body_stream);
+		n_help::write_http_status(*_http_status, false);
+		n_help::write_cookies(*_cookies);
+		free(_http_status); free(_headers); free(_cookies);
+		std::cout << "\r\n";
+		fflush(stdout);
+		return -1;
+	};
+	return 0;
+}
 void set_cookie(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (args[0]->IsNullOrUndefined() || !args[0]->IsString()) {
@@ -1054,10 +1308,24 @@ void set_cookie(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		_cookies->erase(itr);
 	}
 	_cookies->push_back(cook_val);
-	args.GetReturnValue().Set(v8::Number::New(isolate, 1));
-};
+}
 void http_status(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
+#if defined(FAST_CGI_APP)
+	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
+		isolate->ThrowException(v8::Exception::TypeError(
+			v8::String::NewFromUtf8(isolate, "HTTP Status Code Required!!!")));
+		return;
+	}
+	v8::String::Utf8Value status_code_str(isolate, args[0]);
+	auto desc = new std::string("Status:");
+	desc->append(*status_code_str);
+	if (args[1]->IsString() &&!args[1]->IsNullOrUndefined()) {
+		desc->append(" ");
+		v8::String::Utf8Value dec_str(isolate, args[1]);
+		desc->append(*dec_str);
+	}
+#else
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
 			v8::String::NewFromUtf8(isolate, "Server Protocol Required!!!")));
@@ -1081,10 +1349,11 @@ void http_status(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::String::Utf8Value dec_str(isolate, args[2]);
 		desc->append(*dec_str);
 	}
+#endif//!FAST_CGI_APP
 	n_help::add_http_status(*_http_status, *desc);
-	delete desc;
+	free(desc);
 	return;
-};
+}
 void response_write_header(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
@@ -1108,14 +1377,14 @@ void response_write_header(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	const char* desc = *description_str;
 	n_help::add_header(*_headers, ckey, desc);
 	return;
-};
+}
 void response_write(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (args[0]->IsNullOrUndefined())return;
 	v8::String::Utf8Value utf8_str(isolate, args[0]);
 	_body_stream << *utf8_str;
 	return;
-};
+}
 void http_request(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	try {
@@ -1132,13 +1401,13 @@ void http_request(const v8::FunctionCallbackInfo<v8::Value>& args) {
 			return;
 		}
 		v8::Local<v8::Value> v8_method_str = config->Get(sow_web_jsx::v8_str(isolate, "method"));
-		v8::String::Utf8Value utf_method_str(isolate, v8_method_str);
-		std::string method(*utf_method_str);
 		if (v8_method_str->IsNullOrUndefined() || !v8_method_str->IsString()) {
 			isolate->ThrowException(v8::Exception::TypeError(
 				v8::String::NewFromUtf8(isolate, "Method should be string!!!")));
 			return;
 		}
+		v8::String::Utf8Value utf_method_str(isolate, v8_method_str);
+		std::string method(*utf_method_str);
 		v8::Local<v8::Value>v8_payload_val = config->Get(sow_web_jsx::v8_str(isolate, "body"));
 		if (method == "POST") {
 			if (v8_payload_val->IsNullOrUndefined() || !v8_payload_val->IsString()) {
@@ -1148,7 +1417,12 @@ void http_request(const v8::FunctionCallbackInfo<v8::Value>& args) {
 			}
 		}
 		v8::String::Utf8Value utf_url_str(isolate, v8_url_str);
-		http_client::http_request* http = new http_client::http_request(*utf_url_str, true);
+		v8::Local<v8::Value> v8_follow_location = config->Get(sow_web_jsx::v8_str(isolate, "follow_location"));
+		bool follow_location = true;
+		if (v8_follow_location->IsBoolean()) {
+			follow_location = v8_follow_location->IsTrue();
+		}
+		http_client::http_request* http = new http_client::http_request(*utf_url_str, follow_location);
 		v8_url_str.Clear();
 		v8::Local<v8::Value>v8_header_str = config->Get(sow_web_jsx::v8_str(isolate, "header"));
 		if (!v8_header_str->IsNullOrUndefined() && v8_header_str->IsArray()) {
@@ -1180,7 +1454,7 @@ void http_request(const v8::FunctionCallbackInfo<v8::Value>& args) {
 				cookies->append(*key);
 			}
 			http->set_cookie(cookies->c_str());
-			delete cookies;
+			free(cookies);
 			v8_cookie_str.Clear();
 		}
 		std::string* resp_header = new std::string();
@@ -1190,18 +1464,19 @@ void http_request(const v8::FunctionCallbackInfo<v8::Value>& args) {
 			v8::String::Utf8Value v8_payload_str (isolate, v8_payload_val);
 			//rec = http->post(*v8_payload_str, *resp_header, *resp_body);
 			const char* payload_str = *v8_payload_str;
-			std::future<int> result = std::async(std::launch::async | std::launch::deferred, [=]() {
+			rec = http->post(payload_str, *resp_header, *resp_body);
+			/*std::future<int> result = std::async(std::launch::async | std::launch::deferred, [=]() {
 				return http->post(payload_str, *resp_header, *resp_body);
 			});
-			rec = result.get();
+			rec = result.get();*/
 			v8_payload_val.Clear();
 		}
 		else {
-			std::future<int> result = std::async(std::launch::async | std::launch::deferred, [=]() {
+			/*std::future<int> result = std::async(std::launch::async | std::launch::deferred, [=]() {
 				return http->get(*resp_header, *resp_body);;
 			});
-			rec = result.get();
-			//rec = http->get(*resp_header, *resp_body);
+			rec = result.get();*/
+			rec = http->get(*resp_header, *resp_body);
 		}
 		config.Clear();
 		v8::Handle<v8::Object> v8_result = v8::Object::New(isolate);
@@ -1233,7 +1508,7 @@ void http_request(const v8::FunctionCallbackInfo<v8::Value>& args) {
 				v8::String::NewFromUtf8(isolate, resp_body->c_str())
 			);
 		}
-		delete http; delete resp_header; delete resp_body;
+		free(http); free(resp_header); free(resp_body);
 		args.GetReturnValue().Set(v8_result);
 		v8_result.Clear();
 		return;
@@ -1244,7 +1519,7 @@ void http_request(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		args.GetReturnValue().Set(sow_web_jsx::v8_str(isolate, "Unknown!!!"));
 	}
 	
-};
+}
 //#include <iosfwd>
 //5:08 PM 11/28/2018
 /*
@@ -1265,9 +1540,19 @@ void sleep_func(const v8::FunctionCallbackInfo<v8::Value>& args) {
 #else
 #error Not Implemented
 #endif//!_WINDOWS_
-};
+}
 void response_redirect(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
+#if defined(FAST_CGI_APP)
+	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
+		isolate->ThrowException(v8::Exception::TypeError(
+			v8::String::NewFromUtf8(isolate, "Redirect location required!!!")));
+		return;
+	}
+	auto desc = new std::string("Status: 303 See Other");
+	desc->append(H_N_L);
+	v8::String::Utf8Value url_str(isolate, args[0]);
+#else
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
 			v8::String::NewFromUtf8(isolate, "Server Protocol Required!!!")));
@@ -1281,13 +1566,13 @@ void response_redirect(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::String::Utf8Value server_proto_str(isolate, args[0]);
 	v8::String::Utf8Value url_str(isolate, args[1]);
 	auto desc = new std::string(*server_proto_str);
-	//desc->append(" 301 Moved Permanently\n");
 	desc->append(" 303 See Other\n");
+#endif//FAST_CGI_APP
 	desc->append("Location: ");
 	desc->append(*url_str);
 	n_help::add_http_status(*_http_status, *desc);
-	delete desc;
-};
+	free(desc);
+}
 void encrypt_source(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
@@ -1295,14 +1580,10 @@ void encrypt_source(const v8::FunctionCallbackInfo<v8::Value>& args) {
 			v8::String::NewFromUtf8(isolate, "File absolute path required!!!")));
 		return;
 	}
-#if defined(__client_build)
-#error Not Implemented
-#else
 	isolate->ThrowException(v8::Exception::Error(
 		v8::String::NewFromUtf8(isolate, "Not Implemented!!!")));
 	return;
-#endif//!__client_build
-};
+}
 void decrypt_source(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
@@ -1310,14 +1591,10 @@ void decrypt_source(const v8::FunctionCallbackInfo<v8::Value>& args) {
 			v8::String::NewFromUtf8(isolate, "File absolute path required!!!")));
 		return;
 	}
-#if defined(__client_build)
-#error Not Implemented
-#else
 	isolate->ThrowException(v8::Exception::Error(
 		v8::String::NewFromUtf8(isolate, "Not Implemented!!!")));
 	return;
-#endif//!__client_build
-};
+}
 void async_t(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate * isolate = args.GetIsolate();
 	async_func_arg*afa = new async_func_arg();
@@ -1335,27 +1612,29 @@ void async_t(const v8::FunctionCallbackInfo<v8::Value>& args) {
 			};
 			callback->Call(context->Global(), 1, carg);
 			context.Clear();
+			//v8::Unlocker unLocker(isolate);
 			isolate->Exit();
 		} catch (...) {}
 	}, afa);
 	args.GetReturnValue().Set(v8::String::NewFromUtf8(isolate, "START"));
-};
+}
 /*[zgip]*/
 void gzip_compress_write() {
-	if (n_help::write_http_status(*_http_status, true) < 0) {
+	/*if (n_help::write_http_status(*_http_status, true) < 0) {
 		std::stringstream().swap(_body_stream);
 		n_help::write_http_status(*_http_status, false);
 		n_help::write_cookies(*_cookies);
-		delete _http_status; delete _headers; delete _cookies;
+		free(_http_status); free(_headers); free(_cookies);
 		std::cout << "\r\n";
 		fflush(stdout);
 		return;
-	};
-	delete _http_status;
+	};*/
+	if (write_http_status() < 0)return;
+	free(_http_status);
 	n_help::write_header(*_headers);
-	delete _headers;
+	free(_headers);
 	n_help::write_cookies(*_cookies);
-	delete _cookies;
+	free(_cookies);
 	std::ios::sync_with_stdio(false);
 	std::cout << "\r\n";
 	std::future<void> result = std::async(std::launch::async | std::launch::deferred, [=]() {
@@ -1364,14 +1643,19 @@ void gzip_compress_write() {
 	});
 	result.get();
 	fflush(stdout);
-};
+}
 /*[/zgip]*/
 void sow_web_jsx::wrapper::clear_cache() {
 	if (!_is_cli)return;
 	if (_is_flush == true)return;
-	_is_flush = true;
-	delete _root_dir;
-};
+	free(_root_dir);
+}
+const char * sow_web_jsx::wrapper::get_root_dir() {
+	return _root_dir->c_str();
+}
+void attachment_response() {
+	if (write_http_status() < 0)return;
+}
 //9:32 PM 11/22/2018
 void sow_web_jsx::wrapper::response_body_flush() {
 	if (_is_flush == true)return;
@@ -1380,22 +1664,27 @@ void sow_web_jsx::wrapper::response_body_flush() {
 		gzip_compress_write();
 		return;
 	}
-	if (n_help::write_http_status(*_http_status, true ) < 0) {
-		std::stringstream().swap(_body_stream);
-		n_help::write_http_status(*_http_status, false);
-		n_help::write_cookies(*_cookies);
-		delete _http_status; delete _headers; delete _cookies;
-		std::cout << "\r\n";
-		fflush(stdout);
-		//std::cout << std::flush;
-		return;
-	}
+	//if (n_help::is_attachment_response(*_headers) == 1) {
+	//	attachment_response();
+	//	return;
+	//}
+	//if (n_help::write_http_status(*_http_status, true ) < 0) {
+	//	std::stringstream().swap(_body_stream);
+	//	n_help::write_http_status(*_http_status, false);
+	//	n_help::write_cookies(*_cookies);
+	//	free(_http_status); free(_headers); free(_cookies);
+	//	std::cout << "\r\n";
+	//	fflush(stdout);
+	//	//std::cout << std::flush;
+	//	return;
+	//}
+	if (write_http_status() < 0)return;
 	std::ios::sync_with_stdio(false);
-	delete _http_status;
+	free(_http_status);
 	n_help::write_header(*_headers);
-	delete _headers;
+	free(_headers);
 	n_help::write_cookies(*_cookies);
-	delete _cookies;
+	free(_cookies);
 	fflush(stdout);
 	std::cout << "\r\n";
 	//SET_BINARY_MODE(stdout);
@@ -1408,17 +1697,17 @@ void sow_web_jsx::wrapper::response_body_flush() {
 	fflush(stdout);
 	std::stringstream().swap(_body_stream);
 	return;
-};
+}
 void response_clear(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	std::stringstream().swap(_body_stream);
-};
+}
 void get_response_body(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	std::string* str = new std::string(_body_stream.str());
 	args.GetReturnValue().Set(sow_web_jsx::v8_str(isolate, str->c_str()));
-	delete str;
-};
+	free(str);
+}
 void encrypt_str(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	
@@ -1455,12 +1744,12 @@ void encrypt_str(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		else {
 			args.GetReturnValue().Set(sow_web_jsx::v8_str(isolate, encrypted_text->c_str()));
 		}
-		delete encrypted_text;
+		free(encrypted_text);
 	} catch (std::runtime_error&e) {
 		isolate->ThrowException(v8::Exception::Error(
 			v8::String::NewFromUtf8(isolate, e.what())));
 	}
-};
+}
 void decrypt_str(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
@@ -1496,11 +1785,11 @@ void decrypt_str(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		else {
 			args.GetReturnValue().Set(sow_web_jsx::v8_str(isolate, decrypted_text->c_str()));
 		}
-		delete decrypted_text;
+		free(decrypted_text);
 	} catch (std::runtime_error&e) {
 		args.GetReturnValue().Set(sow_web_jsx::v8_str(isolate, e.what()));
 	}
-};
+}
 void hex_to_string(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
@@ -1515,7 +1804,7 @@ void hex_to_string(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	args.GetReturnValue().Set(sow_web_jsx::v8_str(isolate, plain_str->data()));
 	free(plain_str);
 	return;
-};
+}
 void string_to_hex(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
@@ -1530,7 +1819,7 @@ void string_to_hex(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	args.GetReturnValue().Set(sow_web_jsx::v8_str(isolate, hex_str->data()));
 	free(hex_str);
 	return;
-};
+}
 //9:32 PM 11/22/2018
 void require(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
@@ -1540,7 +1829,13 @@ void require(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		return;
 	}
 #if defined(__client_build)
-#error Not Implemented
+	bool is_encrypt = false;
+	if (!args[1]->IsNullOrUndefined()) {
+		if (args[1]->IsBoolean()) {
+			v8::Local<v8::Boolean> b = v8::Local<v8::Boolean>::Cast(args[1]);
+			is_encrypt = b->IsTrue();
+		}
+	}
 #endif//!__client_build
 	v8::String::Utf8Value utf_abs_path_str(isolate, args[0]);
 	auto abs_path = new std::string();
@@ -1548,12 +1843,30 @@ void require(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	sow_web_jsx::get_server_map_path(*utf_abs_path_str, *abs_path);
 	std::string source_str("");
 #if defined(__client_build)
-#error Not Implemented
+	if (is_encrypt) {
+		size_t ret = sow_web_jsx::read_file(abs_path->data(), source_str, true);
+		free(abs_path);
+		if (ret < 0) {
+			isolate->ThrowException(v8::Exception::Error(v8::String::NewFromUtf8(isolate, source_str.c_str())));
+			return;
+		}
+		auto decipher = new Cipher(-1000);
+		source_str = decipher->encrypt(source_str);
+		free(decipher);
+	}
+	else {
+		size_t ret = sow_web_jsx::read_file(abs_path->data(), source_str, true);
+		free(abs_path);
+		if (ret < 0) {
+			isolate->ThrowException(v8::Exception::Error(v8::String::NewFromUtf8(isolate, source_str.c_str())));
+			return;
+		}
+	}
 #else
 	size_t ret = sow_web_jsx::read_file(abs_path->data(), source_str, true);
-	delete abs_path;
+	free(abs_path);
 	if (ret < 0) {
-		isolate->ThrowException(v8::Exception::TypeError(v8::String::NewFromUtf8(isolate, source_str.c_str())));
+		isolate->ThrowException(v8::Exception::Error(v8::String::NewFromUtf8(isolate, source_str.c_str())));
 		return;
 	}
 #endif//!__client_build
@@ -1568,6 +1881,8 @@ void require(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Local<v8::ObjectTemplate> io_object = v8::ObjectTemplate::New(isolate);
 	io_object->Set(isolate, "read_file", v8::FunctionTemplate::New(isolate, native_read_file));
 	io_object->Set(isolate, "write_file", v8::FunctionTemplate::New(isolate, native_write_file));
+	io_object->Set(isolate, "exists_file", v8::FunctionTemplate::New(isolate, native_exists_file));
+	jsx_file_bind(isolate, io_object);
 	v8_global->Set(isolate, "fs", io_object);
 	/*[IO/file read/write]*/
 	/*[Sys Object]*/
@@ -1586,6 +1901,14 @@ void require(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	sys_object->Set(isolate, "kill_process_by_name", v8::FunctionTemplate::New(isolate, native_kill_process_by_name));
 	v8_global->Set(isolate, "sys", sys_object);
 	/*[/Sys Object]*/
+	/*[NpgSql....]*/
+	v8::Local<v8::ObjectTemplate> npgsql_object = v8::ObjectTemplate::New(isolate);
+	npgsql_object->Set(isolate, "execute_io", v8::FunctionTemplate::New(isolate, npgsql_execute_io));
+	npgsql_object->Set(isolate, "execute_scalar", v8::FunctionTemplate::New(isolate, npgsql_execute_scalar));
+	npgsql_object->Set(isolate, "execute_query", v8::FunctionTemplate::New(isolate, npgsql_execute_query));
+	npgsql_object->Set(isolate, "data_reader", v8::FunctionTemplate::New(isolate, npgsql_data_reader));
+	v8_global->Set(isolate, "npgsql", npgsql_object);
+	/*[/NpgSql....]*/
 	/*[crypto]*/
 	v8::Local<v8::ObjectTemplate> crypto_object = v8::ObjectTemplate::New(isolate);
 	crypto_object->Set(isolate, "encrypt", v8::FunctionTemplate::New(isolate, encrypt_str));
@@ -1603,6 +1926,7 @@ void require(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8_global->Set(isolate, "__async", v8::FunctionTemplate::New(isolate, async_func));
 	v8_global->Set(isolate, "__sleep", v8::FunctionTemplate::New(isolate, sleep_func));
 	v8_global->Set(isolate, "__async_t", v8::FunctionTemplate::New(isolate, async_t));
+	v8_global->Set(isolate, "is_interactive", v8::Boolean::New(isolate, _is_interactive));
 	v8::Local<v8::Context> context = v8::Context::New(isolate, nullptr, v8_global);
 	v8::Context::Scope context_scope(context);
 	// Compile the source code.
@@ -1625,10 +1949,19 @@ void require(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	jsGlobal.Clear(); context.Clear();
 	v8_global.Clear();
 	return;
-};
+}
+/*#if defined(FAST_CGI_APP)
+v8::Local<v8::ObjectTemplate> _v8_global;
+bool _global_init = false;
+#endif//FAST_CGI_APP*/
 v8::Local<v8::Context> sow_web_jsx::wrapper::get_context(v8::Isolate* isolate, std::map<std::string, std::map<std::string, std::string>>& ctx) {
-	//internal_global_ctx* js_ctx = new internal_global_ctx();
-	v8::Local<v8::ObjectTemplate> v8_global = v8::ObjectTemplate::New(isolate);
+#if defined(FAST_CGI_APP)
+	_is_flush = false;
+#endif//FAST_CGI_APP
+	/*if (!_global_init) {
+		_v8_global = v8::ObjectTemplate::New(isolate);
+	}*/
+	v8::Local<v8::ObjectTemplate> _v8_global = v8::ObjectTemplate::New(isolate);
 	v8::Local<v8::ObjectTemplate> ctx_object = v8::ObjectTemplate::New(isolate);
 	for (auto itr = ctx.begin(); itr != ctx.end(); ++itr) {
 		auto key = itr->first;
@@ -1667,30 +2000,45 @@ v8::Local<v8::Context> sow_web_jsx::wrapper::get_context(v8::Isolate* isolate, s
 	body_object->Set(isolate, "write_as_pdf", v8::FunctionTemplate::New(isolate, generate_pdf_from_body));
 	response_object->Set(isolate, "body", body_object);
 	response_object->Set(isolate, "clear", v8::FunctionTemplate::New(isolate, response_clear));
-	response_object->Set(isolate, "status", v8::FunctionTemplate::New(isolate, http_status));
-	response_object->Set(isolate, "cookie", v8::FunctionTemplate::New(isolate, set_cookie));
+	response_object->Set(isolate, "_status", v8::FunctionTemplate::New(isolate, http_status));
+	response_object->Set(isolate, "_cookie", v8::FunctionTemplate::New(isolate, set_cookie));
 	response_object->Set(isolate, "_redirect", v8::FunctionTemplate::New(isolate, response_redirect));
 	response_object->Set(isolate, "_as_gzip", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		v8::Isolate* isolate = args.GetIsolate();
+		//v8::Isolate* isolate = args.GetIsolate();
 		n_help::add_header(*_headers, "Content-Encoding", "gzip");
 		return;
 	}));
 	/*auto js_global = new internal_global_ctx();
 	js_global->body_stream << "";*/
-	response_object->Set(isolate, "_as_gzip", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+	/*response_object->Set(isolate, "_as_gzip", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* isolate = args.GetIsolate();
 		n_help::add_header(*_headers, "Content-Encoding", "gzip");
 		return;
-	}));
+	}));*/
+	ctx_object->Set(isolate, "is_interactive", v8::Boolean::New(isolate, false));
+	//_is_interactive
 	ctx_object->Set(isolate, "response", response_object);
 	/*[/context.respons....]*/
-	v8_global->Set(isolate, "context", ctx_object);
+	_v8_global->Set(isolate, "context", ctx_object);
+	/*if (_global_init) {
+		_headers = new std::map<std::string, std::string>();
+		malloc(sizeof _headers);
+		_cookies = new std::vector<std::string>();
+		malloc(sizeof _cookies);
+		_http_status = new std::vector<std::string>();
+		malloc(sizeof _http_status);
+		_is_interactive = false;
+		return v8::Context::New(isolate, nullptr, _v8_global);
+	}
+	_global_init = true;*/
 	/*[IO/file read/write....]*/
 	v8::Local<v8::ObjectTemplate> io_object = v8::ObjectTemplate::New(isolate);
 	io_object->Set(isolate, "read_file", v8::FunctionTemplate::New(isolate, native_read_file));
 	io_object->Set(isolate, "write_file", v8::FunctionTemplate::New(isolate, native_write_file));
+	io_object->Set(isolate, "exists_file", v8::FunctionTemplate::New(isolate, native_exists_file));
 	io_object->Set(isolate, "_write_file_from_payload", v8::FunctionTemplate::New(isolate, write_file_from_payload));
-	v8_global->Set(isolate, "fs", io_object);
+	jsx_file_bind(isolate, io_object);
+	_v8_global->Set(isolate, "fs", io_object);
 	/*[IO/file read/write....]*/
 	/*[Sys Object]*/
 	v8::Local<v8::ObjectTemplate> sys_object = v8::ObjectTemplate::New(isolate);
@@ -1705,20 +2053,20 @@ v8::Local<v8::Context> sow_web_jsx::wrapper::get_context(v8::Isolate* isolate, s
 	sys_object->Set(isolate, "create_child_process", v8::FunctionTemplate::New(isolate, native_create_child_process));
 	sys_object->Set(isolate, "open_process", v8::FunctionTemplate::New(isolate, native_open_process));
 	sys_object->Set(isolate, "kill_process_by_name", v8::FunctionTemplate::New(isolate, native_kill_process_by_name));
-	v8_global->Set(isolate, "sys", sys_object);
+	_v8_global->Set(isolate, "sys", sys_object);
 	/*[/Sys Object]*/
 	/*[NpgSql....]*/
 	v8::Local<v8::ObjectTemplate> npgsql_object = v8::ObjectTemplate::New(isolate);
 	npgsql_object->Set(isolate, "execute_io", v8::FunctionTemplate::New(isolate, npgsql_execute_io));
 	npgsql_object->Set(isolate, "execute_scalar", v8::FunctionTemplate::New(isolate, npgsql_execute_scalar));
-	npgsql_object->Set(isolate, "execute_non_query", v8::FunctionTemplate::New(isolate, npgsql_execute_non_query));
+	npgsql_object->Set(isolate, "execute_query", v8::FunctionTemplate::New(isolate, npgsql_execute_query));
 	npgsql_object->Set(isolate, "data_reader", v8::FunctionTemplate::New(isolate, npgsql_data_reader));
-	v8_global->Set(isolate, "npgsql", npgsql_object);
+	_v8_global->Set(isolate, "npgsql", npgsql_object);
 	/*[/NpgSql....]*/
 	/*[pdf_generator....]*/
 	v8::Local<v8::ObjectTemplate> pdf_object = v8::ObjectTemplate::New(isolate);
 	pdf_object->Set(isolate, "generate_pdf", v8::FunctionTemplate::New(isolate, generate_pdf));
-	v8_global->Set(isolate, "native_pdf", pdf_object);
+	_v8_global->Set(isolate, "native_pdf", pdf_object);
 	/*[/pdf_generator....]*/
 	/*[crypto....]*/
 	v8::Local<v8::ObjectTemplate> crypto_object = v8::ObjectTemplate::New(isolate);
@@ -1726,22 +2074,22 @@ v8::Local<v8::Context> sow_web_jsx::wrapper::get_context(v8::Isolate* isolate, s
 	crypto_object->Set(isolate, "decrypt", v8::FunctionTemplate::New(isolate, decrypt_str));
 	crypto_object->Set(isolate, "encrypt_source", v8::FunctionTemplate::New(isolate, encrypt_source));
 	crypto_object->Set(isolate, "decrypt_source", v8::FunctionTemplate::New(isolate, decrypt_source));
-	v8_global->Set(isolate, "crypto", crypto_object);
+	_v8_global->Set(isolate, "crypto", crypto_object);
 	/*[/crypto....]*/
 	/*[http_request]*/
-	v8_global->Set(isolate, "create_http_request", v8::FunctionTemplate::New(isolate, http_request));
+	_v8_global->Set(isolate, "create_http_request", v8::FunctionTemplate::New(isolate, http_request));
 	/*[/http_request]*/
 	/*[require]*/
-	v8_global->Set(isolate, "require", v8::FunctionTemplate::New(isolate, require));
+	_v8_global->Set(isolate, "require", v8::FunctionTemplate::New(isolate, require));
 	/*[/require]*/
-	v8_global->Set(isolate, "__get_response_body", v8::FunctionTemplate::New(isolate, get_response_body));
+	_v8_global->Set(isolate, "__get_response_body", v8::FunctionTemplate::New(isolate, get_response_body));
 	//
-	v8_global->Set(isolate, "hex_to_string", v8::FunctionTemplate::New(isolate, hex_to_string));
-	v8_global->Set(isolate, "string_to_hex", v8::FunctionTemplate::New(isolate, string_to_hex));
-	v8_global->Set(isolate, "__async_t", v8::FunctionTemplate::New(isolate, async_t));
-	v8_global->Set(isolate, "__async", v8::FunctionTemplate::New(isolate, async_func));
-	v8_global->Set(isolate, "setTimeout", v8::FunctionTemplate::New(isolate, set_time_out_func));
-	v8_global->Set(isolate, "__sleep", v8::FunctionTemplate::New(isolate, sleep_func));
+	_v8_global->Set(isolate, "hex_to_string", v8::FunctionTemplate::New(isolate, hex_to_string));
+	_v8_global->Set(isolate, "string_to_hex", v8::FunctionTemplate::New(isolate, string_to_hex));
+	_v8_global->Set(isolate, "__async_t", v8::FunctionTemplate::New(isolate, async_t));
+	_v8_global->Set(isolate, "__async", v8::FunctionTemplate::New(isolate, async_func));
+	_v8_global->Set(isolate, "setTimeout", v8::FunctionTemplate::New(isolate, set_time_out_func));
+	_v8_global->Set(isolate, "__sleep", v8::FunctionTemplate::New(isolate, sleep_func));
 	//
 	_headers = new std::map<std::string, std::string>();
 	malloc(sizeof _headers);
@@ -1749,6 +2097,7 @@ v8::Local<v8::Context> sow_web_jsx::wrapper::get_context(v8::Isolate* isolate, s
 	malloc(sizeof _cookies);
 	_http_status = new std::vector<std::string>();
 	malloc(sizeof _http_status);
+	_is_interactive = false;
 	/*[Create C++ Internal Context]*/
 	//v8::Local<v8::Context> v8_ctx = v8::Context::New(isolate, nullptr, v8_global/*v8::MaybeLocal<v8::ObjectTemplate>()*/);
 	//js_ctx.is_flush = 0;
@@ -1760,7 +2109,7 @@ v8::Local<v8::Context> sow_web_jsx::wrapper::get_context(v8::Isolate* isolate, s
 	//sow_web_jsx::wrap_ctx(isolate, v8_ctx, &js_ctx);
 	//return v8_ctx;
 	//v8_global->SetInternalFieldCount(1);
-	return v8::Context::New(isolate, nullptr, v8_global/*v8::MaybeLocal<v8::ObjectTemplate>()*/);
+	return v8::Context::New(isolate, nullptr, _v8_global/*v8::MaybeLocal<v8::ObjectTemplate>()*/);
 }
 v8::Local<v8::Context> sow_web_jsx::wrapper::get_console_context(v8::Isolate * isolate, std::map<std::string, std::string>&ctx) {
 	_is_cli = true;
@@ -1769,6 +2118,11 @@ v8::Local<v8::Context> sow_web_jsx::wrapper::get_console_context(v8::Isolate * i
 	for (auto itr = ctx.begin(); itr != ctx.end(); ++itr) {
 		if (itr->first == "root_dir") {
 			_root_dir = new std::string(itr->second);
+		}
+		else if (itr->first == "is_interactive") {
+			_is_interactive = itr->second == "1";
+			ctx_object->Set(isolate, "is_interactive", v8::Boolean::New(isolate, _is_interactive));
+			continue;
 		}
 		ctx_object->Set(isolate, itr->first.c_str(), v8_str(isolate, itr->second.c_str()));
 	}
@@ -1780,7 +2134,7 @@ v8::Local<v8::Context> sow_web_jsx::wrapper::get_console_context(v8::Isolate * i
 	v8::Local<v8::ObjectTemplate> npgsql_object = v8::ObjectTemplate::New(isolate);
 	npgsql_object->Set(isolate, "execute_io", v8::FunctionTemplate::New(isolate, npgsql_execute_io));
 	npgsql_object->Set(isolate, "execute_scalar", v8::FunctionTemplate::New(isolate, npgsql_execute_scalar));
-	npgsql_object->Set(isolate, "execute_non_query", v8::FunctionTemplate::New(isolate, npgsql_execute_non_query));
+	npgsql_object->Set(isolate, "execute_query", v8::FunctionTemplate::New(isolate, npgsql_execute_query));
 	npgsql_object->Set(isolate, "data_reader", v8::FunctionTemplate::New(isolate, npgsql_data_reader));
 	v8_global->Set(isolate, "npgsql", npgsql_object);
 	/*[/NpgSql....]*/
@@ -1817,6 +2171,8 @@ v8::Local<v8::Context> sow_web_jsx::wrapper::get_console_context(v8::Isolate * i
 	v8::Local<v8::ObjectTemplate> io_object = v8::ObjectTemplate::New(isolate);
 	io_object->Set(isolate, "read_file", v8::FunctionTemplate::New(isolate, native_read_file));
 	io_object->Set(isolate, "write_file", v8::FunctionTemplate::New(isolate, native_write_file));
+	io_object->Set(isolate, "exists_file", v8::FunctionTemplate::New(isolate, native_exists_file));
+	jsx_file_bind(isolate, io_object);
 	v8_global->Set(isolate, "fs", io_object);
 	/*[IO/file read/write....]*/
 	/*[Sys Object]*/
@@ -1838,10 +2194,11 @@ v8::Local<v8::Context> sow_web_jsx::wrapper::get_console_context(v8::Isolate * i
 	v8_global->Set(isolate, "__clear", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		//v8::Isolate* isolate = args.GetIsolate();
 		//dispose_internal_object(isolate);
-		delete _root_dir;
+		free(_root_dir);
 	}));
 	//
-	v8_global->Set(isolate, "__print", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+	v8_global->Set(isolate, "print", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		if (!_is_interactive)return;
 		v8::Isolate* iso = args.GetIsolate();
 		if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 			iso->ThrowException(v8::Exception::TypeError(

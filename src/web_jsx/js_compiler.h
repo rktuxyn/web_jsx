@@ -30,6 +30,7 @@ namespace sow_web_jsx {
 		int run_script_x(const char*script_source, std::map<std::string, std::string>&ctx);
 		jsx_export void create_engine(const char*exec_path);
 		jsx_export void dispose_engine();
+		jsx_export v8::Isolate* get_isolate();
 		jsx_export int run_script(const char*exec_path, const char*script_source, std::map<std::string, std::string>&ctx);
 		jsx_export void run_script(std::map<std::string, std::map<std::string, std::string>>&, const char*, template_result&);
 		/*uv async*/

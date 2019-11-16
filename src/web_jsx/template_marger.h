@@ -21,6 +21,11 @@ namespace sow_web_jsx {
 			const std::regex start_tag,
 			const std::string root_dir
 		);
+		int implimant_attachment(
+			template_result& tr, 
+			const std::string root_dir, 
+			std::string&html_body
+		);
 	};
 };
 #endif//!template_parser_h

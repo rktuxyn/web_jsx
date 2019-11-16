@@ -36,3 +36,24 @@ int sow_web_jsx::acync_init(v8::Isolate* isolate, acync_cb func, async_func_arg*
 	});
 	return 0;
 };
+/*void set_time_out_bp() {
+	//2:13 AM 2/7/2019
+	//https://github.com/kiddkai/libuv-examples/tree/master/src/timer
+	uv_timer_t timer_req;
+	uv_timer_init(uv_default_loop(), &timer_req);
+	//[Simulate the setTimeout -> setInterval]
+	uv_timer_start(&timer_req, [](uv_timer_t *handle) {
+		uv_timer_stop(handle);
+	}, 1000, 100);
+	//[/Simulate the setTimeout -> setInterval]
+	//[Simulate the setTimeout in JavaScript]
+	uv_timer_start(&timer_req, [](uv_timer_t *handle) {
+		uv_timer_stop(handle);
+	}, 1000, 0);
+	//[/Simulate the setTimeout in JavaScript]
+	//[Simulate the setInterval in JavaScript]
+	uv_timer_start(&timer_req, [](uv_timer_t *handle) {
+		uv_timer_stop(handle);
+	}, 0, 1000);
+	//[/Simulate the setInterval in JavaScript]
+};*/

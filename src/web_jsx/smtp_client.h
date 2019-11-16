@@ -38,6 +38,21 @@
 //https://curl.haxx.se/libcurl/c/smtp-mail.html
 //https://codereview.stackexchange.com/questions/139784/sending-email-using-libcurl
 namespace smtp_client {
+	/*std::string date_time_now() {
+		const int RFC5322_TIME_LEN = 32;
+		time_t t;
+		struct tm *tm;
+
+		std::string ret;
+		ret.resize(RFC5322_TIME_LEN);
+
+		time(&t);
+		tm = localtime(&t);
+
+		strftime(&ret[0], RFC5322_TIME_LEN, "%a, %d %b %Y %H:%M:%S %z", tm);
+
+		return ret;
+	};*/
 	class smtp_request {
 	private:
 		CURL *_curl;

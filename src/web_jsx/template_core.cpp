@@ -18,9 +18,12 @@ int sow_web_jsx::template_core::process_template(template_result & tr,
 		std::string().swap(page_path);
 		tr.err_msg = "_NOT_FOUND_";
 		tr.is_error = true;
+		tr.t_source = html_body;
 		return -1;
 	}
 	std::string().swap(page_path);
+	//std::string*html_body = new std::string(static_cast<const char*>(rresult));
+	//delete rresult;
 	int ret = 0;
 	std::vector<std::string>* templates = new std::vector<std::string>();
 	auto parent_path = new std::string(request_path.c_str());
@@ -43,6 +46,8 @@ int sow_web_jsx::template_core::process_template(template_result & tr,
 	}
 	else {
 		delete templates;
+		sow_web_jsx::template_marger::implimant_attachment(tr, root_dir, html_body);
+		if (tr.is_error == true)return -1;
 	}
 	ret = script_tag_parser::parse(tr, html_body);
 	html_body.swap(tr.t_source);
