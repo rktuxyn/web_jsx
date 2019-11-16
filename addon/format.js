@@ -19,7 +19,7 @@
         }
     };
     // Node
-    var task, _value;
+    //var task, _value;
     function toFixed( value, precision, roundingFunction, optionals ) {
         var power = Math.pow( 10, precision ),
             optionalsRegExp,
@@ -272,6 +272,14 @@
         }
     };
     exports.format = exports.format || {};
+    exports.format.quantity = function ( number ) {
+        return this.number.f( number ).format( "0,000" );
+    };
+    exports.format.amount = function ( number ) {
+        number = this.number.d( number );
+        if ( number === 0 ) return "0.00";
+        return this.number.f( number ).format( "0,000.00" );
+    };
     exports.format.number = {
         d: function ( val, prussian ) {
             if ( !val ) return 0;
@@ -281,15 +289,16 @@
             return parseFloat( Number( val ).toFixed( prussian ) );
         },
         f: function ( number ) {
-            _value = number === undefined || !number || number === '-' ? 0.00 : number;
+            var value, task;
+            value = number === undefined || !number || number === '-' ? 0.00 : number;
             task = 'number';
             return {
                 format: function ( inputString, roundingFunction ) {
-                    return task === 'number' ? ( _value === 0 || !_value ? '' : formatNumeral( _value,
+                    return task === 'number' ? ( value === 0 || !value ? '' : formatNumeral( value,
                         inputString ? inputString : defaultFormat,
                         ( roundingFunction !== undefined ) ? roundingFunction : Math.round
                     ) )
-                        : task === 'date' ? dateFormat( _value, inputString ) : '';
+                        : task === 'date' ? dateFormat( value, inputString ) : '';
                 }
             }
         }

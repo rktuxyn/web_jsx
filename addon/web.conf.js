@@ -10,7 +10,7 @@ module.exports = (function(){
 		auth_cookie:"web_jsx_session",
 		database:{
 			module:"pgsql",
-            db_conn:"Server=localhost; Port=5432; UserId=postgres;Password=XXXX;Database=sow_sys; keepalive=10; CommandTimeout=100000;"
+            db_conn:"Server=localhost; Port=XXXX; UserId=XXXX;Password=XXXX;Database=sow_sys; keepalive=10; CommandTimeout=100000;"
         },
 		crypto:{
             key: "YXV0aGVudGljYXRlX2tleQ==", /* A 256 bit key */

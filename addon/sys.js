@@ -15,18 +15,19 @@ class system {
     static create_process( settings ) {
         if ( settings === null || typeof ( settings ) !== "object" )
             throw new Error( "Settings not defined!!!" );
-        let pid = 0, max = 10;
+        let pid = 0, max = 10, error="";
         while ( true ) {
-            if ( max < 0 ) return -1;
+            if ( max < 0 ) break;
             try {
                 pid = sys.create_process( settings );
                 if ( pid > 0 ) break;
             } catch ( e ) {
                 max--;
+				error += e.message +"\n";
                 continue;
             }
         }
-        return { pid, max };
+        return { pid, max, error };
     }
 }
 module.exports = {
