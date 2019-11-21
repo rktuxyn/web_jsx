@@ -1,11 +1,9 @@
-﻿/**
+/**
 * Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
 * @author {SOW}
 * Copyrights licensed under the New BSD License.
 * See the accompanying LICENSE file for terms.
 */
-//npgsql.execute_io();
-//npgsql.data_reader( "", "", ( i, r ) => { } );
 class pgSql {
     constructor( db_conn/*Database connection string*/, pgsql_ctx/*[User Context]*/) {
         if ( !pgsql_ctx || pgsql_ctx === null || typeof ( pgsql_ctx ) === "undefined" )
@@ -24,19 +22,57 @@ class pgSql {
     static quote_literal( value ) {
         try {
             if ( value === undefined || value === null ) return "";
-            if ( typeof ( value ) !== "string" )
-                value = String( value );
+            if ( typeof ( value ) === "object" ) {
+                value = JSON.stringify( value );
+            } else {
+                if ( typeof ( value ) !== "string" )
+                    value = String( value );
+            }
             value = value.replace( '\'', "''" );
             return "''" + value + "''";
         } catch ( e ) {
             throw new Error( e.message + " " + value );
         }
     }
+    static quote_literalq( value ) {
+        try {
+            if ( value === undefined || value === null ) return "";
+            if ( typeof ( value ) === "object" ) {
+                value = JSON.stringify( value );
+            } else {
+                if ( typeof ( value ) !== "string" )
+                    value = String( value );
+            }
+            value = value.replace( '\'', "'" );
+            return "'" + value + "'";
+        } catch ( e ) {
+            throw new Error( e.message + " " + value );
+        }
+    }
+    parse_paramq( param, sql ) {
+        if ( !sql ) throw new Error( "SQL required!!!" );
+        sql = sql.replace( /\r\n/gi, "" ).replace( /\n/gi, "" ).replace( /\t/gi, " " ).replace( /\s+/g, " " );//normalize
+        if ( !param || typeof ( param ) !== "object" || !Array.isArray( param ) ) return sql;
+        let len = param.length;
+        return sql.replace( /{(\d+)}/g, function ( match, number ) {
+            let index = parseInt( number );
+            if ( isNaN( index ) )
+                throw new Error( "Invalid param index!!!" );
+
+            if ( index > len )
+                throw new Error( "Index should not greater than " + len );
+
+            return typeof ( param[index] ) !== 'undefined'
+                ? pgSql.quote_literalq( param[index] )
+                : /*match || ""*/"null"
+                ;
+        } );
+    }
     create_query( obj, def, nowhere ) {
         if ( !obj || obj === null || typeof ( obj ) !== "object" )
             throw new Error( "Plain object required!!!" );
         let query = "";
-        if ( Object.keys( obj ).length <= 0 ) return "";
+        if ( Object.keys( obj ).length <= 0 ) return query;
         if ( def === void 0 || def === null || typeof ( def ) !== "object" ) def = {};
         let isFirst = true;
         for ( let p in obj ) {
@@ -61,8 +97,7 @@ class pgSql {
     parse_param( param, sql ) {
         if ( !sql ) throw new Error( "SQL required!!!" );
         sql = sql.replace( /\r\n/gi, "" ).replace( /\n/gi, "" ).replace( /\t/gi, " " ).replace( /\s+/g, " " );//normalize
-        if ( typeof ( param ) !== "object" )
-            return sql;
+        if ( !param || typeof ( param ) !== "object" || !Array.isArray( param ) ) return sql;
         let len = param.length;
         return sql.replace( /{(\d+)}/g, function ( match, number ) {
             let index = parseInt( number );
@@ -112,6 +147,14 @@ class pgSql {
         await __async_t( () => {
             cb.call( this, this.execute_io( sp, form_object ) );
         } );
+    }
+    data_reader( query, param, callback ) {
+        if ( typeof ( callback ) !== "function" )
+            throw new Error( "Callback required." );
+        return npgsql.data_reader( this.db_conn, this.parse_paramq( param, query ), callback );
+    }
+    execute_query( query, param ) {
+        return npgsql.execute_query( this.db_conn, this.parse_paramq( param, query ) )
     }
     force_execute( sp, obj, max_try ) {
         if ( !sp || !obj || obj === null )
