@@ -225,4 +225,3 @@ Object.extend( http_request.prototype, {
     }
 } );
 module.exports = http_request;
-//8:23 PM 12/2/2018
