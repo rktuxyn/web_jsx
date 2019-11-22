@@ -52,4 +52,18 @@ let designation_sid = _pgsql.execute_query( "INSERT INTO c_type.designation(desi
 /** Execute DELETE statement**/
 _pgsql.execute_query( "delete from c_type.designation where designation_sid > {0}  and designation_sid not in({1})", [2, designation_sid] );
 ```
+OpenSSL EVP Symmetric Encryption and Decryption
+```javascript
+let
+key = "01234567890123456789012345678901"/* A 256 bit key */,
+iv = "0123456789012345"/* A 128 bit IV */;
+let plainText = "Hello world";
+/** Encryption **/
+let encText = crypto.encrypt( plainText, key, iv );
+context.response.write( `Encrypted:${encText}` );
+
+/** Decryption **/
+let decText = crypto.decrypt( enctext, key, iv );
+context.response.write( `Decrypted:${dectext}` );
+```
 Learn more https://web_jsx.safeonline.world/ and https://www.youtube.com/channel/UCsEq3IcHPLJGFseuINsYs_w
