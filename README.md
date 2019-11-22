@@ -25,6 +25,7 @@ let resp = npgsql.execute_io("Server=localhost; Port=5432; UserId=postgres;Passw
 );
 __print(JSON.stringify(resp));
 ```
+Implement module with require
 ```javascript
 /** read web config module **/
 let cfg = require( "/addon/web.conf.js" );
