@@ -55,8 +55,8 @@ _pgsql.execute_query( "delete from c_type.designation where designation_sid > {0
 OpenSSL EVP Symmetric Encryption and Decryption
 ```javascript
 let
-key = "01234567890123456789012345678901"/* A 256 bit key */,
-iv = "0123456789012345"/* A 128 bit IV */;
+   key = "01234567890123456789012345678901"/* A 256 bit key */,
+   iv = "0123456789012345"/* A 128 bit IV */;
 let plainText = "Hello world";
 /** Encryption **/
 let encText = crypto.encrypt( plainText, key, iv );
