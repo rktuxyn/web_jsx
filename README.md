@@ -1,5 +1,5 @@
 # web_jsx
-web_jsx *.wjsx, *.wjsxh (back-end Javascript) web extension handler (Run with IIS, Apache, Nginx)<br/>
+web_jsx *.wjsx, *.wjsxh (Server-side Javascript) web extension handler (Run with IIS, Apache, Nginx)<br/>
 <br/>
 Read POST data
 ```javascript
