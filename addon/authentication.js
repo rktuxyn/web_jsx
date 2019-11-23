@@ -6,9 +6,9 @@
 * See the accompanying LICENSE file for terms.
 */
 ( typeof ( Object.extend ) === 'function' ? undefined : ( Object.extend = function ( destination, source ) {
-	for ( var property in source )
-		destination[property] = source[property];
-	return destination;
+    for ( var property in source )
+        destination[property] = source[property];
+    return destination;
 } ) );
 function getAuthHeader( header ) {
     if ( !header ) throw "Invalid request!!!";
@@ -46,9 +46,9 @@ function getCookie( httpCookie, name ) {
     }
     return undefined;
 };
-let { CryptoJS } = require( "/addon/aes.js" );
+//let { CryptoJS } = require( "/addon/aes.js" );
 module.exports = ( function () {
-	var _user_info = { is_authenticated: false, move_next: true };
+    var _user_info = { is_authenticated: false, move_next: true };
     return {
         init: function ( ctx, config ) {
             if ( !ctx || 'object' !== typeof ( ctx ) )
@@ -58,27 +58,33 @@ module.exports = ( function () {
             if ( !ctx.request.cookie ) return;
             if ( !config.auth_cookie ) config.auth_cookie = "web_jsx_session";
             let cook = getCookie( ctx.request.cookie, config.auth_cookie );
-
             if ( !cook || cook == null ) return;
+            _user_info = { is_authenticated: false, move_next: true };
             _user_info.remote_address = ctx.remote_addr;
-			_user_info.login_id = cook;
-			Object.extend(_user_info, getAuthHeader( ctx.request.header ) );
-            try {
-                if ( _user_info.user_data ) {
-                    _user_info.session = JSON.parse( _user_info.user_data );
-                    delete _user_info.user_data;
-                    _user_info.session.session_id = getCookie( ctx.request.cookie, "_sess_act" );
+            let arr = cook.split( "~" );
+            Object.extend( _user_info, getAuthHeader( ctx.request.header ) );
+            if ( arr !== null ) {
+                _user_info.is_authenticated = true;
+                let keys = ["login_id", "user_data"];
+                for ( let i = 0, l = arr.length; i < l; i++ ) {
+                    _user_info[keys[i]] = arr[i];
                 }
-            } catch ( e ) { }
-			
-			if (_user_info.origin.indexOf( ctx.host ) > -1 ) return this;
-			
+                try {
+                    if ( _user_info.user_data ) {
+                        _user_info.session = JSON.parse( _user_info.user_data );
+                        delete _user_info.user_data;
+                        _user_info.session.session_id = getCookie( ctx.request.cookie, "_sess_act" );
+                    }
+                } catch ( e ) { }
+            }
+           
+            if ( _user_info.origin.indexOf( ctx.host ) > -1 ) return this;
             return writeCrossHeader( _user_info.origin ), this;
-		},
-		get move_next() {
-			if ( !_user_info ) return false;
-			return _user_info.move_next;
-		},
+        },
+        get move_next() {
+            if ( !_user_info ) return false;
+            return _user_info.move_next;
+        },
         isAuthenticated: function () {
             if ( !_user_info ) return false;
             return _user_info.is_authenticated;
@@ -90,17 +96,17 @@ module.exports = ( function () {
             _user_info = { is_authenticated: false };
             return this;
         },
-        authenticate: function ( ctx, config, loginid ) {
+        authenticate: function ( ctx, config, loginid, userData ) {
             if ( !ctx || 'object' !== typeof ( ctx ) )
                 throw "context required!!!";
             if ( !config || 'object' !== typeof ( config ) )
                 throw "config required!!!";
             if ( !config.auth_cookie ) config.auth_cookie = "web_jsx_session";
             if ( ctx.https ) {
-                ctx.response.cookie( `Set-Cookie: ${config.auth_cookie}=${loginid};` );
+                ctx.response.cookie( `Set-Cookie: ${config.auth_cookie}=${loginid}~${userData};` );
                 return this;
             }
-            ctx.response.cookie( `Set-Cookie: ${config.auth_cookie}=${loginid};` );
+            ctx.response.cookie( `Set-Cookie: ${config.auth_cookie}=${loginid}~${userData};` );
             return this;
         }
     };
