@@ -1,228 +1,108 @@
+//3:25 AM 11/30/2018
 /**
 * Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
 * @author {SOW}
 * Copyrights licensed under the New BSD License.
 * See the accompanying LICENSE file for terms.
 */
-//8:23 PM 12/2/2018
-/** [Object Extend]*/
 ( typeof ( Object.extend ) === 'function' ? undefined : ( Object.extend = function ( destination, source ) {
-    for ( let property in source )
-        destination[property] = source[property];
-    return destination;
+	for ( var property in source )
+		destination[property] = source[property];
+	return destination;
 } ) );
-/** [/Object Extend]*/
-Date.prototype.addHours = function ( h ) {
-    this.setHours( this.getHours() + h );
-    return this;
-};
-var http_request = function ( _url ) {
-    this.url = _url;
-};
-function http_init( body, follow_location ) {
-    let req_object = {
-        url: this.url,
-        method: this.method,
-        follow_location: typeof ( follow_location ) !== "boolean" ? true : follow_location
+function getAuthHeader( header ) {
+    if ( !header ) throw "Invalid request!!!";
+    let map = {
+        "HTTP_ORIGIN": "origin"
     };
-    if ( this.method === "POST" ) {
-        if ( body === undefined || body === null )
-            throw new Error( "Request body required for POST request!!!" );
-        if ( typeof ( body ) !== 'string' )
-            throw new Error( "POST paylod data typeof(string) required !!!" );
-        req_object.body = body; body = undefined;
-    }
-    if ( Object.keys( this.header ).length > 0 ) {
-        req_object.header = [];
-        for ( let key in this.header )
-            req_object.header.push( `${key}:${this.header[key]}` );
-    }
-	/*if( this.header && this.header.length > 0)
-		req_object.header = this.header;*/
-    if ( this.cookie && this.cookie.length > 0 ) {
-        req_object.cookie = this.cookie.join( ";" );
-        /*req_object.cookie = "";
-        for ( let i = 0, l = this.cookie.length; i < l; i++ ) {
-            if ( i === 0 ) {
-                req_object.cookie += this.cookie[i]; continue;
-            }
-            req_object.cookie += "; " + this.cookie[i];
-        }*/
-
-    }
-    return create_http_request( req_object );
+    let out = {};
+    header.split( "~" ).find( ( a ) => {
+        let ar = a.split( "=" ), val;
+        if ( !map[ar[0]] ) return;
+        val = ar[1];
+        out[map[ar[0]]] = val === void 0 || !val ? null : ar[1].trim();
+    } );
+    return out;
 };
-function parse_response( resp ) {
-    this.response = {
-        http_status_code: 0,
-        cookie: [],
-        header: {},
-        body: {},
-        is_error: false,
-        error: undefined
-    };
-    if ( resp.ret_val < 0 ) {
-        this.response.is_error = true;
-        this.response.error = resp.ret_msg;
-        return;
-    }
-    this.response.body = resp.response_body; delete resp.response_body;
-    if ( !resp.response_header && "string" !== typeof ( resp.response_header ) ) {
-        delete resp.response_header;
-        return;
-    }
-    let arr = resp.response_header.split( "\r\n" );
-    delete resp.response_header;
-    if ( null === arr ) return;
+function writeCrossHeader( ctx, origin ) {
+    ctx.response.header( "Access-Control-Allow-Origin", origin || "*" );
+    ctx.response.header( "Access-Control-Allow-Credentials", "true" );
+    ctx.response.header( "Access-Control-Allow-Methods", "GET" );
+    ctx.response.header( "Access-Control-Max-Age", "7200" );
+    ctx.response.header( "Access-Control-Expose-Headers", "x-access-token, x-auth-token, x-http-status-code, Content-Type, Pragma, Content-Transfer-Encoding" );
+    ctx.response.header( "Access-Control-Allow-Headers", "x-mac-addr, x-access-token, x-auth-token, x-device-info, x-http-status-code, Content-Type, Accept, X-Requested-With, remember-me" );
+    return true;
+};
+function getCookie( httpCookie, name ) {
+    if ( !httpCookie || !name ) throw "Invalid request!!!";
+    let arr = httpCookie.split( ";" );
+    if ( arr === null || !arr ) return undefined;
     for ( let row of arr ) {
-        if ( !row ) continue;
-        if ( row.indexOf( 'HTTP' ) > -1 ) {
-            this.response.http_status_code = parseInt( row.split( " " )[1] );
-            continue;
-        }
-        if ( row.indexOf( 'Set-Cookie' ) > -1 ) {
-            let cok = row.split( ":" )[1];
-            if ( !cok ) continue;
-            cok = cok.split( ";" )[0];
-            this.response.cookie.push( cok ); continue;
-        }
-        let harr = row.split( ":" );
-        let key = harr[0].replace( /-/g, "_" ).toLowerCase();
-        this.response.header[key] = harr[1];
+        let rarr = row.split( "=" );
+        let key = rarr[0];
+        if ( !key ) continue;
+        if ( key.trim() !== name ) continue;
+        return String( rarr[1] ).trim();
     }
-    return;
+    return undefined;
 };
-function prepare_post_data( body ) {
-    if ( 'object' !== typeof ( body ) || typeof ( body ) === 'string' ) {
-        this.set_header( "Content-Length", String( body.length ) )
-        return body;
-    }
-    if ( null === body && 'object' !== typeof ( body ) )
-        throw new Error( "Request body required for POST request!!!" );
+let { CryptoJS } = require( "/addon/aes.js" );
+module.exports = ( function () {
+	var _user_info = { is_authenticated: false, move_next: true };
+    return {
+        init: function ( ctx, config ) {
+            if ( !ctx || 'object' !== typeof ( ctx ) )
+                throw "context required!!!";
+            if ( !config || 'object' !== typeof ( config ) )
+                throw "config required!!!";
+            if ( !ctx.request.cookie ) return;
+            if ( !config.auth_cookie ) config.auth_cookie = "web_jsx_session";
+            let cook = getCookie( ctx.request.cookie, config.auth_cookie );
 
-    let str = [];
-    for ( let p in body ) {
-        str.push( encodeURIComponent( p ) + "=" + encodeURIComponent( body[p] ) );
-    }
-    let data = str.join( "&" );
-    this.set_header( "Content-Length", String( data.length ) );
-    //this.form_data = data;
-    return data;
-
-};
-function clean_resp( rs ) {
-    for ( let p in rs )
-        delete rs[p];
-};
-function resolve( deferred, cb ) {
-    if ( typeof ( cb ) !== "function" ) return deferred;
-    deferred.catch( ( reason ) => {
-        cb( -1, reason );
-    } ).then( ( s ) => {
-        cb( 1, s );
-    } ); deferred = undefined;
-    return;
-};
-Object.extend( http_request.prototype, {
-    response: {},
-    url: undefined,
-    method: undefined,
-    cookie: [],
-    header: {},
-    get_time_stamp: function ( day ) {
-        return new Date().addHours( typeof ( day ) === "number" ? day : 1 ).toString().split( "(" )[0].trim();
-    },
-    exists_cookie: function ( cook ) {
-        return this.cookie.indexOf( cook ) >= 0;
-    },
-    set_cookie: function ( key, value ) {
-        return this.set_raw_cookie( `${key}=${value}` );
-    },
-    set_raw_cookie: function ( cook ) {
-        if ( this.exists_cookie( cook ) ) return this;
-        this.cookie.push( cook );
-        return this;
-    },
-    remove_header: function ( key ) {
-        if ( this.header[key] )
-            delete this.header[key];
-        /*let index = this.header.indexOf( key );
-        throw new Error( `${key} ==> ${index}==>${JSON.stringify( this.header)}` );
-        if ( index < 0 ) return;
-        this.header.splice( index, 1 );*/
-        return this;
-    },
-    set_header: function ( key, value ) {
-        this.remove_header( key );
-        this.header[key] = value;
-        return this;
-    },
-    getAsync: function ( cb, follow_location ) {
-        return resolve( new Promise( ( resolve, reject ) => {
-            this.get( follow_location );
-            resolve();
-        } ), cb );
-    },
-    postAsync: function ( body, cb, follow_location ) {
-        return resolve( new Promise( ( resolve, reject ) => {
-            this.post( body, follow_location ); body = undefined;
-            resolve();
-        } ), cb );
-    },
-    /**
-     * @type {{body: JSON, cb: Function, follow_location:boolean|void 0}}
-     */
-    sendAsync: function ( body, cb, follow_location ) {
-        return resolve( new Promise( ( resolve, reject ) => {
-            this.post( body, follow_location ); body = undefined;
-            resolve();
-        } ), cb );
-    },
-    /**
-     * @type {{follow_location:boolean|void 0}}
-     * @returns {{http_request}}
-     */
-    get: function ( follow_location) {
-        this.method = "GET";
-        let resp = http_init.call( this, void 0, follow_location );
-        parse_response.call( this, resp );
-        clean_resp( resp );
-        return this;
-    },
-    post: function ( body, follow_location ) {
-        this.method = "POST";
-        let resp = http_init.call( this, prepare_post_data.call( this, body ), follow_location ); body = void 0;
-        parse_response.call( this, resp );
-        clean_resp( resp );
-        return this;
-    },
-    send: function ( body, follow_location ) {
-        this.method = "POST";
-        let resp = http_init.call( this, prepare_post_data.call( this, body ), follow_location ); body = void 0;
-        parse_response.call( this, resp );
-        clean_resp( resp );
-        return this;
-    },
-    move_to_request: function ( with_header ) {
-        if ( 'number' === typeof ( this.response.http_status_code ) && this.response.http_status_code > 0 ) {
-            this.cookie = [];
-            for ( let part; this.response.cookie.length && ( part = this.response.cookie.shift() ); ) {
-                this.cookie.push( part );
+            if ( !cook || cook == null ) return;
+            _user_info.remote_address = ctx.remote_addr;
+			_user_info.login_id = cook;
+			Object.extend(_user_info, getAuthHeader( ctx.request.header ) );
+            try {
+                if ( _user_info.user_data ) {
+                    _user_info.session = JSON.parse( _user_info.user_data );
+                    delete _user_info.user_data;
+                    _user_info.session.session_id = getCookie( ctx.request.cookie, "_sess_act" );
+                }
+            } catch ( e ) { }
+			
+			if (_user_info.origin.indexOf( ctx.host ) > -1 ) return this;
+			
+            return writeCrossHeader( _user_info.origin ), this;
+		},
+		get move_next() {
+			if ( !_user_info ) return false;
+			return _user_info.move_next;
+		},
+        isAuthenticated: function () {
+            if ( !_user_info ) return false;
+            return _user_info.is_authenticated;
+        },
+        getUserInfo: function () {
+            return _user_info || {};
+        },
+        clear: function () {
+            _user_info = { is_authenticated: false };
+            return this;
+        },
+        authenticate: function ( ctx, config, loginid ) {
+            if ( !ctx || 'object' !== typeof ( ctx ) )
+                throw "context required!!!";
+            if ( !config || 'object' !== typeof ( config ) )
+                throw "config required!!!";
+            if ( !config.auth_cookie ) config.auth_cookie = "web_jsx_session";
+            if ( ctx.https ) {
+                ctx.response.cookie( `Set-Cookie: ${config.auth_cookie}=${loginid};` );
+                return this;
             }
+            ctx.response.cookie( `Set-Cookie: ${config.auth_cookie}=${loginid};` );
+            return this;
         }
-        if ( !with_header )
-            this.header = {};
-        return this;
-    },
-    clear_response: function () {
-        clean_resp( this.response );
-        delete this.response;
-        this.url = undefined;
-        this.method = undefined;
-        this.header = {};
-        this.cookie = [];
-        return this;
-    }
-} );
-module.exports = http_request;
-//8:23 PM 12/2/2018
+    };
+}() );
+//8:08 AM 11/30/2018
