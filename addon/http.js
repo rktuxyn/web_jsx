@@ -37,18 +37,8 @@ function http_init( body, follow_location ) {
         for ( let key in this.header )
             req_object.header.push( `${key}:${this.header[key]}` );
     }
-	/*if( this.header && this.header.length > 0)
-		req_object.header = this.header;*/
     if ( this.cookie && this.cookie.length > 0 ) {
         req_object.cookie = this.cookie.join( ";" );
-        /*req_object.cookie = "";
-        for ( let i = 0, l = this.cookie.length; i < l; i++ ) {
-            if ( i === 0 ) {
-                req_object.cookie += this.cookie[i]; continue;
-            }
-            req_object.cookie += "; " + this.cookie[i];
-        }*/
-
     }
     return create_http_request( req_object );
 };
@@ -106,7 +96,6 @@ function prepare_post_data( body ) {
     }
     let data = str.join( "&" );
     this.set_header( "Content-Length", String( data.length ) );
-    //this.form_data = data;
     return data;
 
 };
@@ -146,10 +135,6 @@ Object.extend( http_request.prototype, {
     remove_header: function ( key ) {
         if ( this.header[key] )
             delete this.header[key];
-        /*let index = this.header.indexOf( key );
-        throw new Error( `${key} ==> ${index}==>${JSON.stringify( this.header)}` );
-        if ( index < 0 ) return;
-        this.header.splice( index, 1 );*/
         return this;
     },
     set_header: function ( key, value ) {
@@ -225,3 +210,4 @@ Object.extend( http_request.prototype, {
     }
 } );
 module.exports = http_request;
+//8:23 PM 12/2/2018
