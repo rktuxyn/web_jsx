@@ -30,7 +30,7 @@ Implement module with require
 /** read web config module **/
 let cfg = require( "/addon/web.conf.js" );
 /** get pgsql addon **/
-const { pgSql } = require( "/addon/pgsql.js" );
+const { pgSql, npgsql_db_type, npgsql_parameter_direction, npgsql_createParam } = require( "/addon/pgsql.js" );
 /** initialize pgSql instance **/
 let _pgsql = new pgSql( cfg.database.db_conn, JSON.stringify( { login_id: "system" } ) );
 
@@ -51,6 +51,18 @@ let designation_sid = _pgsql.execute_query( "INSERT INTO c_type.designation(desi
 
 /** Execute DELETE statement**/
 _pgsql.execute_query( "delete from c_type.designation where designation_sid > {0}  and designation_sid not in({1})", [2, designation_sid] );
+
+/** Execute SCALAR statement**/
+let params = [];
+params.push( npgsql_createParam( "ct", npgsql_db_type.Jsonb, npgsql_parameter_direction.Input, { login_id: "system" } ) );
+params.push( npgsql_createParam( "obj", npgsql_db_type.Jsonb, npgsql_parameter_direction.Input, { } ) );
+params.push( npgsql_createParam( "ret_data_table", npgsql_db_type.Jsonb, npgsql_parameter_direction.Output ) );
+params.push( npgsql_createParam( "ret_val", npgsql_db_type.Bigint, npgsql_parameter_direction.Output ) );
+params.push( npgsql_createParam( "ret_msg", npgsql_db_type.Varchar, npgsql_parameter_direction.Output ) );
+let res = _pgsql.execute_scalar( "data_storage.__get__historical_data", params );
+context.response.write( res.ret_val );
+context.response.write( res.ret_msg );
+context.response.write( JSON.stringify( res.ret_data_table ) );
 ```
 OpenSSL EVP Symmetric Encryption and Decryption
 ```javascript
