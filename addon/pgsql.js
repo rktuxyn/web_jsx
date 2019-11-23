@@ -4,6 +4,26 @@
 * Copyrights licensed under the New BSD License.
 * See the accompanying LICENSE file for terms.
 */
+const npgsql_db_type = {
+    COMMON: -1, NULL: -2, Array: 1,
+    Bigint: 1, Boolean: 2, Box: 3, Bytea: 4,
+    Circle: 5, Char: 6, Date: 7, Double: 8,
+    Integer: 9, Line: 10, LSeg: 11, Money: 12,
+    Numeric: 13, Path: 14, Point: 15, Real: 17,
+    Smallint: 18, Text: 19, Time: 20, Timestamp: 21,
+    Varchar: 22, Refcursor: 23, Inet: 24, Bit: 25,
+    TimestampTZ: 26, Uuid: 27, Xml: 28, Oidvector: 29,
+    Interval: 30, TimeTZ: 31, Name: 32, Abstime: 33,
+    MacAddr: 34, Json: 35, Jsonb: 36, Hstore: 37,
+    InternalChar: 38, Varbit: 39, Xid: 42, Cid: 43, Cidr: 44,
+    TsVector: 45, TsQuery: 46, Enum: 47, Composite: 48,
+    Regtype: 49, Geometry: 50, Citext: 51, Int2Vector: 52, Tid: 53, Range: 1073741824
+};
+const parameter_direction = {
+    Input: 1,
+    Output: 2, InputOutput: 3,
+    ReturnValue: 6
+};
 class pgSql {
     constructor( db_conn/*Database connection string*/, pgsql_ctx/*[User Context]*/) {
         if ( !pgsql_ctx || pgsql_ctx === null || typeof ( pgsql_ctx ) === "undefined" )
@@ -153,6 +173,37 @@ class pgSql {
             throw new Error( "Callback required." );
         return npgsql.data_reader( this.db_conn, this.parse_paramq( param, query ), callback );
     }
+    
+    execute_scalar( sp, params ) {
+        try {
+            let res = npgsql.execute_scalar( this.db_conn, sp, params );
+            let outres = {};
+            params.forEach( ( param ) => {
+                if ( param.parameter_direction === parameter_direction.Input ) return;
+                if ( param.npgsql_db_type === npgsql_db_type.Json ||
+                    param.npgsql_db_type === npgsql_db_type.Jsonb ) {
+                    return outres[param.name] = res[param.parameter_name] ? JSON.parse( res[param.parameter_name] ) : null, delete res[param.parameter_name], void 0;
+                }
+                if ( param.npgsql_db_type === npgsql_db_type.Integer ||
+                    param.npgsql_db_type === npgsql_db_type.Numeric ||
+                    param.npgsql_db_type === npgsql_db_type.Bigint ||
+                    param.npgsql_db_type === npgsql_db_type.Smallint ||
+                    param.npgsql_db_type === npgsql_db_type.Real ) {
+                    let val = parseFloat( res[param.parameter_name] );
+                    return outres[param.name] = isNaN( val ) ? 0 : val, delete res[param.parameter_name], void 0;
+                }
+                return outres[param.name] = res[param.parameter_name], delete res[param.parameter_name], void 0;
+            } );
+            return outres;
+        } catch ( e ) {
+            return {
+                "ret_val": -1,
+                "ret_msg": e.message,
+                "ret_data_table": "{}"
+            };
+        }
+        
+    }
     execute_query( query, param ) {
         return npgsql.execute_query( this.db_conn, this.parse_paramq( param, query ) )
     }
@@ -178,5 +229,36 @@ class pgSql {
     }
 }
 module.exports = {
-    pgSql: pgSql
+    pgSql: pgSql,
+    npgsql_db_type: npgsql_db_type,
+    npgsql_parameter_direction: parameter_direction,
+    npgsql_createParam: function ( name, db_type, direction, value ) {
+        let out = {
+            parameter_name: void 0,
+            data: void 0,
+            npgsql_db_type: db_type,
+            parameter_direction: direction,
+            name: name
+        };
+        out.parameter_name = `_${name}`;
+        if ( direction === parameter_direction.Input || direction === parameter_direction.InputOutput ) {
+            if ( !value || value === null ) {
+                out.data = "null";
+            } else {
+                if ( db_type === npgsql_db_type.Varchar ) {
+                    out.data = pgSql.quote_literalq( value );
+                } else if ( db_type === npgsql_db_type.Json || db_type === npgsql_db_type.Jsonb ) {
+                    out.data = pgSql.quote_literalq( JSON.stringify( value ) );
+                } else {
+                    out.data = pgSql.quote_literalq( value );
+                }
+            }
+            return out;
+        }
+        if ( direction === parameter_direction.Output
+            || direction === parameter_direction.ReturnValue ) {
+            return out;
+        }
+        throw new Error( `Invalid parameter_direction ${direction}` );
+    }
 };
