@@ -16,13 +16,13 @@ Date.prototype.addHours = function ( h ) {
     this.setHours( this.getHours() + h );
     return this;
 };
-var http_request = function ( _url ) {
-    this.url = _url;
-};
 function http_init( body, follow_location ) {
     let req_object = {
         url: this.url,
         method: this.method,
+        is_debug: this.is_debug,
+        is_verify_ssl: this.is_verify_ssl,
+        is_verify_ssl_host: this.is_verify_ssl_host,
         follow_location: typeof ( follow_location ) !== "boolean" ? true : follow_location
     };
     if ( this.method === "POST" ) {
@@ -112,83 +112,96 @@ function resolve( deferred, cb ) {
     } ); deferred = undefined;
     return;
 };
-Object.extend( http_request.prototype, {
-    response: {},
-    url: undefined,
-    method: undefined,
-    cookie: [],
-    header: {},
-    get_time_stamp: function ( day ) {
+//8:23 PM 12/2/2018
+//1:02 PM 11/24/2019
+//With Rajib & Ovi
+class http_request {
+    constructor( _url, opt ) {
+        this.url = _url;
+        if ( !opt || opt === null || typeof ( opt ) !== "object" ) {
+            opt = {
+                is_debug: false,
+                is_verify_ssl: true,
+                is_verify_ssl_host: true
+            };
+        }
+        Object.extend( this, opt );
+        this.response = {};
+        this.method = void 0;
+        this.cookie = [];
+        this.header = {};
+    }
+    get_time_stamp( day ) {
         return new Date().addHours( typeof ( day ) === "number" ? day : 1 ).toString().split( "(" )[0].trim();
-    },
-    exists_cookie: function ( cook ) {
+    }
+    exists_cookie( cook ) {
         return this.cookie.indexOf( cook ) >= 0;
-    },
-    set_cookie: function ( key, value ) {
+    }
+    set_cookie( key, value ) {
         return this.set_raw_cookie( `${key}=${value}` );
-    },
-    set_raw_cookie: function ( cook ) {
+    }
+    set_raw_cookie( cook ) {
         if ( this.exists_cookie( cook ) ) return this;
         this.cookie.push( cook );
         return this;
-    },
-    remove_header: function ( key ) {
+    }
+    remove_header( key ) {
         if ( this.header[key] )
             delete this.header[key];
         return this;
-    },
-    set_header: function ( key, value ) {
+    }
+    set_header( key, value ) {
         this.remove_header( key );
         this.header[key] = value;
         return this;
-    },
-    getAsync: function ( cb, follow_location ) {
+    }
+    getAsync( cb, follow_location ) {
         return resolve( new Promise( ( resolve, reject ) => {
             this.get( follow_location );
             resolve();
         } ), cb );
-    },
-    postAsync: function ( body, cb, follow_location ) {
+    }
+    postAsync( body, cb, follow_location ) {
         return resolve( new Promise( ( resolve, reject ) => {
             this.post( body, follow_location ); body = undefined;
             resolve();
         } ), cb );
-    },
+    }
     /**
      * @type {{body: JSON, cb: Function, follow_location:boolean|void 0}}
      */
-    sendAsync: function ( body, cb, follow_location ) {
+    sendAsync( body, cb, follow_location ) {
         return resolve( new Promise( ( resolve, reject ) => {
-            this.post( body, follow_location ); body = undefined;
-            resolve();
+            this.post( body, follow_location );
+            return body = undefined, resolve();
         } ), cb );
-    },
+    }
     /**
      * @type {{follow_location:boolean|void 0}}
      * @returns {{http_request}}
      */
-    get: function ( follow_location) {
+    get( follow_location ) {
         this.method = "GET";
         let resp = http_init.call( this, void 0, follow_location );
         parse_response.call( this, resp );
         clean_resp( resp );
         return this;
-    },
-    post: function ( body, follow_location ) {
+    }
+    post( body, follow_location ) {
         this.method = "POST";
         let resp = http_init.call( this, prepare_post_data.call( this, body ), follow_location ); body = void 0;
         parse_response.call( this, resp );
         clean_resp( resp );
         return this;
-    },
-    send: function ( body, follow_location ) {
+    }
+    send( body, follow_location ) {
         this.method = "POST";
         let resp = http_init.call( this, prepare_post_data.call( this, body ), follow_location ); body = void 0;
         parse_response.call( this, resp );
         clean_resp( resp );
         return this;
-    },
-    move_to_request: function ( with_header ) {
+    }
+    move_to_request( with_header ) {
         if ( 'number' === typeof ( this.response.http_status_code ) && this.response.http_status_code > 0 ) {
             this.cookie = [];
             for ( let part; this.response.cookie.length && ( part = this.response.cookie.shift() ); ) {
@@ -198,8 +211,8 @@ Object.extend( http_request.prototype, {
         if ( !with_header )
             this.header = {};
         return this;
-    },
-    clear_response: function () {
+    }
+    clear_response() {
         clean_resp( this.response );
         delete this.response;
         this.url = undefined;
@@ -208,6 +221,5 @@ Object.extend( http_request.prototype, {
         this.cookie = [];
         return this;
     }
-} );
+};
 module.exports = http_request;
-//8:23 PM 12/2/2018
