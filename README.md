@@ -75,7 +75,7 @@ smtp.debug();
 /* You may enable TLS mood */
 smtp.enableTls();
 /* If you enable TLS you need to add CERT */
-smtp.cart( env.server_map_path( "/mycart.pem" ) );
+smtp.cert( env.server_map_path( "/mycert.pem" ) );
 /* Create MailMessage Instance */
 let msg = new MailMessage( "from@address", "to@address" );
 /* Add your mail subject */
