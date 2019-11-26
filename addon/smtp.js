@@ -73,7 +73,7 @@ const _options = {
     is_debug: false,
     is_verify_ssl: false,
     is_verify_ssl_host: false,
-    cart_path: void 0,
+    cert_path: void 0,
     tls: false,
     from: void 0,
     to: void 0,
@@ -190,9 +190,9 @@ class Smtp {
     enableTls() {
         return this.opt.tls = true, this;
     }
-    cart( path ) {
+    cert( path ) {
         ensure_value( path, "path" );
-        return this.opt.cart_path = path, this;
+        return this.opt.cert_path = path, this;
     }
     host( host ) {
         ensure_value( host, "host" );
@@ -219,7 +219,6 @@ class Smtp {
         if ( Array.isArray( obj.attachments ) ) {
             if ( obj.attachments.length <= 0 ) delete obj.attachments;
         }
-        //return obj;
         try {
             let res = {
                 success: create_smtp_request( obj ) === "Success",
