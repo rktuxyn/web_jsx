@@ -75,7 +75,7 @@ smtp.debug();
 /* You may enable TLS mood */
 smtp.enableTls();
 /* If you enable TLS you need to add CERT */
-smtp.cert( env.server_map_path( "/mycert.pem" ) );
+smtp.cert( context.server_map_path( "/mycert.pem" ) );
 /* Create MailMessage Instance */
 let msg = new MailMessage( "from@address", "to@address" );
 /* Add your mail subject */
@@ -95,7 +95,7 @@ msg.attachment( {
 let rs = smtp.sendMail( msg );
 /* Read your response, whether it was sent or failed..*/
 /*{success:true|false, msg: reason}*/
-print( JSON.stringify( rs ) );
+context.response.write( JSON.stringify( rs ) );
 ```
 OpenSSL EVP Symmetric Encryption and Decryption
 ```javascript
