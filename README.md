@@ -64,6 +64,39 @@ context.response.write( res.ret_val );
 context.response.write( res.ret_msg );
 context.response.write( JSON.stringify( res.ret_data_table ) );
 ```
+Send @Email with #web_jsx
+```javascript
+/* Import SMTP Addon*/
+const { Smtp, MailMessage, mime_type, mime_encoder } = require( "/addon/smtp.js" );
+/* Create SMTP instance*/
+let smtp = new Smtp( "smtp://my_smtp.com", "smtp_user", "smtp_password" );
+/* If you use CLI, you can enable debug mood*/
+smtp.debug();
+/* You may enable TLS mood */
+smtp.enableTls();
+/* If you enable TLS you need to add CERT */
+smtp.cart( env.server_map_path( "/mycart.pem" ) );
+/* Create MailMessage Instance */
+let msg = new MailMessage( "from@address", "to@address" );
+/* Add your mail subject */
+msg.subject( "Your subject Test mail from web_jsx" );
+/* Add your CC, BCC @address. You can add multiple address*/
+msg.cc( "cc@address" ).bcc( "bcc@address" );
+/* Add your mail body here and can set it body is html */
+msg.body( `@body`,/*is html body*/ false );
+/* Add your attachment. you can add multiple attachment here*/
+msg.attachment( {
+    name: "test",
+    path: env.server_map_path( "test.zip" ),
+    mime_type: mime_type.application.zip,
+    encoder: mime_encoder.base64
+} );
+/* Send email here with MailMessage instance */
+let rs = smtp.sendMail( msg );
+/* Read your response, whether it was sent or failed..*/
+/*{success:true|false, msg: reason}*/
+print( JSON.stringify( rs ) );
+```
 OpenSSL EVP Symmetric Encryption and Decryption
 ```javascript
 let
