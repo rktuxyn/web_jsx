@@ -87,7 +87,7 @@ msg.body( `@body`,/*is html body*/ false );
 /* Add your attachment. you can add multiple attachment here*/
 msg.attachment( {
     name: "test",
-    path: env.server_map_path( "test.zip" ),
+    path: context.server_map_path( "test.zip" ),
     mime_type: mime_type.application.zip,
     encoder: mime_encoder.base64
 } );
