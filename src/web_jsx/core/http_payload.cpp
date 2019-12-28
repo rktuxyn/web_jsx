@@ -9,6 +9,12 @@
 #if !defined(_web_jsx_global_h)
 #include "web_jsx_global.h"
 #endif//_web_jsx_global_h
+#if !defined(_INC_STDLIB)
+#include <stdlib.h>/* srand, rand */
+#endif // !_INC_STDLIB
+#if !defined(_INC_TIME)
+#include <time.h>
+#endif//!_INC_TIME
 #pragma warning(disable : 4996)//Disable strcpy warning
 using namespace sow_web_jsx;
 /*[Help]*/
@@ -21,7 +27,7 @@ public:
 		const std::string& c_type
 	);
 	~http_posted_file();
-	void store(const std::string& buff);
+	void store(const char* path);
 	double save_as(const char* path);
 	bool is_empty_header();
 	bool is_text_content();
@@ -32,16 +38,21 @@ public:
 	const char* get_file_name();
 	const char* get_content_type();
 	size_t get_file_size();
+	void set_file_size(size_t file_size);
 private:
 	bool _is_disposed;
-	std::unique_ptr<std::vector<char>> _stream;
 	std::string _fcontent_disposition;
 	std::string _fname;
 	std::string _ffile_name;
 	std::string _fcontent_type;
+	bool _is_moved;
+	size_t _file_size;
+	std::string _temp_file;
 };
 typedef struct POSTED_FILES {
 	POSTED_FILES* next;
+	//std::unique_ptr<POSTED_FILES>next;
+	//std::unique_ptr<http_posted_file> file;
 	http_posted_file* file;
 }posted_files;
 class http_payload {
@@ -49,6 +60,7 @@ public:
 	http_payload(const std::string& content_type, size_t content_length);
 	~http_payload();
 	int read_all();
+	int read_all(const char* temp_dir);
 	int save_to_file(const char* dir);
 	bool is_maltipart();
 	int has_error();
@@ -71,12 +83,16 @@ private:
 	int _is_multipart;
 	int _is_read_end;
 	int _file_count;
+	bool _ismemory;
 	size_t _content_length;
+	//std::unique_ptr<posted_files>_posted_files;
 	posted_files* _posted_files;
 	int _errc;
 	char* _internal_error;
 	std::string _content_type;
+	//std::string _form_data;
 	std::unique_ptr<std::vector<char>> _stream;
+	//std::vector<char> _stream;
 	int panic(const char* error, int code);
 	void parse_mime(const std::string& data);
 };
@@ -174,7 +190,9 @@ http_posted_file* parse_header(const std::string& data) {
 	std::string cType = extract_between(part, "Content-Type: ", "\r\n\r\n");
 	// This is hairy: Netscape and IE don't encode the filenames
 	// The RFC says they should be encoded, so I will assume they are.
+	//std::cout << "cType:" << cType << std::endl;
 	filename = form_urldecode(filename);
+	//return std::make_unique<http_posted_file>(disposition, name, filename, cType);
 	return new http_posted_file(disposition, name, filename, cType);
 }
 http_posted_file::http_posted_file(const std::string& disposition,
@@ -182,13 +200,12 @@ http_posted_file::http_posted_file(const std::string& disposition,
 	const std::string& file_name,
 	const std::string& c_type
 ) {
-	//this->_data = NULL;
 	_fcontent_disposition = disposition.c_str();
 	_fname = name.c_str();
 	_ffile_name = file_name.c_str();
 	_fcontent_type = c_type.c_str();
 	_is_disposed = false;
-	_stream = std::make_unique<std::vector<char>>();
+	_is_moved = false; _file_size = 0;
 }
 http_posted_file::~http_posted_file() {
 	this->clear();
@@ -208,48 +225,53 @@ const char* http_posted_file::get_content_type() {
 void http_posted_file::clear() {
 	if (_is_disposed)return;
 	_is_disposed = true;
-	if (_stream != NULL) {
-		_stream->clear();
-		_stream.release();
-		_stream = NULL;
+	if (_is_moved == false) {
+		if (!_temp_file.empty()) {
+			if (__file_exists(_temp_file.c_str())) {
+				std::remove(_temp_file.c_str());
+			}
+		}
 	}
 	_fcontent_disposition.clear();
 	_fname.clear(); _ffile_name.clear();
-	_fcontent_type.clear();
+	_fcontent_type.clear(); _temp_file.clear();
+	_file_size = 0;
+}
+void http_posted_file::set_file_size(size_t file_size) {
+	_file_size = file_size;
 }
 size_t http_posted_file::get_file_size() {
-	return _stream->size();
-}
-void http_posted_file::store(const std::string& buff) {
-	size_t len = buff.size();
-	_stream->reserve(len);
-	const char* buffer = buff.c_str();
-	std::copy(buffer, buffer + len, std::back_inserter(*_stream.get()));
-	//std::transform(std::begin(buff), std::end(buff), &_stream[0], [](const auto& s) { return s.c_str(); });
+	return _file_size;
 }
 const char* http_posted_file::get_data() {
-	if (_stream->empty()) {
-		return NULL;
-	}
+	if (_is_moved)return NULL;
 	if (is_text_content()) {
-		return std::string(_stream->begin(), _stream->end()).c_str();
+		std::ifstream file(_temp_file.c_str(), std::ifstream::ate | std::ifstream::binary);
+		if (file.is_open()) {
+			std::streamsize size = file.tellg();
+			file.seekg(0, std::ios::beg);
+			std::vector<char> buffer(size);
+			const char* file_str = NULL;
+			if (file.read(buffer.data(), size)) {
+				file_str = std::string(buffer.begin(), buffer.end()).c_str();
+			}
+			buffer.clear();
+			file.close();
+			return file_str;
+		}
 	}
 	return NULL;
 }
+void http_posted_file::store(const char* path) {
+	this->_temp_file = std::string(path);
+}
 double http_posted_file::save_as(const char* path) {
-	if (_stream->empty()) {
-		return -4;
-	}
-	std::ofstream binary_file(path, std::ios::binary | std::ios::out);
-	if (binary_file.is_open()) {
-		size_t totalSize = get_file_size();
-		std::copy(_stream->begin(), _stream->end(), std::ostreambuf_iterator<char>(binary_file));
-		binary_file.close();
-		std::ofstream().swap(binary_file);
-		return static_cast<double>(totalSize);
-	}
-	std::ofstream().swap(binary_file);
-	return static_cast<double>(-1);
+	if (_is_moved == true)return 0;
+	if (__file_exists(_temp_file.c_str()) == false)return -1;
+	if (__file_exists(path) == true)std::remove(path);
+	if (std::rename(_temp_file.c_str(), path) < 0)return -501;
+	_is_moved = true;
+	return (double)_file_size;
 }
 bool http_posted_file::is_empty_header() {
 	return _fcontent_type.empty();
@@ -270,12 +292,16 @@ http_payload::http_payload(
 	_is_multipart = 0;
 	_errc = 0; _is_disposed = false;
 	_internal_error = new char;
-	_stream = std::make_unique<std::vector<char>>();
+	_ismemory = false;
 	if (_content_length > 0) {
 		std::string multipart_type = "multipart/form-data";
 		if (strings_equal(multipart_type, content_type,
 			multipart_type.length())) {
 			_is_multipart = 1;
+		}
+		else {
+			_ismemory = true;
+			_stream = std::make_unique<std::vector<char>>();
 		}
 		multipart_type.clear();
 	}
@@ -315,11 +341,14 @@ void http_payload::clear() {
 		_content_type.clear();
 		std::string().swap(_content_type);
 	}
-	if (_stream != NULL) {
-		_stream->clear();
-		_stream.release();
-		_stream = NULL;
+	if (_ismemory) {
+		if (_stream != NULL) {
+			_stream->clear();
+			_stream.release();
+			_stream = NULL;
+		}
 	}
+	
 }
 http_payload::~http_payload() {
 	this->clear();
@@ -331,52 +360,154 @@ http_payload::~http_payload() {
 #if !defined(FCGIO_H)
 #include "fcgio.h"
 #endif//!FCGIO_H
+#if !defined(DATA_READ_CHUNK)
+#define DATA_READ_CHUNK 8192
+#endif//!DATA_READ_CHUNK
 void read_payload(std::unique_ptr<std::vector<char>>& std_input, size_t content_length) {
 	std_input->reserve(content_length);
 	char buff;
 	while (std::cin.get(buff)) {
-		// Process c here.
 		std_input->insert(std_input->end(), buff);
-	}
-	fclose(stdin);
-	std::cin.clear();
-	//fflush(stdin);
-}
-#else
-#if !defined(DATA_READ_CHUNK)
-#define DATA_READ_CHUNK 8192
-#endif//!DATA_READ_CHUNK
-void read_payload(std::vector<char> & std_input, size_t content_length) {
-	std_input.reserve(content_length);
-	size_t len = 0;
-	//DATA_READ_CHUNK should be 8192 according to FCGX_Accept_r(FCGX_Request *reqDataPtr) line 2154 file fcgiapp.c
-	while (true) {
-		char* buff;
-		if (content_length > DATA_READ_CHUNK) {
-			buff = new char[DATA_READ_CHUNK + 1];
-			len = DATA_READ_CHUNK;
-		}
-		else {
-			buff = new char[content_length + 1];
-			len = content_length;
-		}
-		buff[len] = '\0';
-		fread(buff, 1, len, stdin);
-		if (buff != NULL && buff[0] != '\0') {
-			std_input.insert(std_input.end(), buff, buff + len);
-			delete[]buff;
-			content_length -= len;
-			if (content_length <= 0)break;
-		}
-		else {
-			delete[]buff;
-		}
 	}
 	fclose(stdin);
 }
 #endif//!FAST_CGI_APP
+std::istream& getline(std::istream& is, std::string& t) {
+	t.clear();
+	std::streambuf* sb = is.rdbuf();
+	for (;;) {
+		int c = sb->sbumpc();
+		switch (c) {
+		case '\n':
+			t += (char)c;
+			return is;
+		case '\r':
+			t += (char)c;
+			c = sb->sgetc();
+			if (c == '\n') {
+				sb->sbumpc();
+				t += (char)c;
+			}
+			return is;
+		case EOF:
+			// Also handle the case when the last line has no line ending
+			if (t.empty()) {
+				is.setstate(std::ios::eofbit);
+			}
+			return is;
+		default:
+			t += (char)c;
+		}
+	}
+}
+int http_payload::read_all(const char* temp_dir) {
+	if (_errc < 0 || _is_disposed == true)return 0;
+	if (_is_read_end > 0)return 0;
+	if (_content_length <= 0) {
+		return panic("No payload found in current request", -1);
+	}
+	if (this->is_maltipart() == false) {
+		return panic("Multipart posted file required...", -1);
+	}
+	if (SET_BINARY_MODE_IN() == -1) {
+		std::string err("ERROR: while converting cin to binary:");
+		err.append(strerror(errno));
+		return panic(err.c_str(), -10);
+	}
+	_ismemory = false;
+	std::string bType = "boundary=";
+	size_t 	pos = _content_type.find(bType);
+	// generate the separators
+	std::string sep = _content_type.substr(pos + bType.size());
+	sep.insert(0, "--");
+	std::string line;
+	int file_count = 0;
+	bool start = false;
+	std::string file_name;
+	std::ofstream file;
+	std::string temp_dir_str(temp_dir);
+	sow_web_jsx::format__path(temp_dir_str);
+	size_t sep_len = sep.size();
+	bool is_saved = true;
+	srand(time(NULL));
+	std::istream::sentry sentry(std::cin, true);
+	while (getline(std::cin, line)){
+		if (line.size() < sep_len || line.find(sep) == std::string::npos) {
+			if (!start)continue;
+			file.write(line.c_str(), line.size());
+			if (std::cin.eof()) {
+				_posted_files->file->set_file_size(static_cast<size_t>(file.tellp()));
+				file.flush(); file.close();
+				is_saved = true; start = false; break;
+			}
+			continue;
+		}
+		if (std::cin.eof()) {
+			if (start) {
+				_posted_files->file->set_file_size(static_cast<size_t>(file.tellp()));
+				file.flush(); file.close();
+				is_saved = true;
+			}
+			start = false; break;
+		}
+		if (start) {
+			_posted_files->file->set_file_size(static_cast<size_t>(file.tellp()));
+			file.flush(); file.close();
+			start = false; is_saved = true;
+		}
+		int info_count = 0;
+		line.clear();
+		std::string new_info("");
+		while (true) {
+			info_count++;
+			if (getline(std::cin, line).eof())break;
+			new_info.append(line.c_str());
+			if (info_count >= 2)break;
+		}
+		if (getline(std::cin, line).eof())break;//Last CRLF
+		new_info.append(line.c_str());
+		posted_files* pf = new posted_files();
+		pf->file = parse_header(new_info);
+		if (pf->file->is_empty_header()) {
+			pf->file->clear();
+			delete pf->file;
+			delete pf;
+			continue;
+		}
+		if (!file_name.empty())file_name.clear();
+		file_name = std::string(temp_dir_str.c_str());
+		/* initialize random seed: */
+		file_name.append(std::to_string(rand() * file_count));
+		file.open(file_name, std::ofstream::out | std::ofstream::binary);
+		if (file.is_open() == false) {
+			std::string err("Unable to open file to ->");
+			err.append(temp_dir);
+			return panic(err.c_str(), -1);
+		}
+		is_saved = false;
+		start = true;
+		pf->file->store(file_name.c_str());
+		if (_posted_files != NULL) {
+			pf->next = std::move(_posted_files);
+		}
+		else {
+			pf->next = NULL;
+		}
+		_posted_files = pf;
+		new_info.clear();
+		file_count++;
+	}
+	fclose(stdin);
+	if (is_saved == false) {
+		_posted_files->file->set_file_size(static_cast<size_t>(file.tellp()));
+		file.flush(); file.close();
+	}
+	temp_dir_str.clear();
+	if (!line.empty())line.clear();
+	return file_count;
+}
 int http_payload::save_to_file(const char* dir) {
-	int rec = this->read_all();
+	int rec = this->read_all(dir);
 	if (rec < 0)return rec;
 	std::string dir_str(dir);
 	sow_web_jsx::format__path(dir_str);
@@ -397,42 +528,18 @@ int http_payload::read_all() {
 		return panic("No payload found in current request", -1);
 	}
 	try {
+		if (this->is_maltipart()) {
+			return panic("Multipart not allowed here... Please provide TEMP_DIRECTORY...", -1);
+		}
 		if (SET_BINARY_MODE_IN() == -1) {
 			std::string err("ERROR: while converting cin to binary:");
 			err.append(strerror(errno));
 			return panic(err.c_str(), -10);
 		}
+		_is_read_end = 1;
 		read_payload(_stream, _content_length);
 		if (_stream->empty()) {
 			return panic("Unable to read payload from current request", -1);
-		}
-		_is_read_end = 1;
-		if (this->is_maltipart()) {
-			
-			std::string 		bType = "boundary=";
-			size_t 	pos = _content_type.find(bType);
-			// generate the separators
-			std::string sep1 = _content_type.substr(pos + bType.size());
-			sep1.append("\r\n");
-			sep1.insert(0, "--");
-			std::unique_ptr<std::string> form_data = std::make_unique<std::string>(_stream->begin(), _stream->end());
-			// Find the data between the separators
-			size_t start = form_data->find(sep1);
-			size_t sepLen = sep1.size();
-			size_t oldPos = start + sepLen;
-			while (true) {
-				pos = form_data->find(sep1, oldPos);
-				// If sep1 wasn't found, the rest of the data is an item
-				if (std::string::npos == pos)
-					break;
-				// parse the data
-				parse_mime(form_data->substr(oldPos, pos - oldPos));
-				// update position
-				oldPos = pos + sepLen;
-			}
-			sep1.clear(); bType.clear();
-			form_data->clear(); form_data.release();
-			form_data = NULL;
 		}
 		return 1;
 	}
@@ -441,36 +548,6 @@ int http_payload::read_all() {
 	}
 	catch (...) {
 		return panic("Unknown error...", -501);
-	}
-}
-void http_payload::parse_mime(const std::string& data) {
-	// Find the header
-	std::string end = "\r\n\r\n";
-	size_t headLimit = data.find(end, 0);
-	// Detect error
-	if (std::string::npos == headLimit)
-		throw std::runtime_error("Malformed input");
-	// Extract the value - there is still a trailing CR/LF to be subtracted off
-	size_t valueStart = headLimit + end.length();
-	_file_count++;
-	posted_files* pf = new posted_files();
-	pf->file = parse_header(data.substr(0, valueStart));
-	if (pf->file->is_empty_header()) {
-		pf->file->clear();
-		delete pf->file;
-		delete pf;
-	}
-	else {
-		std::unique_ptr<std::string> value = std::make_unique<std::string>(data.substr(valueStart, data.length() - valueStart - 2));
-		pf->file->store(*value); value->clear(); value.release();
-		value = NULL;
-		if (_posted_files != NULL) {
-			pf->next = std::move(_posted_files);
-		}
-		else {
-			pf->next = NULL;
-		}
-		_posted_files = pf;
 	}
 }
 bool http_payload::is_maltipart() {
@@ -493,10 +570,13 @@ int http_payload::panic(const char* error, int code) {
 }
 
 int http_payload::get_total_file() {
-	return _file_count;
+	if (is_maltipart())return _file_count;
+	return panic("File count allowed only Multipart posted stream....", -1);
+	
 }
 const char* http_payload::get_body() {
 	if (_is_disposed)return '\0';
+	if (is_maltipart())return '\0';
 	if (_stream->empty())return '\0';
 	return std::string(_stream->begin(), _stream->end()).c_str();
 }
@@ -529,6 +609,10 @@ v8::Local<v8::Object> get_file_obj(v8::Isolate* isolate, http_posted_file* pf) {
 		}
 		else if (ret == -2) {
 			std_str = "Unable to write data to file...";
+		}
+		else if (ret == -501) {
+			std_str = "Unable to move file. Error#";
+			std_str.append(strerror(errno));
 		}
 		absolute_v8_str.clear();
 		isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, std_str.c_str())));
@@ -619,8 +703,15 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "read_all", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		http_payload* app = (http_payload*)args.Holder()->GetAlignedPointerFromInternalField(0);
-		int ret = app->read_all();
 		v8::Isolate* isolate = args.GetIsolate();
+		int ret = 0;
+		if (args[0]->IsString()) {
+			native_string temp_dir(isolate, args[0]);
+			ret = app->read_all(temp_dir.c_str());
+		}
+		else {
+			ret = app->read_all();
+		}
 		if (ret < 0) {
 			isolate->ThrowException(v8::Exception::TypeError(
 				sow_web_jsx::v8_str(isolate, app->get_last_error())));
