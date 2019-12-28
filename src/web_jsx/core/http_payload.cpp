@@ -62,7 +62,7 @@ public:
 	int read_all();
 	int read_all(const char* temp_dir);
 	int save_to_file(const char* dir);
-	bool is_maltipart();
+	bool is_multipart();
 	int has_error();
 	int get_total_file();
 	const char* get_body();
@@ -94,7 +94,6 @@ private:
 	std::unique_ptr<std::vector<char>> _stream;
 	//std::vector<char> _stream;
 	int panic(const char* error, int code);
-	void parse_mime(const std::string& data);
 };
 bool strings_equal(
 	const std::string& s1,
@@ -406,7 +405,7 @@ int http_payload::read_all(const char* temp_dir) {
 	if (_content_length <= 0) {
 		return panic("No payload found in current request", -1);
 	}
-	if (this->is_maltipart() == false) {
+	if (this->is_multipart() == false) {
 		return panic("Multipart posted file required...", -1);
 	}
 	if (SET_BINARY_MODE_IN() == -1) {
@@ -528,7 +527,7 @@ int http_payload::read_all() {
 		return panic("No payload found in current request", -1);
 	}
 	try {
-		if (this->is_maltipart()) {
+		if (this->is_multipart()) {
 			return panic("Multipart not allowed here... Please provide TEMP_DIRECTORY...", -1);
 		}
 		if (SET_BINARY_MODE_IN() == -1) {
@@ -550,7 +549,7 @@ int http_payload::read_all() {
 		return panic("Unknown error...", -501);
 	}
 }
-bool http_payload::is_maltipart() {
+bool http_payload::is_multipart() {
 	return _is_multipart != 0;
 }
 int http_payload::has_error() {
@@ -570,13 +569,13 @@ int http_payload::panic(const char* error, int code) {
 }
 
 int http_payload::get_total_file() {
-	if (is_maltipart())return _file_count;
+	if (is_multipart())return _file_count;
 	return panic("File count allowed only Multipart posted stream....", -1);
 	
 }
 const char* http_payload::get_body() {
 	if (_is_disposed)return '\0';
-	if (is_maltipart())return '\0';
+	if (is_multipart())return '\0';
 	if (_stream->empty())return '\0';
 	return std::string(_stream->begin(), _stream->end()).c_str();
 }
@@ -719,9 +718,9 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 		}
 		args.GetReturnValue().Set(v8::Number::New(isolate, ret));
 	}, global));
-	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "is_maltipart", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "is_multipart", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		http_payload* app = (http_payload*)args.Holder()->GetAlignedPointerFromInternalField(0);
-		bool ret = app->is_maltipart();
+		bool ret = app->is_multipart();
 		v8::Isolate* isolate = args.GetIsolate();
 		args.GetReturnValue().Set(v8::Boolean::New(isolate, ret));
 	}, global));
