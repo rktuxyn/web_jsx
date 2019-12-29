@@ -13,6 +13,34 @@ void sow_web_jsx::get_dir_from_path (const std::string& path_str, std::string&di
 	size_t found = path_str.find_last_of("/\\");
 	dir = path_str.substr(0, found);
 }
+std::istream& sow_web_jsx::get_line(std::istream& is, std::string& t) {
+	t.clear();
+	std::streambuf* sb = is.rdbuf();
+	for (;;) {
+		int c = sb->sbumpc();
+		switch (c) {
+		case '\n':
+			t += (char)c;
+			return is;
+		case '\r':
+			t += (char)c;
+			c = sb->sgetc();
+			if (c == '\n') {
+				sb->sbumpc();
+				t += (char)c;
+			}
+			return is;
+		case EOF:
+			// Also handle the case when the last line has no line ending
+			if (t.empty()) {
+				is.setstate(std::ios::eofbit);
+			}
+			return is;
+		default:
+			t += (char)c;
+		}
+	}
+}
 #if !(defined(_WIN32)||defined(_WIN64)) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
 #error Not Implemented
 #else
@@ -265,11 +293,13 @@ size_t sow_web_jsx::read_file(const char*absolute_path, std::stringstream&ssstre
 	size_t rlen = 0;
 	while (true) {
 		rlen = t_length > READ_CHUNK ? READ_CHUNK : t_length;
-		char* buff = (char*)malloc(rlen + 1);
+		//char* buff = (char*)malloc(rlen + 1);
+		char* buff = new char[rlen + 1];
 		buff[rlen] = '\0';
 		read_length = fread(buff, 1, rlen, fs);
 		if (ferror(fs)) {
-			free(buff);
+			//free(buff);
+			delete[]buff;
 			fclose(fs);
 			std::stringstream().swap(ssstream);
 			ssstream << "ERROR OCCURED WHILE READING FILE#" << absolute_path;
@@ -277,7 +307,8 @@ size_t sow_web_jsx::read_file(const char*absolute_path, std::stringstream&ssstre
 		}
 		r_length += read_length;
 		ssstream.write(buff, read_length);
-		free(buff);
+		//free(buff);
+		delete[]buff;
 		t_length -= read_length;
 		if (t_length <= 0)break;
 	}
