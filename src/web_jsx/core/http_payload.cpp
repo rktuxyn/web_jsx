@@ -51,8 +51,6 @@ private:
 };
 typedef struct POSTED_FILES {
 	POSTED_FILES* next;
-	//std::unique_ptr<POSTED_FILES>next;
-	//std::unique_ptr<http_posted_file> file;
 	http_posted_file* file;
 }posted_files;
 class http_payload {
@@ -63,21 +61,16 @@ public:
 	int read_all(const char* temp_dir);
 	int save_to_file(const char* dir);
 	bool is_multipart();
+	bool is_read_end();
 	int has_error();
 	int get_total_file();
 	const char* get_body();
 	const char* get_last_error();
 	void clear();
 	template<class _func>
-	int read_files(_func cb) {
-		int rec = 0;
-		if (_posted_files == NULL)return rec;
-		posted_files* pf;
-		for (pf = _posted_files; pf; pf = pf->next) {
-			cb(pf->file); rec++;
-		}
-		return rec;
-	}
+	int read_files(_func cb);
+	template<class _func>
+	int read_line(_func cb);
 private:
 	bool _is_disposed;
 	int _is_multipart;
@@ -85,14 +78,12 @@ private:
 	int _file_count;
 	bool _ismemory;
 	size_t _content_length;
-	//std::unique_ptr<posted_files>_posted_files;
 	posted_files* _posted_files;
 	int _errc;
 	char* _internal_error;
 	std::string _content_type;
-	//std::string _form_data;
-	std::unique_ptr<std::vector<char>> _stream;
-	//std::vector<char> _stream;
+	std::stringstream _stream;
+	size_t get_stream_size();
 	int panic(const char* error, int code);
 };
 bool strings_equal(
@@ -189,9 +180,7 @@ http_posted_file* parse_header(const std::string& data) {
 	std::string cType = extract_between(part, "Content-Type: ", "\r\n\r\n");
 	// This is hairy: Netscape and IE don't encode the filenames
 	// The RFC says they should be encoded, so I will assume they are.
-	//std::cout << "cType:" << cType << std::endl;
 	filename = form_urldecode(filename);
-	//return std::make_unique<http_posted_file>(disposition, name, filename, cType);
 	return new http_posted_file(disposition, name, filename, cType);
 }
 http_posted_file::http_posted_file(const std::string& disposition,
@@ -300,7 +289,6 @@ http_payload::http_payload(
 		}
 		else {
 			_ismemory = true;
-			_stream = std::make_unique<std::vector<char>>();
 		}
 		multipart_type.clear();
 	}
@@ -341,16 +329,26 @@ void http_payload::clear() {
 		std::string().swap(_content_type);
 	}
 	if (_ismemory) {
-		if (_stream != NULL) {
-			_stream->clear();
-			_stream.release();
-			_stream = NULL;
+		size_t size = get_stream_size();
+		if (size == 0 || size == std::string::npos) {
+			_stream.clear();
+			std::stringstream().swap(_stream);
 		}
 	}
 	
 }
 http_payload::~http_payload() {
 	this->clear();
+}
+template<class _func>
+int http_payload::read_files(_func cb) {
+	int rec = 0;
+	if (_posted_files == NULL)return rec;
+	posted_files* pf;
+	for (pf = _posted_files; pf; pf = pf->next) {
+		cb(pf->file); rec++;
+	}
+	return rec;
 }
 #if defined(FAST_CGI_APP)
 #if !defined(_FCGI_STDIO)
@@ -362,45 +360,63 @@ http_payload::~http_payload() {
 #if !defined(DATA_READ_CHUNK)
 #define DATA_READ_CHUNK 8192
 #endif//!DATA_READ_CHUNK
-void read_payload(std::unique_ptr<std::vector<char>>& std_input, size_t content_length) {
-	std_input->reserve(content_length);
-	char buff;
-	while (std::cin.get(buff)) {
-		std_input->insert(std_input->end(), buff);
+template<class _func>
+int http_payload::read_line(_func cb) {
+	if (_content_length <= 0) {
+		return panic("No payload found in current request", -1);
+	}
+	if (this->is_multipart() == true) {
+		return panic("Multipart posted file not allowed...", -1);
+	}
+	if (_is_read_end > 0) {
+		return panic("Posted data already read end... Please use get_body instead.", -1);
+	}
+	if (SET_BINARY_MODE_IN() == -1) {
+		std::string err("ERROR: while converting cin to binary:");
+		err.append(strerror(errno));
+		return panic(err.c_str(), -10);
+	}
+	_is_read_end = 1;
+	int rec = 0;
+	std::string line;
+	std::istream::sentry sentry(std::cin, true);
+	while (sow_web_jsx::get_line(std::cin, line)) {
+		cb(line.c_str(), line.size()); rec++;
+		if (std::cin.eof())break;
+	}
+	if (!line.empty())line.clear();
+	fclose(stdin);
+	return rec;
+}
+void read_payload(std::stringstream&stream, const size_t content_length) {
+	size_t len = 0;
+	size_t c_len = content_length;
+	//DATA_READ_CHUNK should be 8192 according to FCGX_Accept_r(FCGX_Request *reqDataPtr) line 2215 file fcgiapp.c
+	stream.clear();
+	while (true) {
+		char* buff;
+		if (content_length > DATA_READ_CHUNK) {
+			buff = new char[DATA_READ_CHUNK + 1];
+			len = DATA_READ_CHUNK;
+		}
+		else {
+			buff = new char[content_length + 1];
+			len = content_length;
+		}
+		buff[len] = '\0';
+		std::cin.read(buff, len);
+		stream.write(buff, len);
+		delete[]buff;
+		c_len -= len;
+		if (c_len <= 0)break;
 	}
 	fclose(stdin);
 }
 #endif//!FAST_CGI_APP
-std::istream& getline(std::istream& is, std::string& t) {
-	t.clear();
-	std::streambuf* sb = is.rdbuf();
-	for (;;) {
-		int c = sb->sbumpc();
-		switch (c) {
-		case '\n':
-			t += (char)c;
-			return is;
-		case '\r':
-			t += (char)c;
-			c = sb->sgetc();
-			if (c == '\n') {
-				sb->sbumpc();
-				t += (char)c;
-			}
-			return is;
-		case EOF:
-			// Also handle the case when the last line has no line ending
-			if (t.empty()) {
-				is.setstate(std::ios::eofbit);
-			}
-			return is;
-		default:
-			t += (char)c;
-		}
-	}
-}
+
 int http_payload::read_all(const char* temp_dir) {
-	if (_errc < 0 || _is_disposed == true)return 0;
+	if (_is_disposed)return 0;
+	if (_errc < 0 )return _errc;
 	if (_is_read_end > 0)return 0;
 	if (_content_length <= 0) {
 		return panic("No payload found in current request", -1);
@@ -413,7 +429,7 @@ int http_payload::read_all(const char* temp_dir) {
 		err.append(strerror(errno));
 		return panic(err.c_str(), -10);
 	}
-	_ismemory = false;
+	_ismemory = false; _is_read_end = 1;
 	std::string bType = "boundary=";
 	size_t 	pos = _content_type.find(bType);
 	// generate the separators
@@ -430,7 +446,7 @@ int http_payload::read_all(const char* temp_dir) {
 	bool is_saved = true;
 	srand(time(NULL));
 	std::istream::sentry sentry(std::cin, true);
-	while (getline(std::cin, line)){
+	while (sow_web_jsx::get_line(std::cin, line)){
 		if (line.size() < sep_len || line.find(sep) == std::string::npos) {
 			if (!start)continue;
 			file.write(line.c_str(), line.size());
@@ -456,17 +472,17 @@ int http_payload::read_all(const char* temp_dir) {
 		}
 		int info_count = 0;
 		line.clear();
-		std::string new_info("");
+		std::string header_info("");
 		while (true) {
 			info_count++;
-			if (getline(std::cin, line).eof())break;
-			new_info.append(line.c_str());
+			if (sow_web_jsx::get_line(std::cin, line).eof())break;
+			header_info.append(line.c_str());
 			if (info_count >= 2)break;
 		}
-		if (getline(std::cin, line).eof())break;//Last CRLF
-		new_info.append(line.c_str());
+		if (sow_web_jsx::get_line(std::cin, line).eof())break;//Last CRLF
+		header_info.append(line.c_str());
 		posted_files* pf = new posted_files();
-		pf->file = parse_header(new_info);
+		pf->file = parse_header(header_info);
 		if (pf->file->is_empty_header()) {
 			pf->file->clear();
 			delete pf->file;
@@ -493,7 +509,7 @@ int http_payload::read_all(const char* temp_dir) {
 			pf->next = NULL;
 		}
 		_posted_files = pf;
-		new_info.clear();
+		header_info.clear();
 		file_count++;
 	}
 	fclose(stdin);
@@ -520,6 +536,12 @@ int http_payload::save_to_file(const char* dir) {
 	std::string().swap(dir_str);
 	return rec;
 }
+size_t http_payload::get_stream_size() {
+	_stream.seekg(0, std::ios::end);//Go to end of stream
+	std::streamoff totalSize = _stream.tellg();
+	_stream.seekg(0, std::ios::beg);//Back to begain of stream
+	return (size_t)totalSize;
+}
 int http_payload::read_all() {
 	if (_errc < 0 || _is_disposed == true)return 0;
 	if (_is_read_end > 0)return 0;
@@ -536,8 +558,10 @@ int http_payload::read_all() {
 			return panic(err.c_str(), -10);
 		}
 		_is_read_end = 1;
+		_stream = std::stringstream(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
 		read_payload(_stream, _content_length);
-		if (_stream->empty()) {
+		size_t size = get_stream_size();
+		if (size == 0 || size == std::string::npos) {
 			return panic("Unable to read payload from current request", -1);
 		}
 		return 1;
@@ -552,6 +576,9 @@ int http_payload::read_all() {
 bool http_payload::is_multipart() {
 	return _is_multipart != 0;
 }
+bool http_payload::is_read_end(){
+	return _is_read_end != 0;
+}
 int http_payload::has_error() {
 	return _errc < 0;
 }
@@ -559,6 +586,7 @@ const char* http_payload::get_last_error() {
 	if (_errc >= 0 || _internal_error == NULL) return "No Error Found!!!";
 	return const_cast<const char*>(_internal_error);
 }
+
 int http_payload::panic(const char* error, int code) {
 	if (_internal_error != NULL)
 		delete[]_internal_error;
@@ -575,9 +603,11 @@ int http_payload::get_total_file() {
 }
 const char* http_payload::get_body() {
 	if (_is_disposed)return '\0';
+	if (_is_read_end <= 0)return '\0';
 	if (is_multipart())return '\0';
-	if (_stream->empty())return '\0';
-	return std::string(_stream->begin(), _stream->end()).c_str();
+	size_t size = get_stream_size();
+	if (size == 0 || size == std::string::npos)return '\0';
+	return _stream.str().c_str();
 }
 v8::Local<v8::Object> get_file_obj(v8::Isolate* isolate, http_posted_file* pf) {
 	v8::Local<v8::FunctionTemplate> appTemplate = v8::FunctionTemplate::New(isolate);
@@ -670,6 +700,10 @@ v8::Local<v8::Object> get_file_obj(v8::Isolate* isolate, http_posted_file* pf) {
 
 	v8::Handle<v8::Object> exports = appTemplate->GetFunction(isolate->GetCurrentContext()).ToLocalChecked()->NewInstance(isolate->GetCurrentContext()).ToLocalChecked();
 	exports->SetAlignedPointerInInternalField(0, pf);
+	v8::Persistent<v8::Object, v8::CopyablePersistentTraits<v8::Object>> pobj(isolate, exports);
+	pobj.SetWeak<http_posted_file*>(&pf, [](const v8::WeakCallbackInfo<http_posted_file*>& data) {
+		delete[] data.GetParameter();
+	}, v8::WeakCallbackType::kParameter);
 	return exports;
 }
 void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -700,6 +734,33 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 		args.GetReturnValue().Set(v8::Number::New(isolate, static_cast<double>(len)));
 		return;
 	}, global));
+	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "read_line", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		v8::Isolate* isolate = args.GetIsolate();
+		if (!args[0]->IsFunction() || args[0]->IsNullOrUndefined()) {
+			isolate->ThrowException(v8::Exception::TypeError(
+				sow_web_jsx::v8_str(isolate, "Callback should be a Function instance!!!")));
+			return;
+		}
+		http_payload* app = (http_payload*)args.Holder()->GetAlignedPointerFromInternalField(0);
+		v8::Persistent<v8::Function> cb;
+		cb.Reset(isolate, v8::Local<v8::Function>::Cast(args[0]));
+		v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate, cb);
+		int ret = app->read_line([&isolate, &callback](const char* data, size_t size) {
+			v8::Local<v8::Value> argv[2] = {
+				v8::String::NewFromUtf8(isolate, data),
+				v8::Number::New(isolate, static_cast<double>(size))
+			};
+			callback->Call(isolate->GetCurrentContext(), isolate->GetCurrentContext()->Global(), 2, argv);
+			argv->Clear();
+		});
+		callback.Clear();
+		if (ret < 0) {
+			isolate->ThrowException(v8::Exception::TypeError(
+				sow_web_jsx::v8_str(isolate, app->get_last_error())));
+			return;
+		}
+		args.GetReturnValue().Set(v8::Number::New(isolate, ret));
+	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "read_all", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		http_payload* app = (http_payload*)args.Holder()->GetAlignedPointerFromInternalField(0);
 		v8::Isolate* isolate = args.GetIsolate();
@@ -727,6 +788,14 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "get_body", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* isolate = args.GetIsolate();
 		http_payload* app = (http_payload*)args.Holder()->GetAlignedPointerFromInternalField(0);
+		if (app->is_multipart()) {
+			isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, "Multipart posted file not allowed.")));
+			return;
+		}
+		if (app->is_read_end() == false) {
+			isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, "No posted data read yet from current context. Please use before read_all...")));
+			return;
+		}
 		const char* data = app->get_body();
 		if (data == NULL || (data != NULL && data == '\0')) {
 			isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, "No data found in current context.")));
@@ -792,6 +861,82 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 		native_string ctype(isolate, args[1]);
 		http_payload* hp = new http_payload(ctype.c_str(), content_length);
 		localApp->SetAlignedPointerInInternalField(0, hp);
+		v8::Persistent<v8::Object, v8::CopyablePersistentTraits<v8::Object>> pobj(isolate, localApp);
+		pobj.SetWeak<http_payload*>(&hp, [](const v8::WeakCallbackInfo<http_payload*>& data) {
+			delete[] data.GetParameter();
+		}, v8::WeakCallbackType::kParameter);
 	}
 	args.GetReturnValue().Set(localApp);
+}
+void sow_web_jsx::write_file_from_payload(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	v8::Isolate* isolate = args.GetIsolate();
+	if (!args[0]->IsNumber() || args[0]->IsNullOrUndefined()) {
+		isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, "Contenent length required!!!")));
+		return;
+	}
+	if (!args[1]->IsString() || args[1]->IsNullOrUndefined()) {
+		isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, "ContentType required!!!")));
+		return;
+	}
+	if (!args[2]->IsString() || args[2]->IsNullOrUndefined()) {
+		isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, "Upload directory required!!!")));
+		return;
+	}
+	v8::Local<v8::Context> ctx = isolate->GetCurrentContext();
+	v8::Local<v8::Number> num = args[0]->ToNumber(ctx).ToLocalChecked();
+	size_t content_length = static_cast<size_t>(num->Value());
+	native_string ctype(isolate, args[1]);
+	native_string upload_dir(isolate, args[2]);
+	http_payload* app = new http_payload(ctype.c_str(), content_length);
+	int rec = app->read_all(upload_dir.c_str());
+	if (rec < 0) {
+		isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, app->get_last_error())));
+	}
+	else {
+		rec = app->save_to_file(upload_dir.c_str());
+		if (rec < 0) {
+			isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, app->get_last_error())));
+		}
+	}
+	if (rec >= 0) {
+		args.GetReturnValue().Set(v8::Number::New(isolate, rec));
+	}
+	app->clear(); delete app; ctype.clear(); upload_dir.clear();
+}
+void sow_web_jsx::read_payload(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	v8::Isolate* isolate = args.GetIsolate();
+	if (!args[0]->IsNumber() || args[0]->IsNullOrUndefined()) {
+		isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, "Contenent length required!!!")));
+		return;
+	}
+	if (!args[1]->IsString() || args[1]->IsNullOrUndefined()) {
+		isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, "ContentType required!!!")));
+		return;
+	}
+	if (!args[2]->IsFunction() || args[2]->IsNullOrUndefined()) {
+		isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, "Callback required!!!")));
+		return;
+	}
+	v8::Local<v8::Context> ctx = isolate->GetCurrentContext();
+	v8::Local<v8::Number> num = args[0]->ToNumber(ctx).ToLocalChecked();
+	size_t content_length = static_cast<size_t>(num->Value());
+	native_string ctype(isolate, args[1]);
+	http_payload* app = new http_payload(ctype.c_str(), content_length);
+	v8::Local<v8::Function> callback = v8::Local<v8::Function>::Cast(args[2]);
+	int ret = app->read_line([&isolate, &callback](const char* data, size_t size) {
+		v8::Local<v8::Value> argv[2] = {
+			v8::String::NewFromUtf8(isolate, data),
+			v8::Number::New(isolate, static_cast<double>(size))
+		};
+		callback->Call(isolate->GetCurrentContext(), isolate->GetCurrentContext()->Global(), 2, argv);
+		argv->Clear();
+	});
+	callback.Clear();
+	if (ret < 0) {
+		isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, app->get_last_error())));
+	}
+	else {
+		args.GetReturnValue().Set(v8::Number::New(isolate, ret));
+	}
+	app->clear(); delete app; ctype.clear();
 }
