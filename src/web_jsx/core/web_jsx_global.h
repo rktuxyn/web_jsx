@@ -92,6 +92,7 @@ _access(fname, 0)!=-1
 #else
 #  define SET_BINARY_MODE(file) _setmode(_fileno(file), _O_BINARY)
 #  define SET_BINARY_MODE_OUT() _setmode(_fileno(__acrt_iob_func(1)), _O_BINARY)
+#  define SET_BINARY_MODE_IN() _setmode(_fileno(__acrt_iob_func(0)), _O_BINARY)
 #endif//!__CYGWIN__
 #endif//!SET_BINARY_MODE
 #endif//_WIN32||__unix__
@@ -115,7 +116,15 @@ _access(fname, 0)!=-1
 #define H_N_L "\n"
 #endif//!H_N_L
 #endif//FAST_CGI_APP
+#if defined(jsx_shared)
+#if !defined(jsx_export)
 #define jsx_export __declspec(dllexport)
+#endif//!jsx_export
+#else
+#if !defined(jsx_export)
+#define jsx_export
+#endif//!jsx_export
+#endif//jsx_shared
 #define __client_build
 //#undef __client_build
 #define FORCE_EXIT_PROCESS	9
@@ -123,6 +132,7 @@ _access(fname, 0)!=-1
 //#define _stdin stdin
 #ifdef __cplusplus
 #pragma warning(disable : 4996)
+#pragma warning(disable : 4244)
 extern "C" {
 #endif
 	typedef struct {
@@ -161,7 +171,7 @@ namespace sow_web_jsx {
 	int create_process(const process_info*pi);
 	long create_child_process(const char*process_path, const char*arg);
 	int open_process(const char*process_path, const char*arg);
-
+	std::istream& get_line(std::istream& is, std::string& t);
 #if defined(_WINDOWS_)
 	wchar_t* ccr2ws(const char* s);
 	int kill_process_by_name(const char *process_name);
