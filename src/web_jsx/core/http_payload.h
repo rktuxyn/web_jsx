@@ -18,5 +18,7 @@
 #endif//!V8_LIBPLATFORM_LIBPLATFORM_H_
 namespace sow_web_jsx {
 	void read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value>& args);
+	void read_payload(const v8::FunctionCallbackInfo<v8::Value>& args);
+	void write_file_from_payload(const v8::FunctionCallbackInfo<v8::Value>& args);
 }
 #endif//!_http_payload_h
