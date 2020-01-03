@@ -32,46 +32,76 @@
 #if !defined(_CSTRING_)
 #include <cstring>
 #endif//!_CSTRING_
-#if !defined(jsx_export)
-#define jsx_export __declspec(dllexport)
-#endif//!jsx_export
+#if !defined(_glb_r_h)
+#include "glb_r.h"
+#endif//!_glb_r_h
+#if !defined(_SSTREAM_)
+#include <sstream>
+#endif//_SSTREAM_
+#if !defined(_REGEX_)
+#include <regex>
+#endif// !_REGEX_
+#if !defined(_curl_util_h)
+#include "curl_util.h"
+#endif//!_curl_util_h
 //https://curl.haxx.se/libcurl/c/smtp-mail.html
 //https://codereview.stackexchange.com/questions/139784/sending-email-using-libcurl
+//https://curl.haxx.se/libcurl/c/smtp-mime.html
 namespace smtp_client {
-	/*std::string date_time_now() {
-		const int RFC5322_TIME_LEN = 32;
-		time_t t;
-		struct tm *tm;
-
-		std::string ret;
-		ret.resize(RFC5322_TIME_LEN);
-
-		time(&t);
-		tm = localtime(&t);
-
-		strftime(&ret[0], RFC5322_TIME_LEN, "%a, %d %b %Y %H:%M:%S %z", tm);
-
-		return ret;
-	};*/
+	typedef struct {
+		size_t lines_read; /* count up */
+		std::vector<char*> data;
+	}smtp_ctx;
+	typedef struct {
+		std::string name; /* count up */
+		std::string path;
+		std::string mime_type;
+		std::string encoder;
+	}mail_attachment;
 	class smtp_request {
 	private:
+		//smtp_ctx _upload_ctx;
 		CURL *_curl;
-		struct curl_slist *_header_chunk;
-		bool _follow_location;
 		bool _disposed;
+		bool _has_error;
+		bool _is_debug;
 		char* _internal_error;
-		const char*_full_url;
+		struct curl_slist* _recipients;
+		struct curl_slist* _cheaders;
+		std::vector<std::string>* _headers;
+		std::vector<mail_attachment*>* _attachments;
+		virtual bool init();
+		virtual void log(const char* format, const char* str);
 		virtual void set_error(const char* error);
-		virtual void prepare();
-		virtual int send_request(std::string & response_header, std::string &response_body);
 	public:
-		smtp_request(const char*full_url, bool follow_location);
+		smtp_request();
+		virtual bool has_error();
+		virtual void host(const std::string host);
+		virtual void credentials(const std::string user, const std::string password);
+		virtual void http_auth(bool is_http_auth);
+		virtual void add_attachment(
+			const std::string name, 
+			const std::string mime_type,
+			const std::string path,
+			const std::string encoder
+		);
+		virtual void set_date_header();
+		virtual void set_message_id(const std::string mail_domain);
+		virtual void mail_from(const std::string from);
+		virtual void mail_to(const std::string to);
+		virtual void mail_cc(const std::string cc);
+		virtual void mail_bcc(const std::string bcc);
+		virtual void mail_subject(const std::string subject);
+		virtual void read_debug_information(bool isDebug);
+		virtual void verify_ssl(bool verify);
+		virtual void verify_ssl_host(bool verify);
+		virtual void set_server_cert(const std::string path);
+		virtual void enable_tls_connection();
+		virtual void prepare();
+		virtual int send_mail(const std::string body, bool isHtml);
+		//virtual int test_mail(const std::string body, bool isHtml);
+		virtual const char* get_last_error();
 		virtual ~smtp_request();
-		const char* get_last_error();
-		virtual void set_header(const char*header);
-		virtual void set_cookie(const char*cookie);
-		virtual int get(std::string & response_header, std::string &response_body);
-		virtual int post(const char*body, std::string & response_header, std::string &response_body);
 	};
 };
 

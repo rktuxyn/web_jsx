@@ -8,7 +8,7 @@ std::unordered_map<char, char> Cipher::make_map(int n) {
 	auto mod = [](int a, int b) { a %= b; return a < 0 ? a + b : a; };
 
 	std::unordered_map<char, char> map;
-	static const char alphabet[] = "abcd";
+	static const char alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz`~!@#$%^&*(){}[]123456789";
 	int const m = sizeof alphabet - 1; // subtract the final NUL
 	for (int i = 0; i < m; ++i) {
 		map.insert(std::make_pair(alphabet[i], alphabet[mod(i + n, m)]));

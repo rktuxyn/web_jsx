@@ -13,6 +13,7 @@ void sow_web_jsx::get_dir_from_path (const std::string& path_str, std::string&di
 	size_t found = path_str.find_last_of("/\\");
 	dir = path_str.substr(0, found);
 }
+//\r\n
 std::istream& sow_web_jsx::get_line(std::istream& is, std::string& t) {
 	t.clear();
 	std::streambuf* sb = is.rdbuf();
@@ -41,12 +42,103 @@ std::istream& sow_web_jsx::get_line(std::istream& is, std::string& t) {
 		}
 	}
 }
+bool sow_web_jsx::strings_equal(
+	const std::string& s1,
+	const std::string& s2,
+	size_t n
+) {
+	std::string::const_iterator p1 = s1.begin();
+	std::string::const_iterator p2 = s2.begin();
+	bool good = (n <= s1.length() && n <= s2.length());
+	std::string::const_iterator l1 = good ? (s1.begin() + n) : s1.end();
+	std::string::const_iterator l2 = good ? (s2.begin() + n) : s2.end();
+	while (p1 != l1 && p2 != l2) {
+		if (std::toupper(*(p1++)) != std::toupper(*(p2++)))
+			return false;
+	}
+	return good;
+}
+bool sow_web_jsx::strings_equal(
+	const std::string& s1,
+	const std::string& s2
+) {
+	std::string::const_iterator p1 = s1.begin();
+	std::string::const_iterator p2 = s2.begin();
+	std::string::const_iterator l1 = s1.end();
+	std::string::const_iterator l2 = s2.end();
+	while (p1 != l1 && p2 != l2) {
+		if (std::toupper(*(p1++)) != std::toupper(*(p2++)))
+			return false;
+	}
+	return (s2.size() == s1.size()) ? true : false;
+}
+std::string sow_web_jsx::extract_between(
+	const std::string& data,
+	const std::string& separator1,
+	const std::string& separator2
+) {
+	std::string result;
+	std::string::size_type start, limit;
+
+	start = data.find(separator1, 0);
+	if (std::string::npos != start) {
+		start += separator1.length();
+		limit = data.find(separator2, start);
+		if (std::string::npos != limit)
+			result = data.substr(start, limit - start);
+	}
+
+	return result;
+}
+
 #if !(defined(_WIN32)||defined(_WIN64)) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
 #error Not Implemented
 #else
+size_t sow_web_jsx::read_file(const char* absolute_path, std::stringstream& ssstream, bool check_file_exists) {
+	size_t r_length = -1;
+	if (check_file_exists == true) {
+		if (__file_exists(absolute_path) == false) {
+			ssstream << "File not found in#" << absolute_path;
+			return r_length;
+		}
+	}
+	FILE* fs;
+	errno_t err = fopen_s(&fs, absolute_path, "rb");
+	if (fs == NULL || err != 0) {
+		ssstream << get_error_desc(err) << " FILE:"<< absolute_path;
+		return r_length;
+	}
+	fseek(fs, 0, SEEK_END);//go to end
+	size_t t_length = ftell(fs);//get length of stream
+	rewind(fs);//Back to begain of stream
+	size_t read_length = 0;
+	r_length = 0;
+	size_t rlen = 0;
+	while (true) {
+		rlen = t_length > READ_CHUNK ? READ_CHUNK : t_length;
+		char* buff = new char[rlen + 1];
+		buff[rlen] = '\0';
+		read_length = fread(buff, 1, rlen, fs);
+		if (ferror(fs)) {
+			delete[]buff;
+			fclose(fs);
+			std::stringstream().swap(ssstream);
+			ssstream << "ERROR OCCURED WHILE READING FILE#" << absolute_path;
+			return -2;
+		}
+		r_length += read_length;
+		ssstream.write(buff, read_length);
+		delete[]buff;
+		t_length -= read_length;
+		if (t_length <= 0)break;
+	}
+	fclose(fs);
+	return r_length;
+}
 wchar_t* sow_web_jsx::ccr2ws(const char* s) {
 	size_t len = strlen(s);
 	wchar_t * buf = new wchar_t[len + sizeof(wchar_t)]();
+	//mbstowcs_s(len, buf, len, s, len);
 	mbsrtowcs(buf, &s, len, NULL);
 	return buf;
 }
@@ -111,9 +203,10 @@ int sow_web_jsx::kill_process_by_name(const char *process_name) {
 	pEntry.dwSize = sizeof (pEntry);
 	BOOL hRes = Process32First(hSnapShot, &pEntry);
 	if (Process32First(hSnapShot, &pEntry)) {
-		const wchar_t* p_name = sow_web_jsx::ccr2ws(process_name);
+		wchar_t* p_name = sow_web_jsx::ccr2ws(process_name);
+		const wchar_t* cp_name = const_cast<const wchar_t*>(p_name);
 		do {
-			if (wcscmp (pEntry.szExeFile, p_name) == 0) {
+			if (wcscmp (pEntry.szExeFile, cp_name) == 0) {
 				HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, 0,
 					(DWORD)pEntry.th32ProcessID);
 				if (hProcess != NULL && hProcess != INVALID_HANDLE_VALUE) {
@@ -122,28 +215,14 @@ int sow_web_jsx::kill_process_by_name(const char *process_name) {
 				}
 			}
 		} while (Process32Next(hSnapShot, &pEntry));
+		delete[]p_name;
 	}
-	//while (hRes) {
-	//	//wcscmp (pEntry.szExeFile, p_name);
-	//	//if (strcmp(ws2ccr(pEntry.szExeFile), process_name) == 0) {
-	//	if (wcscmp (pEntry.szExeFile, p_name) == 0) {
-	//		HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, 0,
-	//			(DWORD)pEntry.th32ProcessID);
-	//		if (hProcess != NULL && hProcess != INVALID_HANDLE_VALUE) {
-	//			TerminateProcess(hProcess, FORCE_EXIT_PROCESS);
-	//			CloseHandle(hProcess);
-	//		}
-	//	}
-	//	hRes = Process32Next(hSnapShot, &pEntry);
-	//}
 	CloseHandle(hSnapShot);
 	return 1;
 }
 int sow_web_jsx::create_process(const process_info*pi) {
-	if (pi->process_path.empty())
-		return -10;
-	if (__file_exists(pi->process_path.c_str()) == false)
-		return -4;
+	if (pi->process_path.empty())return -10;
+	if (__file_exists(pi->process_path.c_str()) == false)return -4;
 	PROCESS_INFORMATION pinfo;
 	ZeroMemory(&pinfo, sizeof(PROCESS_INFORMATION));
 	STARTUPINFO si;
@@ -206,14 +285,13 @@ int sow_web_jsx::create_process(const process_info*pi) {
 		CoTaskMemFree(pszApp);
 		CoTaskMemFree(pszCmdLine);
 		return (int)dwPid;
-	};
+	}
 	//660
 	//https://docs.microsoft.com/en-us/windows/desktop/debug/system-error-codes--0-499
 	return (int)GetLastError();
 }
 long sow_web_jsx::create_child_process(const char*process_path, const char*arg) {
-	if (__file_exists(process_path) == false)
-		return -1;
+	if (__file_exists(process_path) == false)return -1;
 	PCWSTR pszCmd = (PCWSTR)ccr2ws(process_path);
 	PWSTR pszApp;
 	PWSTR pszCmdLine;// = (PWSTR)s2ws(arg);
@@ -247,9 +325,8 @@ long sow_web_jsx::create_child_process(const char*process_path, const char*arg) 
 	}
 	return (long)hr;
 }
-
 #endif
-const char * sow_web_jsx::get_error_desc(int error_code) {
+const char* sow_web_jsx::get_error_desc(int error_code) {
 	switch (error_code) {
 	case ERROR_FILE_NOT_FOUND: return "The system cannot find the file specified!!!";
 	case ERROR_PATH_NOT_FOUND: return "The system cannot find the path specified!!!";
@@ -270,50 +347,6 @@ const char * sow_web_jsx::get_error_desc(int error_code) {
 }
 size_t read_binary() {
 	return -1;
-}
-size_t sow_web_jsx::read_file(const char*absolute_path, std::stringstream&ssstream, bool check_file_exists) {
-	size_t r_length = -1;
-	if ( check_file_exists == true ) {
-		if (__file_exists(absolute_path) == false) { 
-			ssstream << "File not found in#" << absolute_path;
-			return r_length;
-		}
-	}
-	FILE*fs;
-	errno_t err = fopen_s(&fs, absolute_path, "rb");
-	if (fs == NULL || err != 0) { 
-		ssstream << get_error_desc(err);
-		return r_length;
-	}
-	fseek(fs, 0, SEEK_END);
-	size_t t_length = ftell(fs);
-	rewind(fs);
-	size_t read_length = 0;
-	r_length = 0;
-	size_t rlen = 0;
-	while (true) {
-		rlen = t_length > READ_CHUNK ? READ_CHUNK : t_length;
-		//char* buff = (char*)malloc(rlen + 1);
-		char* buff = new char[rlen + 1];
-		buff[rlen] = '\0';
-		read_length = fread(buff, 1, rlen, fs);
-		if (ferror(fs)) {
-			//free(buff);
-			delete[]buff;
-			fclose(fs);
-			std::stringstream().swap(ssstream);
-			ssstream << "ERROR OCCURED WHILE READING FILE#" << absolute_path;
-			return -2;
-		}
-		r_length += read_length;
-		ssstream.write(buff, read_length);
-		//free(buff);
-		delete[]buff;
-		t_length -= read_length;
-		if (t_length <= 0)break;
-	}
-	fclose(fs);
-	return r_length;
 }
 size_t sow_web_jsx::read_file(const char*absolute_path, std::string&str, bool check_file_exists) {
 	std::stringstream ssstream(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
@@ -350,7 +383,7 @@ char* sow_web_jsx::read_file(const char* absolute_path, bool check_file_exists =
 		fclose(stream);
 		stream = NULL;
 		return chars;
-	} catch (std::exception) {
+	} catch (...) {
 		return new char[8]{ "INVALID" };
 	}
 }

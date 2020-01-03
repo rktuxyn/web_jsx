@@ -12,9 +12,10 @@
 #if !defined(_INC_STDLIB)
 #include <stdlib.h>/* srand, rand */
 #endif // !_INC_STDLIB
-#if !defined(_INC_TIME)
-#include <time.h>
-#endif//!_INC_TIME
+#if !defined(_CSTDLIB_)
+#include <cstdlib>
+#endif// !_CSTDLIB_
+#include <ctime>
 #pragma warning(disable : 4996)//Disable strcpy warning
 using namespace sow_web_jsx;
 /*[Help]*/
@@ -86,53 +87,7 @@ private:
 	size_t get_stream_size();
 	int panic(const char* error, int code);
 };
-bool strings_equal(
-	const std::string& s1,
-	const std::string& s2,
-	size_t n
-) {
-	std::string::const_iterator p1 = s1.begin();
-	std::string::const_iterator p2 = s2.begin();
-	bool good = (n <= s1.length() && n <= s2.length());
-	std::string::const_iterator l1 = good ? (s1.begin() + n) : s1.end();
-	std::string::const_iterator l2 = good ? (s2.begin() + n) : s2.end();
-	while (p1 != l1 && p2 != l2) {
-		if (std::toupper(*(p1++)) != std::toupper(*(p2++)))
-			return false;
-	}
-	return good;
-}
-bool strings_equal(
-	const std::string& s1,
-	const std::string& s2
-) {
-	std::string::const_iterator p1 = s1.begin();
-	std::string::const_iterator p2 = s2.begin();
-	std::string::const_iterator l1 = s1.end();
-	std::string::const_iterator l2 = s2.end();
-	while (p1 != l1 && p2 != l2) {
-		if (std::toupper(*(p1++)) != std::toupper(*(p2++)))
-			return false;
-	}
-	return (s2.size() == s1.size()) ? true : false;
-}
-std::string extract_between(const std::string& data,
-	const std::string& separator1,
-	const std::string& separator2
-) {
-	std::string result;
-	std::string::size_type start, limit;
 
-	start = data.find(separator1, 0);
-	if (std::string::npos != start) {
-		start += separator1.length();
-		limit = data.find(separator2, start);
-		if (std::string::npos != limit)
-			result = data.substr(start, limit - start);
-	}
-
-	return result;
-}
 char hex_to_char(char first, char second) {
 	int digit;
 	digit = (first >= 'A' ? ((first & 0xDF) - 'A') + 10 : (first - '0'));
@@ -350,6 +305,21 @@ int http_payload::read_files(_func cb) {
 	}
 	return rec;
 }
+std::string random_string(int len) {
+	/* initialize random seed: */
+	srand(time(NULL));
+	std::string format = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+	size_t flen = format.size();
+	std::string out_str;
+	int pos;
+	while (out_str.size() != len) {
+		pos = ((rand() % (flen - 1)));
+		out_str += format.substr(pos, 1);
+	}
+	format.clear();
+	//fclose(stdin);
+	return out_str;
+}
 #if defined(FAST_CGI_APP)
 #if !defined(_FCGI_STDIO)
 #include <fcgi_stdio.h>
@@ -429,46 +399,66 @@ int http_payload::read_all(const char* temp_dir) {
 		err.append(strerror(errno));
 		return panic(err.c_str(), -10);
 	}
-	_ismemory = false; _is_read_end = 1;
-	std::string bType = "boundary=";
-	size_t 	pos = _content_type.find(bType);
+	_ismemory		= false;
+	_is_read_end	= 1;
+	std::string		bType = "boundary=";
+	size_t			pos = _content_type.find(bType);
 	// generate the separators
-	std::string sep = _content_type.substr(pos + bType.size());
+	std::string		sep = _content_type.substr(pos + bType.size());
 	sep.insert(0, "--");
-	std::string line;
-	int file_count = 0;
-	bool start = false;
-	std::string file_name;
-	std::ofstream file;
-	std::string temp_dir_str(temp_dir);
+	std::string		line;
+	int				file_count = 0;
+	bool			start = false;
+	std::string		file_name;
+	std::ofstream	file;
+	std::string		temp_dir_str(temp_dir);
 	sow_web_jsx::format__path(temp_dir_str);
-	size_t sep_len = sep.size();
-	bool is_saved = true;
-	srand(time(NULL));
+	size_t			sep_len = sep.size();
+	bool			is_saved = true;
 	std::istream::sentry sentry(std::cin, true);
+	size_t			file_total_size = 0;
+	size_t			block_size = 0;
+	size_t			read_size = 0;
+	const size_t	max_block_size = 10485760;/*(Max block size (1024*1024)*10) = 10 MB*/
+	/* initialize random seed: */
+	//srand(time(NULL));
 	while (sow_web_jsx::get_line(std::cin, line)){
+		if (std::cin.good() == false)break;
+		if (std::cin.fail() == true)break;
 		if (line.size() < sep_len || line.find(sep) == std::string::npos) {
 			if (!start)continue;
-			file.write(line.c_str(), line.size());
+			read_size = line.size();
+			file.write(line.c_str(), read_size);
+			file_total_size += read_size;
+			block_size += read_size;
 			if (std::cin.eof()) {
-				_posted_files->file->set_file_size(static_cast<size_t>(file.tellp()));
+				//_posted_files->file->set_file_size(static_cast<size_t>(file.tellp()));
+				_posted_files->file->set_file_size(file_total_size);
 				file.flush(); file.close();
 				is_saved = true; start = false; break;
+				file_total_size = 0; block_size = 0;
+			}
+			else {
+				if (block_size >= max_block_size) {
+					file.flush(); block_size = 0;
+				}
 			}
 			continue;
 		}
 		if (std::cin.eof()) {
 			if (start) {
-				_posted_files->file->set_file_size(static_cast<size_t>(file.tellp()));
+				//_posted_files->file->set_file_size(static_cast<size_t>(file.tellp()));
+				_posted_files->file->set_file_size(file_total_size);
 				file.flush(); file.close();
-				is_saved = true;
+				is_saved = true; file_total_size = 0; block_size = 0;
 			}
 			start = false; break;
 		}
 		if (start) {
-			_posted_files->file->set_file_size(static_cast<size_t>(file.tellp()));
+			//_posted_files->file->set_file_size(static_cast<size_t>(file.tellp()));
+			_posted_files->file->set_file_size(file_total_size);
 			file.flush(); file.close();
-			start = false; is_saved = true;
+			start = false; is_saved = true; file_total_size = 0; block_size = 0;
 		}
 		int info_count = 0;
 		line.clear();
@@ -491,8 +481,9 @@ int http_payload::read_all(const char* temp_dir) {
 		}
 		if (!file_name.empty())file_name.clear();
 		file_name = std::string(temp_dir_str.c_str());
-		/* initialize random seed: */
-		file_name.append(std::to_string(rand() * file_count));
+		//file_name.append(std::to_string(std::rand() * file_count));
+		file_name.append(random_string(15)).append(std::to_string(file_count));
+		//std::cout << "file_name_" << file_count << ":" << file_name << std::endl;
 		file.open(file_name, std::ofstream::out | std::ofstream::binary);
 		if (file.is_open() == false) {
 			std::string err("Unable to open file to ->");
@@ -514,7 +505,7 @@ int http_payload::read_all(const char* temp_dir) {
 	}
 	fclose(stdin);
 	if (is_saved == false) {
-		_posted_files->file->set_file_size(static_cast<size_t>(file.tellp()));
+		_posted_files->file->set_file_size(file_total_size);
 		file.flush(); file.close();
 	}
 	temp_dir_str.clear();
@@ -586,7 +577,6 @@ const char* http_payload::get_last_error() {
 	if (_errc >= 0 || _internal_error == NULL) return "No Error Found!!!";
 	return const_cast<const char*>(_internal_error);
 }
-
 int http_payload::panic(const char* error, int code) {
 	if (_internal_error != NULL)
 		delete[]_internal_error;
@@ -595,7 +585,6 @@ int http_payload::panic(const char* error, int code) {
 	_errc = code;
 	return _errc;
 }
-
 int http_payload::get_total_file() {
 	if (is_multipart())return _file_count;
 	return panic("File count allowed only Multipart posted stream....", -1);

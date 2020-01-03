@@ -16,45 +16,22 @@
 #if !defined(_SSTREAM_)
 #include <sstream> // std::stringstream
 #endif//_SSTREAM_
-#pragma warning (disable : 4231)
-#pragma warning(disable : 4996)
-#if !defined(HEADER_CONF_H)
-#include <openssl/conf.h>
-#endif//!HEADER_CONF_H
-#if !defined(HEADER_ENVELOPE_H)
-#include <openssl/evp.h>
-#endif//!HEADER_ENVELOPE_H
-#if !defined(HEADER_ERR_H)
-#include <openssl/err.h>
-#endif//!HEADER_ERR_H
-#if !defined(HEADER_CONF_H)
-#include <openssl/applink.c>
-#endif//!HEADER_CONF_H
-#include <algorithm>
-#include <stdexcept>
-#if !defined(jsx_export)
-#define jsx_export __declspec(dllexport)
-#endif//!HEADER_CONF_H
-#if !defined(CHUNK)
-#define EBUFF 1024
-#endif//!CHUNK
-#if !defined(_secure_blob_h)
-#include "secure_blob.h"
-#endif//!_secure_blob_h
 //https://wiki.openssl.org/index.php/EVP_Symmetric_Encryption_and_Decryption
 namespace crypto {
-	int evp_encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key,
-		unsigned char *iv, unsigned char *ciphertext);
-	int evp_encrypt(unsigned char* plaintext, int plaintext_len, unsigned char* key,
-		unsigned char* iv, sow_web_jsx::secure_blob* encrypt_text);
-	int evp_decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key,
-		unsigned char *iv, unsigned char *plaintext);
-	int evp_decrypt(unsigned char* ciphertext, int ciphertext_len, unsigned char* key,
-		unsigned char* iv, sow_web_jsx::secure_blob* plaintext);
 	void string_to_hex(const std::string& input, std::string&output);
 	void hex_to_string(const std::string& input, std::string&output);
-	
-	int encrypt(const char*plain_text, const char*key, const char *iv, std::string&encrypt_text);
-	int decrypt(const char*encrypt_text, const char*key, const char *iv, std::string&plain_text);
+	int generate_key_iv(
+		std::string& key_str, 
+		std::string& iv_str, 
+		std::string& error_msg
+	);
+	int evp_encrypt_decrypt(int should_encrypt,
+		std::stringstream& source,
+		std::stringstream& dest,
+		unsigned char* ckey,
+		unsigned char* ivec
+	);
+	int encrypt(const char*plain_text, const char*key, const char *iv, std::stringstream&dest);
+	int decrypt(const char*encrypt_text, const char*key, const char *iv, std::stringstream& dest);
 };
 #endif//!CRYPTO_H

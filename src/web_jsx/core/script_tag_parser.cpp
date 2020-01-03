@@ -18,7 +18,8 @@ jsx_export void sow_web_jsx::js_write_header(std::stringstream& js_stream) {
 	js_stream << "context.host_url = context.request.protocol + \"//\" + context.host;\n";
 	js_stream << "context.request.query_string = ( function () { try { return JSON.parse( (context.request.query_string) ); } catch ( e ) { return {}; } }() );\n";
 	js_stream << "context.request.content_length = (function(){ let len = parseInt(context.request.content_length); return isNaN(len) ? 0 : len; }())\r\n";
-	js_stream << "context.request.read_payload = function read_payload( cb ) { return this.method !== 'POST'? -1 : this._read_payload(this.content_length, cb);}\r\n";
+	js_stream << "context.request.read_payload = function read_payload( cb ) { return this.method !== 'POST'? -1 : this._read_payload(this.content_length, this.content_type, cb);}\r\n";
+	js_stream << "context.request.write_file_from_payload = function write_file_from_payload( dir ) { if ( this.method !== 'POST' ) throw new Error('Allowed only over POST data.'); return this._write_file_from_payload( context.request.content_length, this.content_type, dir ); }\r\n";
 	js_stream << "context.response.write = function write( val, nline ) { if ( !val || val === null || val === undefined ) return this;  !1 === nline ? context.response._write( val ) : context.response._write( val + '\\r\\n' ); return this;};\r\n";
 	js_stream << "context.response.write_p = function write_p( val ) { if ( !val || val === null || val === undefined ) return this; context.response._write( val ); return this;};\r\n";
 	js_stream << "context.server_protocol = context.server_protocol === null || context.server_protocol === '' || !context.server_protocol ? 'HTTP/1.1' : context.server_protocol;\n";
@@ -36,30 +37,29 @@ jsx_export void sow_web_jsx::js_write_header(std::stringstream& js_stream) {
 	js_stream << "context.response.as_gzip = function as_gzip() { if ( !context.request.accept_encoding ) return -1; if ( context.request.accept_encoding.indexOf( 'gzip' ) < 0 ) return -1; this._as_gzip(); return 1; };\r\n";
 	js_stream << "context.response.header(\"Content-Type\", \"text/html; charset=utf-8\");\n";
 	js_stream << "context.response.header(\"Connection\", \"Keep-Alive\");\n";
-	js_stream << "fs.write_file_from_payload = function write_file_from_payload( path ) { if ( context.request.method !== 'POST' ) throw new Error('Allowed only over POST data.'); return this._write_file_from_payload( context.request.content_length, path ); }\r\n";
 	add_common_func(js_stream);
-	js_stream << "try{\n";
+	//js_stream << "try{\n";
 }
 jsx_export void sow_web_jsx::js_write_footer(std::string&str) {
-	str.append("\ncontext.response.header(\"X-Powered-By\", \"safeonline.world\");\n");
-	str.append("context.response.header(\"X-Process-By\", \"web_jsx_cgi\");\n");
+	//str.append("\ncontext.response.header(\"X-Powered-By\", \"safeonline.world\");\n");
+	//str.append("context.response.header(\"X-Process-By\", \"web_jsx_cgi\");\n");
 	//str.append("context.response.body.flush();\n");
-	str.append("}catch(_exp){\n\
-				context.response.clear();\n\
-				context.response.header(\"Content-Type\", \"text/html\");\n\
-				if(typeof(_exp)!==\"object\"){\n\
-					context.response.write('Error::' + _exp );\n\
-				}else{\n\
-					context.response.write('Error::' + _exp.message + '<br/>' );\n\
-					context.response.write(_exp.stack );\n\
-				}\n\
-				/*context.response.body.flush();*/\n\
-			};");
+	//str.append("}catch(_exp){\n\
+	//			context.response.clear();\n\
+	//			context.response.header(\"Content-Type\", \"text/html\");\n\
+	//			if(typeof(_exp)!==\"object\"){\n\
+	//				context.response.write('Error::' + _exp );\n\
+	//			}else{\n\
+	//				context.response.write('Error::' + _exp.message + '<br/>' );\n\
+	//				context.response.write(_exp.stack );\n\
+	//			}\n\
+	//			/*context.response.body.flush();*/\n\
+	//		};");
 };
 jsx_export void sow_web_jsx::js_write_footer(std::stringstream& js_stream) {
-	js_stream << "\ncontext.response.header(\"X-Powered-By\", \"safeonline.world\");\n";
-	js_stream << "context.response.header(\"X-Process-By\", \"web_jsx_cgi\");\n";
-	js_stream << "}catch(_exp){\n";
+	//js_stream << "\ncontext.response.header(\"X-Powered-By\", \"safeonline.world\");\n";
+	//js_stream << "context.response.header(\"X-Process-By\", \"web_jsx_cgi\");\n";
+	/*js_stream << "}catch(_exp){\n";
 	js_stream << "context.response.clear();\n";
 	js_stream << "context.response.header(\"Content-Type\", \"text/html\");\n";
 	js_stream << "if(typeof(_exp)!==\"object\"){\n";
@@ -68,7 +68,7 @@ jsx_export void sow_web_jsx::js_write_footer(std::stringstream& js_stream) {
 	js_stream << "context.response.write('Error::' + _exp.message + '<br/>' );\n";
 	js_stream << "context.response.write(_exp.stack );\n";
 	js_stream << "}\n";
-	js_stream << "};";
+	js_stream << "};";*/
 	//stream << "context.response.body.flush();\n";
 };
 jsx_export void sow_web_jsx::js_write_console_header(std::stringstream& js_stream) {
@@ -80,17 +80,17 @@ jsx_export void sow_web_jsx::js_write_console_header(std::stringstream& js_strea
 	js_stream << "env.path = ( function () { if ( env.path === undefined || env.path === null ) { throw new Error(\"Environment path not found in current context!!!\"); } return env.path.replace( /\\\\/g,'/' ) }());\n";
 	js_stream << "env.arg = ( function () { try { return JSON.parse( env.arg ); } catch ( e ) { __print( e.message ); return []; } }() );\n";
 	add_common_func(js_stream);
-	js_stream << "try{\n";
+	/*js_stream << "try{\n";*/
 };
 jsx_export void sow_web_jsx::js_write_console_footer(std::stringstream& js_stream) {
-	js_stream << "\n}catch(_exp){\n";
+	/*js_stream << "\n}catch(_exp){\n";
 	js_stream << "if(typeof( _exp )!==\"object\"){\n";
 	js_stream << "__print('Error::' + _exp );\n";
 	js_stream << "}else{\n";
 	js_stream << "__print('Error::' + _exp.message );\n";
 	js_stream << "__print( _exp.stack );\n";
 	js_stream << "}\n";
-	js_stream << "};\n";
+	js_stream << "};\n";*/
 };
 typedef enum {
 	sts,
@@ -252,7 +252,6 @@ int script_tag_parser::parse(template_result & tr, std::string&html_body) {
 		delete regx_str;
 	}
 	tr.is_script_template = true;
-	//(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
 	std::regex* rgx = new std::regex("(?:\\r\\n|\\r|\\n)");
 	std::regex* qu = new std::regex("'");
 	parser_info* info = new parser_info();
@@ -304,7 +303,7 @@ int script_tag_parser::parse(template_result & tr, std::string&html_body) {
 		//html_body = std::regex_replace (html_body, std::regex("\\n\\s*\\n"), "\r\n");
 		//html_body = std::regex_replace (html_body, std::regex("\\r\\n\\s*\\r\\n"), "\n");
 	}*/
-	sow_web_jsx::js_write_footer(html_body);
+	//sow_web_jsx::js_write_footer(html_body);
 
 	return 1;
 };

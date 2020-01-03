@@ -13,9 +13,9 @@
 #if !defined(_v8_util_h)
 #include "v8_util.h"
 #endif//!v8_util_h
-#if !defined(_npgsql_h)
-#include <npgsql.h>
-#endif//!_npgsql_h
+#if !defined(_npgsql_wrapper_h)
+#include "npgsql_wrapper.h"
+#endif//_npgsql_wrapper_h
 #if !defined(_npgsql_tools_h)
 #include <npgsql_tools.h>
 #endif//_npgsql_tools_h
@@ -28,9 +28,6 @@
 #if !defined(_pdf_generator_h)
 #include "pdf_generator.h"
 #endif//_npgsql_tools_h
-#if !defined(_crypto_h)
-#include "crypto.h"
-#endif//!_crypto_h
 #if !defined(directory__h)
 #include "directory_.h"
 #endif//!directory__h
@@ -63,15 +60,29 @@
 #if !defined(_jsx_file_h)
 #include "jsx_file.h"
 #endif//_n_help_h
+#if !defined(_uws_app_h)
+#include "uws/uws_app.h"
+#endif//!_uws_app_h
+#if !defined(_mysql_wrapper_h)
+#include "mysql_wrapper.h"
+#endif//!_mysql_wrapper_h
+#if !defined(_http_payload_h)
+#include "http_payload.h"
+#endif//!_http_payload_h
+//#if !defined(_my_sql_h)
+//#include <my_sql.h>
+//#endif//!_my_sql_h
+
 #pragma warning (disable : 4231)
 #pragma warning(disable : 4996)
 namespace sow_web_jsx {
 	namespace wrapper {
-		void response_body_flush();
+		void response_body_flush(bool end_req);
 		void clear_cache();
 		const char* get_root_dir();
-		v8::Local<v8::Context> get_context(v8::Isolate * isolate, std::map<std::string, std::map<std::string, std::string>>& ctx);
-		v8::Local<v8::Context> get_console_context(v8::Isolate * isolate, std::map<std::string, std::string>&ctx);
+		jsx_export v8::Local<v8::ObjectTemplate> get_context(v8::Isolate * isolate, std::map<std::string, std::map<std::string, std::string>>& ctx);
+		jsx_export v8::Local<v8::ObjectTemplate> get_console_context(v8::Isolate * isolate, std::map<std::string, std::string>&ctx);
+		jsx_export v8::Local<v8::ObjectTemplate> create_v8_context_object(v8::Isolate* isolate);
 	}
 };
 #endif//!_native_wrapper_h

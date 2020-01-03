@@ -33,7 +33,7 @@ extern "C" {
 			return;
 		}
 		if (is_empty_char(ps.page_path)) {
-			rsinf.err_msg = "Scrip path required!!!";
+			rsinf.err_msg = "Script path required!!!";
 			rsinf.is_error = true;
 			return;
 		}

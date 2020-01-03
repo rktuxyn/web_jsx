@@ -130,50 +130,56 @@ _access(fname, 0)!=-1
 #define FORCE_EXIT_PROCESS	9
 //#define _fgets	 fgets
 //#define _stdin stdin
-#ifdef __cplusplus
-#pragma warning(disable : 4996)
-#pragma warning(disable : 4244)
-extern "C" {
-#endif
-	typedef struct {
-		std::string t_source;
-		std::string err_msg;
-		bool is_error;
-		bool is_script;
-		bool is_script_template;
-		bool remove_new_line;
-		bool is_strict;
-	} template_result;
-	typedef struct {
-		const char* page_path;
-		const char* dir;
-		const char* data;
-	} parser_settings;
-	typedef struct {
-		std::string start_in;
-		int wait_for_exit;
-		std::string process_name;
-		std::string process_path;
-		std::string lp_title;
-		std::string arg;
-		int dw_creation_flags;
-		short show_window;
-	}process_info;
-#ifdef __cplusplus
-}
-#endif
+#pragma warning (disable : 4996)
+#define _CRT_SECURE_NO_WARNINGS
+typedef struct {
+	std::string t_source;
+	std::string err_msg;
+	bool is_error;
+	bool is_script;
+	bool is_script_template;
+	bool remove_new_line;
+	bool is_strict;
+} template_result;
+typedef struct {
+	const char* page_path;
+	const char* dir;
+	const char* data;
+} parser_settings;
+typedef struct {
+	std::string start_in;
+	int wait_for_exit;
+	std::string process_name;
+	std::string process_path;
+	std::string lp_title;
+	std::string arg;
+	int dw_creation_flags;
+	short show_window;
+}process_info;
 namespace sow_web_jsx {
 	void format__path(std::string&str);
 	void get_dir_from_path (const std::string& path_str, std::string&dir);
-	/*int dir_exists(const char* dir);
-	int create_directory(const char* dir);
-	//int delete_directory(const char* dir);*/
 	int create_process(const process_info*pi);
 	long create_child_process(const char*process_path, const char*arg);
 	int open_process(const char*process_path, const char*arg);
 	std::istream& get_line(std::istream& is, std::string& t);
+	bool strings_equal(
+		const std::string& s1,
+		const std::string& s2,
+		size_t n
+	);
+	bool strings_equal(
+		const std::string& s1,
+		const std::string& s2
+	);
+	std::string extract_between(
+		const std::string& data,
+		const std::string& separator1,
+		const std::string& separator2
+	);
 #if defined(_WINDOWS_)
 	wchar_t* ccr2ws(const char* s);
+	const char* get_error_desc(int error_code);
 	int kill_process_by_name(const char *process_name);
 	int process_is_running(DWORD dwPid);
 	int terminate_process(DWORD dwPid);
@@ -250,9 +256,8 @@ namespace sow_web_jsx {
 		return 1;
 	}
 #endif//!_WINDOWS_
-	jsx_export size_t read_file(const char*absolute_path, std::stringstream&ssstream, bool check_file_exists);
+	size_t read_file(const char* absolute_path, std::stringstream& ssstream, bool check_file_exists);
 	size_t read_file(const char*absolute_path, std::string&str, bool check_file_exists);
 	char* read_file(const char* absolute_path, bool check_file_exists);
-	const char* get_error_desc(int error_code);
 };
 #endif //!_web_jsx_global_h

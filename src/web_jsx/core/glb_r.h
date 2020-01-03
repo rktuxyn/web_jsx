@@ -13,9 +13,15 @@
 #if !defined(_VECTOR_)
 #include <vector>
 #endif//!_VECTOR_
+#if defined(jsx_shared)
 #if !defined(jsx_export)
 #define jsx_export __declspec(dllexport)
-#endif//jsx_export
+#endif//!jsx_export
+#else
+#if !defined(jsx_export)
+#define jsx_export
+#endif//!jsx_export
+#endif//jsx_shared
 namespace sow_web_jsx {
 	/*[function pointers]*/
 	typedef void (*add_resource_func)();

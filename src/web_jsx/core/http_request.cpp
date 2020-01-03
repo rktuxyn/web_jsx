@@ -5,6 +5,7 @@
 * Copyrights licensed under the New BSD License.
 * See the accompanying LICENSE file for terms.
 */
+//Read more https://curl.haxx.se/libcurl/c/https.html
 #include "http_request.h"
 using namespace http_client;
 #if defined(FAST_CGI_APP)
@@ -37,9 +38,6 @@ size_t write_callback(char *contents, size_t size, size_t nmemb, void *userp) {
 	((std::string*)userp)->append((char*)contents, size * nmemb);
 	return size * nmemb;
 }
-CURLcode ssl_ctx_callback(CURL *curl, void *ssl_ctx, void *userptr) {
-	return CURLE_OK;
-}
 void http_request::prepare() {
 	//CURLcode
 	if (_header_chunk)
@@ -55,6 +53,8 @@ void http_request::prepare() {
 	curl_easy_setopt(_curl, CURLOPT_TIMEOUT, 120L);
 	curl_easy_setopt(_curl, CURLOPT_HTTP_CONTENT_DECODING, 1L);
 	curl_easy_setopt(_curl, CURLOPT_ACCEPT_ENCODING, "gzip");
+}
+void http_request::verify_ssl(bool verify) {
 	/*
 	* If you want to connect to a site who isn't using a certificate that is
 	* signed by one of the certs in the CA bundle you have, you can skip the
@@ -65,18 +65,26 @@ void http_request::prepare() {
 	* default bundle, then the CURLOPT_CAPATH option might come handy for
 	* you.
 	*/
-	curl_easy_setopt(_curl, CURLOPT_SSL_VERIFYPEER, 0L);
+	curl_easy_setopt(_curl, CURLOPT_SSL_VERIFYPEER, verify);
+
+	curl_easy_setopt(_curl, CURLOPT_SSL_CTX_FUNCTION, *sow_web_jsx::ssl_ctx_callback);
+}
+void http_request::verify_ssl_host(bool verify) {
 	/*
-	 * If the site you're connecting to uses a different host name that what
-	 * they have mentioned in their server certificate's commonName (or
-	 * subjectAltName) fields, libcurl will refuse to connect. You can skip
-	 * this check, but this will make the connection less secure.
-	 */
-	/*curl_easy_setopt(_curl, CURLOPT_SSLCERTTYPE, "PEM");
-	curl_easy_setopt(_curl, CURLOPT_SSL_VERIFYHOST, 0L);
-	curl_easy_setopt (_curl, CURLOPT_SSL_CTX_FUNCTION, *ssl_ctx_callback);*/
-	curl_easy_setopt(_curl, CURLOPT_VERBOSE, 1L);
-	
+	* If the site you're connecting to uses a different host name that what
+	* they have mentioned in their server certificate's commonName (or
+	* subjectAltName) fields, libcurl will refuse to connect. You can skip
+	* this check, but this will make the connection less secure.
+	*/
+	curl_easy_setopt(_curl, CURLOPT_SSL_VERIFYHOST, verify);
+}
+void http_request::read_debug_information(bool isDebug) {
+	/* ask libcurl to show us the verbose output */
+	curl_easy_setopt(_curl, CURLOPT_VERBOSE, isDebug);
+	if (isDebug == true) {
+		/* if CURLOPT_VERBOSE is enabled then CURLOPT_DEBUGFUNCTION will be work*/
+		curl_easy_setopt(_curl, CURLOPT_DEBUGFUNCTION, sow_web_jsx::debug_log);
+	}
 }
 int http_request::send_request(std::string & response_header, std::string &response_body) {
 	this->prepare();

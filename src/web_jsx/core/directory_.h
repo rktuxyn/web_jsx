@@ -37,6 +37,7 @@ namespace sow_web_jsx {
 	int delete_dir(const char * name);
 	int dir_exists(const char* dir);
 	int create_directory(const char* dir);
+	int rename_dir(const char* old_dir, const char* new_dir);
 
 };
 #endif//directory__h

@@ -12,9 +12,9 @@
 #if !defined(_v8_engine_h)
 #include "v8_engine.h"
 #endif//!_v8_engine_h
-#if !defined( _v8_util_h)
-#include "v8_util.h"
-#endif //!v8_util_h
+#if !defined( _runtime_compiler_h)
+#include "runtime_compiler.h"
+#endif //!_runtime_compiler_h
 #if !defined(V8_LIBPLATFORM_LIBPLATFORM_H_)
 #include <libplatform/libplatform.h>
 #endif//!V8_LIBPLATFORM_LIBPLATFORM_H_

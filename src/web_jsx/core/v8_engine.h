@@ -26,7 +26,7 @@ namespace sow_web_jsx {
 		class v8_engine {
 		private:
 			v8::Isolate* _isolate;
-			v8::Platform* _platform;
+			std::shared_ptr<v8::Platform> _platform;
 			bool _disposed;
 			void create_engine(const char* exec_path);
 			//v8::Persistent<v8::Context>_context;
@@ -34,8 +34,10 @@ namespace sow_web_jsx {
 			//bool has_context;
 			v8_engine(const char* exec_path);
 			v8::Isolate* get_current_isolate();
+			v8::Isolate* get_global_isolate();
 			//v8::Local<v8::Context> get_context();
 			//void set_context(v8::Local<v8::Context> ctx);
+			void wait_for_pending_task();
 			void dispose();
 			~v8_engine();
 		};

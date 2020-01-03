@@ -80,7 +80,7 @@ void pdf_ext::pdf_generator::prepare_default_settings() {
 		{ "imageQuality", "92" }, { "margin.top", "1.27cm" }, { "margin.bottom", "1.27cm" }, 
 		{ "margin.left", "1.27cm" }, { "margin.right", "1.27cm" }
 	};
-	malloc(sizeof _wgs_settings);
+	//malloc(sizeof _wgs_settings);
 	_wos_settings = new std::map<const char*, const char*>{
 		{ "web.defaultEncoding", "utf-8" }, { "web.background", "true" }, { "web.loadImages", "true" },
 		{ "web.enablePlugins", "false" }, { "web.enableJavascript", "false" },
@@ -90,7 +90,7 @@ void pdf_ext::pdf_generator::prepare_default_settings() {
 		{ "footer.left", "Powered by @ https://safeonline.world" }, { "footer.right", "Page [page] of [topage]" },
 		{ "footer.line", "false" }, { "footer.spacing", "0" }
 	};
-	malloc(sizeof _wos_settings);
+	//malloc(sizeof _wos_settings);
 }
 int pdf_ext::pdf_generator::init(int use_graphics) {
 	_status = -1;

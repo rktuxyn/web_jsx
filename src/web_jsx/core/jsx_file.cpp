@@ -37,11 +37,12 @@ size_t jsx_file::write(const char *buffer) {
 }
 
 void jsx_file::flush() {
+	if (this->is_flush == 1)return;
 	this->is_flush = 1;
 	fclose(this->_fstream);
 	fflush(this->_fstream);
 }
 
 sow_web_jsx::jsx_file::~jsx_file() {
-	this->_fstream = NULL;
+	this->flush(); this->_fstream = NULL;
 }

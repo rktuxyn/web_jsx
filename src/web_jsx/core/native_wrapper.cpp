@@ -6,6 +6,12 @@
 */
 //2:46 AM 11/21/2018
 #include "native_wrapper.h"
+#if !defined(_crypto_h)
+#include "crypto.h"
+#endif//!_crypto_h
+#if !defined(_base64_h)
+#include "base64.h"
+#endif//!_base64_h
 using namespace sow_web_jsx;
 /*[Help]*/
 std::string* _root_dir = NULL;
@@ -17,6 +23,11 @@ std::map<std::string, std::string>* _headers = NULL;
 std::vector<std::string>* _cookies = NULL;
 std::vector<std::string>* _http_status = NULL;
 /*[/Help]*/
+void throw_js_error(v8::Isolate* isolate, const char* err) {
+	isolate->ThrowException(v8::Exception::Error(
+		sow_web_jsx::v8_str(isolate, err)));
+	return;
+}
 void v8_gc(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	args.GetIsolate()->LowMemoryNotification();
 }
@@ -59,7 +70,6 @@ void get_prop_value(v8::Local<v8::Context> ctx, v8::Isolate* isolate, v8::Local<
 	out = utf8_str.c_str();
 }
 void get_req_process_info(v8::Local<v8::Context> ctx, v8::Isolate* isolate, v8::Local<v8::Object> pi, process_info& pri) {
-
 	get_prop_value(ctx, isolate, pi, "start_in", pri.start_in);
 	if (!pri.start_in.empty())
 		pri.start_in = std::regex_replace(pri.start_in, std::regex("(?:/)"), "\\");
@@ -115,30 +125,18 @@ int spawn_uv_process(const process_info pi) {
 	uv_unref((uv_handle_t*)& child_req);
 	return uv_run(loop, UV_RUN_DEFAULT);
 }
-void throw_js_error(v8::Isolate* isolate, const char* err) {
-	isolate->ThrowException(v8::Exception::Error(
-		sow_web_jsx::v8_str(isolate, err)));
-	return;
-}
-
 ///Kill any open process by name e.g. web_jsx_cgi.exe
 ///@param process_name e.g. web_jsx_cgi.exe
 ///@throws Permission denied
 ///@returns {-1|0}
 void native_kill_process_by_name(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
-
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(sow_web_jsx::v8_str(isolate, "App name required!!!")));
 		return;
 	}
 	native_string process_name(isolate, args[0]);
-	//const char* process_name = *utf8_str;
-	//const wchar_t* p_name = L"notepad++.exe";
-	//wchar_t* p_name = sow_web_jsx::ccr2ws(process_name);
-	//const wchar_t* pr_name = sow_web_jsx::ccr2ws(process_name);
 	int ret = sow_web_jsx::kill_process_by_name(process_name.c_str());
-	//ret = wcscmp (p_name, pr_name) == 0 ? 1 : -1;
 	args.GetReturnValue().Set(v8::Number::New(isolate, ret));
 	process_name.clear();
 }
@@ -200,7 +198,7 @@ void native_create_process(const v8::FunctionCallbackInfo<v8::Value>& args) {
 					sow_web_jsx::v8_str(isolate, buff)
 				};
 				callback->Call(ctx, global, 2, arg);
-				});
+			});
 		}
 	}
 	std::string().swap(pri->start_in);
@@ -230,7 +228,6 @@ void native_create_process(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	//throw_js_error(isolate, std::string("ret" + std::to_string(ret) + "arg:" + pri->arg + "; start_in:" + pri->start_in + "; process_name:" + pri->process_name + "; process_path:" + pri->process_path).c_str());
 
 }
-
 ///Create new child process
 ///@param process_path process full path
 ///@param arg process argument
@@ -261,13 +258,11 @@ void native_create_child_process(const v8::FunctionCallbackInfo<v8::Value>& args
 	long ret = sow_web_jsx::create_child_process(process_path.c_str(), arg.c_str());
 	arg.clear(); std::string().swap(process_path); utf_abs_path_str.clear();
 	if (ret < 0) {
-		isolate->ThrowException(v8::Exception::Error(
-			sow_web_jsx::v8_str(isolate, "Not found!!!")));
+		throw_js_error(isolate, "Not found!!!");
 		return;
 	};
 	args.GetReturnValue().Set(v8::Number::New(isolate, ret));
 }
-
 ///Terminate open process by process id
 ///@param pid process id
 ///@throws Permission denied
@@ -290,7 +285,6 @@ void native_terminate_process(const v8::FunctionCallbackInfo<v8::Value>& args) {
 #endif//_WINDOWS_
 	args.GetReturnValue().Set(v8::Number::New(isolate, rec));
 }
-
 ///Check given process id is running
 ///@param pid define Process Id
 ///@returns {true|false}
@@ -322,127 +316,7 @@ void native_current_process_id(const v8::FunctionCallbackInfo<v8::Value>& args) 
 #endif//_WINDOWS_
 	args.GetReturnValue().Set(v8::Number::New(isolate, rec));
 }
-void read_directory_regx(const v8::FunctionCallbackInfo<v8::Value>& args) {
-	//3:21 PM 12/24/2018
-	v8::Isolate* isolate = args.GetIsolate();
-	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
-		isolate->ThrowException(v8::Exception::TypeError(
-			sow_web_jsx::v8_str(isolate, "File absolute path required!!!")));
-		return;
-	}
-	if (!args[1]->IsString() || args[1]->IsNullOrUndefined()) {
-		isolate->ThrowException(v8::Exception::TypeError(
-			sow_web_jsx::v8_str(isolate, "Match pattern required!!!")));
-		return;
-	}
-	native_string utf_abs_path_str(isolate, args[0]);
-	std::string* abs_path = new std::string();
-	abs_path->append(_root_dir->c_str());
-	sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
-	auto directorys = new  std::vector<std::string>();
-	int rec = 0;
-	native_string utf_ext_str(isolate, args[1]);
-	auto reg = new std::regex(utf_ext_str.c_str());//"(html|aspx|jsx|php)"
-	rec = sow_web_jsx::read_directory_sub_directory_x(abs_path->c_str(), *directorys, *reg);
-	delete reg; utf_ext_str.clear(); utf_abs_path_str.clear();
-	v8::Handle<v8::Object> v8_result = v8::Object::New(isolate);
-	v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
-	if (rec == EXIT_FAILURE) {
-		directorys->clear(); delete directorys;
-		v8_result->Set(
-			ctx,
-			sow_web_jsx::v8_str(isolate, "staus_code"),
-			v8::Number::New(isolate, -1)
-		);
-		v8_result->Set(
-			ctx,
-			sow_web_jsx::v8_str(isolate, "message"),
-			sow_web_jsx::concat_msg(isolate, "Could not open directory==>", abs_path->c_str())
-		);
-		delete abs_path;
-		args.GetReturnValue().Set(v8_result);
-		return;
-	}
-	delete abs_path;
-	std::vector<std::string>& json_obj = *directorys;
-	v8::Local<v8::Array> directory_v8_array = v8::Array::New(isolate, (int)json_obj.size());
-	for (size_t i = 0, l = json_obj.size(); i < l; ++i) {
-		directory_v8_array->Set(ctx, (int)i, sow_web_jsx::v8_str(isolate, json_obj[i].c_str()));
-	}
-	directorys->clear(); delete directorys;
-	v8_result->Set(
-		ctx,
-		sow_web_jsx::v8_str(isolate, "staus_code"),
-		v8::Number::New(isolate, 1)
-	);
-	v8_result->Set(
-		ctx,
-		sow_web_jsx::v8_str(isolate, "dir"),
-		directory_v8_array
-	);
-	directory_v8_array.Clear();
-	args.GetReturnValue().Set(v8_result);
-}
-void read_directory(const v8::FunctionCallbackInfo<v8::Value>& args) {
-	//3:21 PM 12/24/2018
-	v8::Isolate* isolate = args.GetIsolate();
-	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
-		isolate->ThrowException(v8::Exception::TypeError(
-			sow_web_jsx::v8_str(isolate, "File absolute path required!!!")));
-		return;
-	}
-	native_string utf_abs_path_str(isolate, args[0]);
-	std::string* abs_path = new std::string("");
-	abs_path->append(_root_dir->c_str());
-	sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
-	auto directorys = new  std::vector<std::string>();
-	int rec = 0; utf_abs_path_str.clear();
-	if (args[1]->IsString() || !args[1]->IsNullOrUndefined()) {
-		native_string utf_ext_str(isolate, args[1]);
-		rec = sow_web_jsx::read_directory_sub_directory(abs_path->c_str(), *directorys, utf_ext_str.c_str());
-		utf_ext_str.clear();
-	}
-	else {
-		rec = sow_web_jsx::read_directory_sub_directory(abs_path->c_str(), *directorys, "A");
-	}
-	v8::Handle<v8::Object> v8_result = v8::Object::New(isolate);
-	v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
-	if (rec == EXIT_FAILURE) {
-		directorys->clear(); delete directorys;
-		v8_result->Set(
-			ctx,
-			sow_web_jsx::v8_str(isolate, "staus_code"),
-			v8::Number::New(isolate, -1)
-		);
-		v8_result->Set(
-			ctx,
-			sow_web_jsx::v8_str(isolate, "message"),
-			sow_web_jsx::concat_msg(isolate, "Could not open directory==>", abs_path->c_str())
-		);
-		args.GetReturnValue().Set(v8_result);
-		delete abs_path;
-		return;
-	}
-	delete abs_path;
-	std::vector<std::string>& json_obj = *directorys;
-	v8::Local<v8::Array> directory_v8_array = v8::Array::New(isolate, (int)json_obj.size());
-	for (size_t i = 0, l = json_obj.size(); i < l; ++i) {
-		directory_v8_array->Set(ctx, (int)i, sow_web_jsx::v8_str(isolate, json_obj[i].c_str()));
-	}
-	directorys->clear(); delete directorys;
-	v8_result->Set(
-		ctx,
-		sow_web_jsx::v8_str(isolate, "staus_code"),
-		v8::Number::New(isolate, 1)
-	);
-	v8_result->Set(
-		ctx,
-		sow_web_jsx::v8_str(isolate, "dir"),
-		directory_v8_array
-	);
-	directory_v8_array.Clear();
-	args.GetReturnValue().Set(v8_result);
-}
+//[FileSystem]
 void jsx_file_bind(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx) {
 	v8::Local<v8::FunctionTemplate> tpl = v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* iso = args.GetIsolate();
@@ -639,11 +513,147 @@ void native_write_from_file(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	delete abs_path;
 	return;
 }
+void exists_directory(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	v8::Isolate* isolate = args.GetIsolate();
+	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
+		isolate->ThrowException(v8::Exception::TypeError(
+			sow_web_jsx::v8_str(isolate, "Directory required!!!")));
+		return;
+	}
+	native_string utf_abs_path_str(isolate, args[0]);
+	std::string* abs_path = new std::string("");
+	abs_path->append(_root_dir->c_str());
+	sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
+	int rec = sow_web_jsx::dir_exists(abs_path->c_str());
+	abs_path->clear(); delete abs_path; abs_path = NULL;
+	utf_abs_path_str.clear();
+	args.GetReturnValue().Set(v8::Number::New(isolate, (double)rec));
+}
+void read_directory_regx(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	//3:21 PM 12/24/2018
+	v8::Isolate* isolate = args.GetIsolate();
+	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
+		isolate->ThrowException(v8::Exception::TypeError(
+			sow_web_jsx::v8_str(isolate, "File absolute path required!!!")));
+		return;
+	}
+	if (!args[1]->IsString() || args[1]->IsNullOrUndefined()) {
+		isolate->ThrowException(v8::Exception::TypeError(
+			sow_web_jsx::v8_str(isolate, "Match pattern required!!!")));
+		return;
+	}
+	native_string utf_abs_path_str(isolate, args[0]);
+	std::string* abs_path = new std::string();
+	abs_path->append(_root_dir->c_str());
+	sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
+	auto directorys = new  std::vector<std::string>();
+	int rec = 0;
+	native_string utf_ext_str(isolate, args[1]);
+	auto reg = new std::regex(utf_ext_str.c_str());//"(html|aspx|jsx|php)"
+	rec = sow_web_jsx::read_directory_sub_directory_x(abs_path->c_str(), *directorys, *reg);
+	delete reg; utf_ext_str.clear(); utf_abs_path_str.clear();
+	v8::Handle<v8::Object> v8_result = v8::Object::New(isolate);
+	v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
+	if (rec == EXIT_FAILURE) {
+		directorys->clear(); delete directorys;
+		v8_result->Set(
+			ctx,
+			sow_web_jsx::v8_str(isolate, "staus_code"),
+			v8::Number::New(isolate, -1)
+		);
+		v8_result->Set(
+			ctx,
+			sow_web_jsx::v8_str(isolate, "message"),
+			sow_web_jsx::concat_msg(isolate, "Could not open directory==>", abs_path->c_str())
+		);
+		delete abs_path;
+		args.GetReturnValue().Set(v8_result);
+		return;
+	}
+	delete abs_path;
+	std::vector<std::string>& json_obj = *directorys;
+	v8::Local<v8::Array> directory_v8_array = v8::Array::New(isolate, (int)json_obj.size());
+	for (size_t i = 0, l = json_obj.size(); i < l; ++i) {
+		directory_v8_array->Set(ctx, (int)i, sow_web_jsx::v8_str(isolate, json_obj[i].c_str()));
+	}
+	directorys->clear(); delete directorys;
+	v8_result->Set(
+		ctx,
+		sow_web_jsx::v8_str(isolate, "staus_code"),
+		v8::Number::New(isolate, 1)
+	);
+	v8_result->Set(
+		ctx,
+		sow_web_jsx::v8_str(isolate, "dir"),
+		directory_v8_array
+	);
+	directory_v8_array.Clear();
+	args.GetReturnValue().Set(v8_result);
+}
+void read_directory(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	//3:21 PM 12/24/2018
+	v8::Isolate* isolate = args.GetIsolate();
+	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
+		isolate->ThrowException(v8::Exception::TypeError(
+			sow_web_jsx::v8_str(isolate, "File absolute path required!!!")));
+		return;
+	}
+	native_string utf_abs_path_str(isolate, args[0]);
+	std::string* abs_path = new std::string("");
+	abs_path->append(_root_dir->c_str());
+	sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
+	auto directorys = new  std::vector<std::string>();
+	int rec = 0; utf_abs_path_str.clear();
+	if (args[1]->IsString() || !args[1]->IsNullOrUndefined()) {
+		native_string utf_ext_str(isolate, args[1]);
+		rec = sow_web_jsx::read_directory_sub_directory(abs_path->c_str(), *directorys, utf_ext_str.c_str());
+		utf_ext_str.clear();
+	}
+	else {
+		rec = sow_web_jsx::read_directory_sub_directory(abs_path->c_str(), *directorys, "A");
+	}
+	v8::Handle<v8::Object> v8_result = v8::Object::New(isolate);
+	v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
+	if (rec == EXIT_FAILURE) {
+		directorys->clear(); delete directorys;
+		v8_result->Set(
+			ctx,
+			sow_web_jsx::v8_str(isolate, "staus_code"),
+			v8::Number::New(isolate, -1)
+		);
+		v8_result->Set(
+			ctx,
+			sow_web_jsx::v8_str(isolate, "message"),
+			sow_web_jsx::concat_msg(isolate, "Could not open directory==>", abs_path->c_str())
+		);
+		args.GetReturnValue().Set(v8_result);
+		delete abs_path;
+		return;
+	}
+	delete abs_path;
+	std::vector<std::string>& json_obj = *directorys;
+	v8::Local<v8::Array> directory_v8_array = v8::Array::New(isolate, (int)json_obj.size());
+	for (size_t i = 0, l = json_obj.size(); i < l; ++i) {
+		directory_v8_array->Set(ctx, (int)i, sow_web_jsx::v8_str(isolate, json_obj[i].c_str()));
+	}
+	directorys->clear(); delete directorys;
+	v8_result->Set(
+		ctx,
+		sow_web_jsx::v8_str(isolate, "staus_code"),
+		v8::Number::New(isolate, 1)
+	);
+	v8_result->Set(
+		ctx,
+		sow_web_jsx::v8_str(isolate, "dir"),
+		directory_v8_array
+	);
+	directory_v8_array.Clear();
+	args.GetReturnValue().Set(v8_result);
+}
 void native_delete_directory(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
-		isolate->ThrowException(v8::Exception::Error(
-			sow_web_jsx::v8_str(isolate, "Directory required!!!")));
+		throw_js_error(isolate, "Directory required!!!");
 		return;
 	}
 	v8::String::Utf8Value utf8_path_str(isolate, args[0]);
@@ -662,8 +672,7 @@ void native_delete_directory(const v8::FunctionCallbackInfo<v8::Value>& args) {
 void native_create_directory(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
-		isolate->ThrowException(v8::Exception::Error(
-			sow_web_jsx::v8_str(isolate, "Server path required!!!")));
+		throw_js_error(isolate, "Server path required!!!");
 		return;
 	}
 	v8::String::Utf8Value utf8_path_str(isolate, args[0]);
@@ -686,6 +695,9 @@ void native_create_directory(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	return;
 
 }
+//[/FileSystem]
+//8:53 PM 12/6/2019
+//[Asynchronous]
 void async_func(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsFunction()) {
@@ -723,13 +735,31 @@ void async_func(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		catch (...) {
 			return -1;
 		}
-	});
+		});
 	int rec = result.get();
 	cb.Reset();
 	callback.Clear();
 	args.GetReturnValue().Set(v8::Number::New(isolate, rec));
 }
-//8:53 PM 12/6/2019
+void sleep_func(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	v8::Isolate* isolate = args.GetIsolate();
+	if (!args[0]->IsNumber() || args[0]->IsNullOrUndefined()) {
+		isolate->ThrowException(v8::Exception::TypeError(
+			sow_web_jsx::v8_str(isolate, "Sleep time Required!!!")));
+		return;
+	}
+	//v8::Unlocker unlocker(isolate);
+	v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
+	int time = args[0]->Int32Value(ctx).FromMaybe(0);
+	std::this_thread::sleep_for(std::chrono::milliseconds(time));
+	//	v8::Local<v8::Number> num = args[0]->ToNumber(ctx).ToLocalChecked();
+	//	int64_t milliseconds = num->ToInteger(ctx).ToLocalChecked()->Value();
+	//#if defined(_WINDOWS_)
+	//	Sleep((DWORD)milliseconds);
+	//#else
+	//	sleep(reinterpret_cast<unsigned int*>(milliseconds));
+	//#endif//!_WINDOWS_
+}
 void set_time_out_func(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsFunction() || args[0]->IsNullOrUndefined()) {
@@ -765,6 +795,8 @@ void _async_thread(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	int rec = sow_web_jsx::async_thread(isolate, v8::Local<v8::Array>::Cast(args[0]));
 	args.GetReturnValue().Set(v8::Number::New(isolate, rec));
 }
+//[/Asynchronous]
+//[wkhtmltopdf]
 void generate_pdf(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	//11:14 PM 12/4/2018
 	v8::Isolate* isolate = args.GetIsolate();
@@ -989,106 +1021,7 @@ void generate_pdf_from_body(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	}
 	return;
 };
-//12:09 PM 8/27/2019
-int write_http_status() {
-	if (n_help::write_http_status(*_http_status, true) < 0) {
-		std::stringstream().swap(_body_stream);
-		n_help::write_http_status(*_http_status, false);
-		n_help::write_cookies(*_cookies);
-		_http_status->clear(); _headers->clear(); _cookies->clear();
-		delete _http_status; delete _headers; delete _cookies;
-		_http_status = NULL; _headers = NULL; _cookies = NULL;
-		std::cout << "\r\n";
-		fflush(stdout);
-		return -1;
-	};
-	return 0;
-}
-void set_cookie(const v8::FunctionCallbackInfo<v8::Value>& args) {
-	v8::Isolate* isolate = args.GetIsolate();
-	if (args[0]->IsNullOrUndefined() || !args[0]->IsString()) {
-		isolate->ThrowException(v8::Exception::TypeError(
-			sow_web_jsx::v8_str(isolate, "HTTP Cookie required!!!")));
-		return;
-	}
-	native_string resp_cookie_str(isolate, args[0]);
-	//v8::String::Utf8Value resp_cookie_str(isolate, args[0]);
-	const char* cook_val = resp_cookie_str.c_str();
-	std::vector<std::string>::iterator itr = std::find(_cookies->begin(), _cookies->end(), cook_val);
-	if (itr != _cookies->end()) {
-		_cookies->erase(itr);
-	}
-	_cookies->push_back(cook_val);
-}
-void http_status(const v8::FunctionCallbackInfo<v8::Value>& args) {
-	v8::Isolate* isolate = args.GetIsolate();
-#if defined(FAST_CGI_APP)
-	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
-		isolate->ThrowException(v8::Exception::TypeError(
-			sow_web_jsx::v8_str(isolate, "HTTP Status Code Required!!!")));
-		return;
-	}
-	native_string status_code_str(isolate, args[0]);
-	std::string* desc = new std::string("Status:");
-	desc->append(status_code_str.c_str());
-	if (args[1]->IsString() && !args[1]->IsNullOrUndefined()) {
-		desc->append(" ");
-		native_string dec_str(isolate, args[1]);
-		desc->append(dec_str.c_str());
-	}
-#else
-	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
-		isolate->ThrowException(v8::Exception::TypeError(
-			sow_web_jsx::v8_str(isolate, "Server Protocol Required!!!")));
-		return;
-	}
-	if (!args[1]->IsString() || args[1]->IsNullOrUndefined()) {
-		isolate->ThrowException(v8::Exception::TypeError(
-			sow_web_jsx::v8_str(isolate, "HTTP Status Code Required!!!")));
-		return;
-	}
-	v8::String::Utf8Value server_proto_str(isolate, args[0]);
-	v8::String::Utf8Value status_code_str(isolate, args[1]);
-	auto desc = new std::string(*server_proto_str);
-	desc->append(" ");
-	desc->append(*status_code_str);
-	desc->append(" ");
-	if (!args[2]->IsString() || args[2]->IsNullOrUndefined()) {
-		desc->append("Unspecified Description");
-	}
-	else {
-		v8::String::Utf8Value dec_str(isolate, args[2]);
-		desc->append(*dec_str);
-	}
-#endif//!FAST_CGI_APP
-	n_help::add_http_status(*_http_status, *desc);
-	desc->clear(); delete desc;
-	return;
-}
-void response_write_header(const v8::FunctionCallbackInfo<v8::Value>& args) {
-	v8::Isolate* isolate = args.GetIsolate();
-	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
-		isolate->ThrowException(v8::Exception::TypeError(
-			sow_web_jsx::v8_str(isolate, "Header Key string required!!!")));
-		return;
-	}
-	if (!args[1]->IsString() || args[1]->IsNullOrUndefined()) {
-		isolate->ThrowException(v8::Exception::TypeError(
-			sow_web_jsx::v8_str(isolate, "Header Description string required!!!")));
-		return;
-	}
-	native_string key_str(isolate, args[0]);
-	native_string description_str(isolate, args[1]);
-	n_help::add_header(*_headers, key_str.c_str(), description_str.c_str());
-	return;
-}
-void response_write(const v8::FunctionCallbackInfo<v8::Value>& args) {
-	v8::Isolate* isolate = args.GetIsolate();
-	if (args[0]->IsNullOrUndefined())return;
-	v8::String::Utf8Value utf8_str(isolate, args[0]);
-	_body_stream << *utf8_str;
-	return;
-}
+//[/wkhtmltopdf]
 //2:08 AM 11/25/2019
 void smtp_request(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
@@ -1450,25 +1383,6 @@ void http_request(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	}
 
 }
-void sleep_func(const v8::FunctionCallbackInfo<v8::Value>& args) {
-	v8::Isolate* isolate = args.GetIsolate();
-	if (!args[0]->IsNumber() || args[0]->IsNullOrUndefined()) {
-		isolate->ThrowException(v8::Exception::TypeError(
-			sow_web_jsx::v8_str(isolate, "Sleep time Required!!!")));
-		return;
-	}
-	//v8::Unlocker unlocker(isolate);
-	v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
-	int time = args[0]->Int32Value(ctx).FromMaybe(0);
-	std::this_thread::sleep_for(std::chrono::milliseconds(time));
-//	v8::Local<v8::Number> num = args[0]->ToNumber(ctx).ToLocalChecked();
-//	int64_t milliseconds = num->ToInteger(ctx).ToLocalChecked()->Value();
-//#if defined(_WINDOWS_)
-//	Sleep((DWORD)milliseconds);
-//#else
-//	sleep(reinterpret_cast<unsigned int*>(milliseconds));
-//#endif//!_WINDOWS_
-}
 void response_redirect(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 #if defined(FAST_CGI_APP)
@@ -1501,6 +1415,7 @@ void response_redirect(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	n_help::add_http_status(*_http_status, *desc);
 	desc->clear(); delete desc; url_str.clear();
 }
+//[Encryption/Decryption]
 void encrypt_source(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
@@ -1602,82 +1517,53 @@ void decrypt_source(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	return;
 #endif//!__client_build
 }
-/*[zgip]*/
-void gzip_compress_write() {
-	if (write_http_status() < 0)return;
-	_http_status->clear(); delete _http_status;
-	n_help::write_header(*_headers);
-	int binary_response = n_help::is_binary_response(*_headers);
-	_headers->clear(); delete _headers;
-	n_help::write_cookies(*_cookies);
-	_cookies->clear(); delete _cookies;
-	_http_status = NULL; _headers = NULL; _cookies = NULL;
-	std::ios::sync_with_stdio(false);
-	std::cout << "\r\n";
-	if (binary_response != 0) {
-		if (SET_BINARY_MODE_OUT() == -1) {
-			//out_stream << "ERROR: while converting cout to binary:" << strerror(errno);
-			//return;
-		}
-	}
-	gzip::compress_gzip(_body_stream, std::cout);
-	std::stringstream().swap(_body_stream);
-	fflush(stdout);
-}
-/*[/zgip]*/
-void sow_web_jsx::wrapper::clear_cache() {
-	if (!_is_cli)return;
-	if (_is_flush == true)return;
-	free(_root_dir);
-}
-const char* sow_web_jsx::wrapper::get_root_dir() {
-	return _root_dir->c_str();
-}
-void attachment_response() {
-	if (write_http_status() < 0)return;
-}
-//9:32 PM 11/22/2018
-void sow_web_jsx::wrapper::response_body_flush() {
-	if (_is_flush == true)return;
-	_is_flush = true;
-	if (n_help::is_gzip_encoding(*_headers) == 1) {
-		gzip_compress_write();
+void generate_key_iv(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	v8::Isolate* isolate = args.GetIsolate();
+	std::string key, iv, error;
+	if (crypto::generate_key_iv(key, iv, error) == FALSE) {
+		isolate->ThrowException(v8::Exception::TypeError(
+			sow_web_jsx::v8_str(isolate, error.c_str())));
+		error.clear();
 		return;
 	}
-	if (write_http_status() < 0)return;
-	std::ios::sync_with_stdio(false);
-	_http_status->clear(); delete _http_status;
-	n_help::write_header(*_headers);
-	int binary_response = n_help::is_binary_response(*_headers);
-	_headers->clear(); delete _headers;
-	n_help::write_cookies(*_cookies);
-	_cookies->clear(); delete _cookies;
-	_http_status = NULL; _headers = NULL; _cookies = NULL;
-	fflush(stdout);
-	std::cout << "\r\n";
-	if (binary_response != 0) {
-		if (SET_BINARY_MODE_OUT() == -1) {
-			//out_stream << "ERROR: while converting cout to binary:" << strerror(errno);
-			//return;
-		}
-	}
-	std::copy(std::istreambuf_iterator<char>(_body_stream),
-		std::istreambuf_iterator<char>(),
-		std::ostream_iterator<char>(std::cout)
+	v8::Handle<v8::Object> v8_result = v8::Object::New(isolate);
+	v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
+	v8_result->Set(
+		ctx,
+		sow_web_jsx::v8_str(isolate, "key"),
+		sow_web_jsx::v8_str(isolate, key.c_str())
 	);
-	fflush(stdout);
-	std::stringstream().swap(_body_stream);
-	return;
+	v8_result->Set(
+		ctx,
+		sow_web_jsx::v8_str(isolate, "iv"),
+		sow_web_jsx::v8_str(isolate, iv.c_str())
+	);
+	args.GetReturnValue().Set(v8_result);
+	key.clear(); iv.clear();
 }
-void response_clear(const v8::FunctionCallbackInfo<v8::Value>& args) {
+void base64_encode(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
-	std::stringstream().swap(_body_stream);
+	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
+		isolate->ThrowException(v8::Exception::TypeError(
+			sow_web_jsx::v8_str(isolate, "Plain text required!!!")));
+		return;
+	}
+	native_string utf_plain_text(isolate, args[0]);
+	std::string bas64str = sow_web_jsx::base64::to_encode_str(reinterpret_cast<const unsigned char*>(utf_plain_text.c_str()), (int)utf_plain_text.size());
+	args.GetReturnValue().Set(sow_web_jsx::v8_str(isolate, bas64str.c_str()));
+	bas64str.clear(); utf_plain_text.clear();
 }
-void get_response_body(const v8::FunctionCallbackInfo<v8::Value>& args) {
+void base64_decode(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
-	std::string* str = new std::string(_body_stream.str());
-	args.GetReturnValue().Set(sow_web_jsx::v8_str(isolate, str->c_str()));
-	str->clear(); delete str;
+	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
+		isolate->ThrowException(v8::Exception::TypeError(
+			sow_web_jsx::v8_str(isolate, "Plain text required!!!")));
+		return;
+	}
+	native_string utf_base64_text(isolate, args[0]);
+	std::string plain_str = sow_web_jsx::base64::to_decode_str(utf_base64_text.c_str());
+	args.GetReturnValue().Set(sow_web_jsx::v8_str(isolate, plain_str.c_str()));
+	plain_str.clear(); utf_base64_text.clear();
 }
 void encrypt_str(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
@@ -1689,34 +1575,30 @@ void encrypt_str(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	}
 	if (!args[1]->IsString() || args[1]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
-			sow_web_jsx::v8_str(isolate, "KEY required!!!")));
+			sow_web_jsx::v8_str(isolate, "Base64 KEY required!!!")));
 		return;
 	}
 	if (!args[2]->IsString() || args[2]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
-			sow_web_jsx::v8_str(isolate, "IV required!!!")));
+			sow_web_jsx::v8_str(isolate, "Base64 IV required!!!")));
 		return;
 	}
 	native_string utf_plain_text(isolate, args[0]);
 	native_string utf_key(isolate, args[1]);
 	native_string utf_iv(isolate, args[2]);
 	try {
-		//void encrypt(const char*plain_text, const char*key, const char *iv, std::string&encrypt_text);
-		std::string* encrypted_text = new std::string();
-		//std::string key(*utf_key);
-		//std::string iv(*utf_iv);
-		//std::string plain_text(*utf_plain_text);
-		int rec = crypto::encrypt(utf_plain_text.c_str(), utf_key.c_str(), utf_iv.c_str(), *encrypted_text);
-		//std::string().swap(key); std::string().swap(iv); std::string().swap(plain_text);
-		utf_plain_text.clear(); utf_key.clear(); utf_iv.clear();
-		if (rec < 0) {
+		std::stringstream dest(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
+		int rec = crypto::encrypt(utf_plain_text.c_str(), utf_key.c_str(), utf_iv.c_str(), dest);
+		utf_key.clear(); utf_iv.clear();
+		if (rec == FALSE) {
 			isolate->ThrowException(v8::Exception::Error(
-				sow_web_jsx::concat_msg(isolate, "Unable to encrypt plain text.==>", encrypted_text->c_str())));
+				sow_web_jsx::concat_msg(isolate, "Unable to encrypt plain text.==>", dest.str().c_str())));
 		}
 		else {
-			args.GetReturnValue().Set(sow_web_jsx::v8_str(isolate, encrypted_text->c_str()));
+			args.GetReturnValue().Set(sow_web_jsx::v8_str(isolate, dest.str().c_str()));
 		}
-		encrypted_text->clear(); delete encrypted_text;
+		utf_plain_text.clear();
+		dest.clear(); std::stringstream().swap(dest);
 	}
 	catch (std::runtime_error& e) {
 		isolate->ThrowException(v8::Exception::Error(
@@ -1744,22 +1626,18 @@ void decrypt_str(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	native_string utf_key(isolate, args[1]);
 	native_string utf_iv(isolate, args[2]);
 	try {
-		//std::string key(*utf_key);
-		//std::string iv(*utf_iv);
-		//std::string encrypted_text(*utf_encrypted_text);
-		//void encrypt(const char*plain_text, const char*key, const char *iv, std::string&encrypt_text);
-		std::string* decrypted_text = new std::string();
-		int rec = crypto::decrypt(utf_encrypted_text.c_str(), utf_key.c_str(), utf_iv.c_str(), *decrypted_text);
-		//std::string().swap(key); std::string().swap(iv); std::string().swap(encrypted_text);
-		utf_encrypted_text.clear(); utf_key.clear(); utf_iv.clear();
-		if (rec < 0) {
+		std::stringstream dest(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
+		int rec = crypto::decrypt(utf_encrypted_text.c_str(), utf_key.c_str(), utf_iv.c_str(), dest);
+		utf_key.clear(); utf_iv.clear();
+		if (rec == FALSE) {
 			isolate->ThrowException(v8::Exception::Error(
-				sow_web_jsx::concat_msg(isolate, "Unable to decrypt encrypted text.==>", decrypted_text->c_str())));
+				sow_web_jsx::concat_msg(isolate, "Unable to decrypt encrypted text.==>", dest.str().c_str())));
 		}
 		else {
-			args.GetReturnValue().Set(sow_web_jsx::v8_str(isolate, decrypted_text->c_str()));
+			args.GetReturnValue().Set(v8::String::NewFromUtf8(isolate, dest.str().c_str(), v8::NewStringType::kNormal).ToLocalChecked());
 		}
-		decrypted_text->clear(); delete decrypted_text;
+		utf_encrypted_text.clear();
+		dest.clear(); std::stringstream().swap(dest);
 	}
 	catch (std::runtime_error& e) {
 		args.GetReturnValue().Set(sow_web_jsx::v8_str(isolate, e.what()));
@@ -1795,11 +1673,134 @@ void string_to_hex(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	hex_str->clear(); delete hex_str;
 	return;
 }
-void SetEngineInformation(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> v8_global) {
-	v8::Local<v8::ObjectTemplate> js_engine_object = v8::ObjectTemplate::New(isolate);
-	js_engine_object->Set(isolate, "version", v8_str(isolate, v8::V8::GetVersion()));
-	js_engine_object->Set(isolate, "name", v8_str(isolate, "V8"));
-	v8_global->Set(isolate, "engine", js_engine_object);
+//[/Encryption/Decryption]
+//12:09 PM 8/27/2019
+void set_cookie(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	v8::Isolate* isolate = args.GetIsolate();
+	if (args[0]->IsNullOrUndefined() || !args[0]->IsString()) {
+		isolate->ThrowException(v8::Exception::TypeError(
+			sow_web_jsx::v8_str(isolate, "HTTP Cookie required!!!")));
+		return;
+	}
+	native_string resp_cookie_str(isolate, args[0]);
+	const char* cook_val = resp_cookie_str.c_str();
+	std::vector<std::string>::iterator itr = std::find(_cookies->begin(), _cookies->end(), cook_val);
+	if (itr != _cookies->end()) {
+		_cookies->erase(itr);
+	}
+	_cookies->push_back(cook_val);
+}
+void http_status(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	v8::Isolate* isolate = args.GetIsolate();
+#if defined(FAST_CGI_APP)
+	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
+		isolate->ThrowException(v8::Exception::TypeError(
+			sow_web_jsx::v8_str(isolate, "HTTP Status Code Required!!!")));
+		return;
+	}
+	native_string status_code_str(isolate, args[0]);
+	std::string* desc = new std::string("Status:");
+	desc->append(status_code_str.c_str());
+	if (args[1]->IsString() && !args[1]->IsNullOrUndefined()) {
+		desc->append(" ");
+		native_string dec_str(isolate, args[1]);
+		desc->append(dec_str.c_str());
+	}
+#else
+	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
+		isolate->ThrowException(v8::Exception::TypeError(
+			sow_web_jsx::v8_str(isolate, "Server Protocol Required!!!")));
+		return;
+	}
+	if (!args[1]->IsString() || args[1]->IsNullOrUndefined()) {
+		isolate->ThrowException(v8::Exception::TypeError(
+			sow_web_jsx::v8_str(isolate, "HTTP Status Code Required!!!")));
+		return;
+	}
+	v8::String::Utf8Value server_proto_str(isolate, args[0]);
+	v8::String::Utf8Value status_code_str(isolate, args[1]);
+	auto desc = new std::string(*server_proto_str);
+	desc->append(" ");
+	desc->append(*status_code_str);
+	desc->append(" ");
+	if (!args[2]->IsString() || args[2]->IsNullOrUndefined()) {
+		desc->append("Unspecified Description");
+	}
+	else {
+		v8::String::Utf8Value dec_str(isolate, args[2]);
+		desc->append(*dec_str);
+	}
+#endif//!FAST_CGI_APP
+	n_help::add_http_status(*_http_status, *desc);
+	desc->clear(); delete desc; status_code_str.clear();
+	return;
+}
+void response_write_header(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	v8::Isolate* isolate = args.GetIsolate();
+	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
+		isolate->ThrowException(v8::Exception::TypeError(
+			sow_web_jsx::v8_str(isolate, "Header Key string required!!!")));
+		return;
+	}
+	if (!args[1]->IsString() || args[1]->IsNullOrUndefined()) {
+		isolate->ThrowException(v8::Exception::TypeError(
+			sow_web_jsx::v8_str(isolate, "Header Description string required!!!")));
+		return;
+	}
+	native_string key_str(isolate, args[0]);
+	native_string description_str(isolate, args[1]);
+	n_help::add_header(*_headers, key_str.c_str(), description_str.c_str());
+	return;
+}
+void response_write(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	v8::Isolate* isolate = args.GetIsolate();
+	if (args[0]->IsNullOrUndefined())return;
+	v8::String::Utf8Value utf8_str(isolate, args[0]);
+	_body_stream << *utf8_str;
+	return;
+}
+void response_throw_error(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	v8::Isolate* isolate = args.GetIsolate();
+	if (!args[0]->IsString()) {
+		throw_js_error(isolate, "Error Description required....");
+		return;
+	}
+	_body_stream.clear();
+	std::stringstream().swap(_body_stream);
+	_http_status->push_back("");
+	native_string utf8_str(isolate, args[0]);
+	_body_stream << "Throw Error:</br>";
+	_body_stream << utf8_str.c_str(); utf8_str.clear();
+	if (!_http_status->empty()) {
+		_http_status->clear();
+	}
+	if (args[1]->IsNumber()) {
+		v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
+		int status_code = args[1]->Int32Value(ctx).FromMaybe(0);
+		response_status rs = n_help::get_http_response_status(status_code);
+		if (rs == response_status::UNAUTHORIZED ||
+			rs == response_status::FORBIDDEN ||
+			rs == response_status::INTERNAL_SERVER_ERROR||
+			rs == response_status::NOT_IMPLEMENTED) {
+			_http_status->push_back(std::to_string(status_code));
+			return;
+		}
+		throw_js_error(isolate, "Invalid Status code defined....");
+		return;
+	}
+	else {
+		_http_status->push_back("500");
+	}
+	return;
+}
+void response_clear(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	//v8::Isolate* isolate = args.GetIsolate();
+	_body_stream.clear();
+	std::stringstream().swap(_body_stream);
+	args.GetReturnValue().Set(args.Holder());
+}
+void get_response_body(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	args.GetReturnValue().Set(sow_web_jsx::v8_str(args.GetIsolate(), _body_stream.str().c_str()));
 }
 void server_map_path(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
@@ -1814,6 +1815,150 @@ void server_map_path(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
 	args.GetReturnValue().Set(sow_web_jsx::v8_str(isolate, abs_path->c_str()));
 	delete abs_path; utf_abs_path_str.clear();
+}
+size_t get_content_length() {
+	_body_stream.seekg(0, std::ios::end);//Go to end of stream
+	std::streamoff totalSize = _body_stream.tellg();
+	_body_stream.seekg(0, std::ios::beg);//Back to begain of stream
+	return (size_t)totalSize;
+}
+void __clear_cache(int clean_body = 0) {
+	if (_http_status != NULL) {
+		_http_status->clear(); delete _http_status; _http_status = NULL;
+	}
+	if (_headers != NULL) {
+		_headers->clear(); delete _headers; _headers = NULL;
+	}
+	if (_cookies != NULL) {
+		_cookies->clear(); delete _cookies; _cookies = NULL;
+	}
+	if (_root_dir != NULL) {
+		_root_dir->clear(); delete _root_dir; _root_dir = NULL;
+	}
+	if (clean_body == 1) {
+		if (get_content_length() > 0) {
+			_body_stream.clear();
+			std::stringstream().swap(_body_stream);
+		}
+	}
+	
+}
+void sow_web_jsx::wrapper::clear_cache() {
+	if (!_is_cli)return;
+	if (_is_flush == true)return;
+	__clear_cache(TRUE);
+}
+BOOL set_binary_output() {
+	if (SET_BINARY_MODE_OUT() != -1)return TRUE;
+	//_body_stream.clear(); std::stringstream().swap(_body_stream);
+	//_body_stream << "ERROR: while converting cout to binary:" << strerror(errno);
+	//n_help::error_response(
+	//	/*const char* server_root*/_root_dir->c_str(),
+	//	/*response_status status_code*/response_status::INTERNAL_SERVER_ERROR,
+	//	/*const std::string error_msg*/_body_stream.str()
+	//);
+	//__clear_cache(TRUE);
+	//return FALSE;
+	return TRUE;
+}
+BOOL _write_http_status() {
+	_body_stream.clear();
+	std::stringstream().swap(_body_stream);
+	n_help::write_http_status(*_http_status, false);
+	n_help::write_header(*_headers);
+	n_help::write_cookies(*_cookies);
+	__clear_cache(TRUE);
+	std::cout << "\r\n";
+	fflush(stdout);
+	return FALSE;
+}
+BOOL write_http_status() {
+	response_status status_code = n_help::get_http_response_status(*_http_status);
+	switch (status_code)
+	{
+	case response_status::OK: return TRUE;
+	case response_status::MOVED:
+	case response_status::REDIRECT:
+	case response_status::SEEOTHER:
+	case response_status::NOTMODIFIED: return _write_http_status();
+	case response_status::UNAUTHORIZED:
+	case response_status::FORBIDDEN:
+	case response_status::NOT_FOUND:
+	case response_status::INTERNAL_SERVER_ERROR:
+	case response_status::NOT_IMPLEMENTED:
+		if (SET_BINARY_MODE_OUT() == -1) {
+			/*_body_stream << "<br/>Another Error occured:<br/>";
+			_body_stream << "ERROR: while converting cout to binary:" << strerror(errno);*/
+		}
+		n_help::error_response(
+			/*const char* server_root*/_root_dir->c_str(),
+			/*response_status status_code*/status_code,
+			/*const std::string error_msg*/_body_stream.str()
+		);
+		__clear_cache(TRUE);
+		return FALSE;
+	default:
+		throw new std::runtime_error("Invalid Http Response Status defined...");
+	}
+}
+/*[zgip]*/
+void gzip_compress_write() {
+	std::ios::sync_with_stdio(false);
+	if (write_http_status() == FALSE)return;
+	if (set_binary_output() == FALSE)return;
+	n_help::write_header(*_headers);
+	n_help::write_cookies(*_cookies);
+	__clear_cache(FALSE);
+	std::cout << "\r\n";
+	gzip::compress_gzip(_body_stream, std::cout);
+	_body_stream.clear(); std::stringstream().swap(_body_stream);
+	fflush(stdout);
+}
+/*[/zgip]*/
+const char* sow_web_jsx::wrapper::get_root_dir() {
+	return _root_dir->c_str();
+}
+void attachment_response() {
+	if (write_http_status() < 0)return;
+}
+//9:32 PM 11/22/2018
+void sow_web_jsx::wrapper::response_body_flush(bool end_req) {
+	if (_is_flush == true)return;
+	_is_flush = true;
+	
+	if (end_req == true ||
+		std::cout.good() == false ||
+		std::cout.fail() == true
+		) {
+		//We defined here force close request...
+		__clear_cache(TRUE); fflush(stdout);
+		return;
+	}
+	if (n_help::is_gzip_encoding(*_headers) == TRUE) {
+		gzip_compress_write();
+		return;
+	}
+	std::ios::sync_with_stdio(false);
+	if (write_http_status() == FALSE)return;
+	if (set_binary_output() == FALSE)return;
+	n_help::write_header(*_headers);
+	n_help::write_cookies(*_cookies);
+	__clear_cache(FALSE);
+	fflush(stdout);
+	std::cout << "\r\n";
+	std::copy(std::istreambuf_iterator<char>(_body_stream),
+		std::istreambuf_iterator<char>(),
+		std::ostream_iterator<char>(std::cout)
+	);
+	fflush(stdout);
+	_body_stream.clear(); std::stringstream().swap(_body_stream);
+	return;
+}
+void SetEngineInformation(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> v8_global) {
+	v8::Local<v8::ObjectTemplate> js_engine_object = v8::ObjectTemplate::New(isolate);
+	js_engine_object->Set(isolate, "version", v8_str(isolate, v8::V8::GetVersion()));
+	js_engine_object->Set(isolate, "name", v8_str(isolate, "V8"));
+	v8_global->Set(isolate, "engine", js_engine_object);
 }
 //9:32 PM 11/22/2018
 void require(const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -1830,20 +1975,20 @@ void require(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	}
 #endif//!__client_build
 	native_string utf_abs_path_str(isolate, args[0]);
-	auto abs_path = new std::string();
+	std::string* abs_path = new std::string();
 	abs_path->append(_root_dir->c_str());
 	sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
-	utf_abs_path_str.clear();
 	std::string source_str("");
 #if defined(__client_build)
 	if (is_encrypt) {
 		size_t ret = sow_web_jsx::read_file(abs_path->c_str(), source_str, true);
 		delete abs_path;
 		if (ret < 0 || ret == std::string::npos) {
+			utf_abs_path_str.clear();
 			isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, source_str.c_str())));
 			return;
 		}
-		auto decipher = new Cipher(-1000);
+		Cipher* decipher = new Cipher(-1000);
 		source_str = decipher->encrypt(source_str);
 		delete decipher;
 	}
@@ -1851,6 +1996,7 @@ void require(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		size_t ret = sow_web_jsx::read_file(abs_path->c_str(), source_str, true);
 		delete abs_path;
 		if (ret < 0 || ret == std::string::npos) {
+			utf_abs_path_str.clear();
 			isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, source_str.c_str())));
 			return;
 		}
@@ -1859,8 +2005,9 @@ void require(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	}
 #else
 	size_t ret = sow_web_jsx::read_file(abs_path->c_str(), source_str, true);
-	free(abs_path);
+	abs_path->clear(); delete abs_path;
 	if (ret < 0 || ret == std::string::npos) {
+		utf_abs_path_str.clear();
 		isolate->ThrowException(v8::Exception::Error(v8::String::NewFromUtf8(isolate, source_str.c_str())));
 		return;
 	}
@@ -1877,12 +2024,13 @@ void require(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::MaybeLocal<v8::Script> script = v8::Script::Compile(context, sow_web_jsx::v8_str(isolate, source_str.c_str()));
 	if (script.IsEmpty()) {
 		source_str.clear();
-		isolate->ThrowException(v8::Exception::Error(
-			sow_web_jsx::v8_str(isolate, "Unable to compile script. Check your script than try again.")));
+		utf_abs_path_str.clear();
+		isolate->ThrowException(v8::Exception::Error(sow_web_jsx::concat_msg(isolate, "Unable to compile script. Check your script than try again. Path: ", utf_abs_path_str.c_str())));
 		context.Clear();
 		v8_global.Clear();
 		return;
 	}
+	utf_abs_path_str.clear();
 	// Run the script to get the result.
 	script.ToLocalChecked()->Run(context);
 	source_str.clear();
@@ -1899,6 +2047,7 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_context(v8::Isolate* iso
 #if defined(FAST_CGI_APP)
 	_is_flush = false;
 #endif//FAST_CGI_APP
+	__clear_cache(1);
 	v8::Local<v8::ObjectTemplate> _v8_global = v8::ObjectTemplate::New(isolate);
 	v8::Local<v8::ObjectTemplate> ctx_object = v8::ObjectTemplate::New(isolate);
 	for (auto itr = ctx.begin(); itr != ctx.end(); ++itr) {
@@ -1908,8 +2057,8 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_context(v8::Isolate* iso
 			for (auto gitr = obj.begin(); gitr != obj.end(); ++gitr) {
 				ctx_object->Set(isolate, (gitr->first).c_str(), v8_str(isolate, gitr->second.c_str()));
 			}
-			if (_root_dir == NULL)
-				_root_dir = new std::string(obj["root_dir"]);
+			//if (_root_dir == NULL)
+			_root_dir = new std::string(obj["root_dir"]);
 			continue;
 		}
 		v8::Local<v8::ObjectTemplate> object = v8::ObjectTemplate::New(isolate);
@@ -1926,6 +2075,7 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_context(v8::Isolate* iso
 	/*[context.respons....]*/
 	v8::Local<v8::ObjectTemplate> response_object = v8::ObjectTemplate::New(isolate);
 	response_object->Set(isolate, "_write", v8::FunctionTemplate::New(isolate, response_write));
+	response_object->Set(isolate, "throw_error", v8::FunctionTemplate::New(isolate, response_throw_error));
 	response_object->Set(isolate, "header", v8::FunctionTemplate::New(isolate, response_write_header));
 	response_object->Set(isolate, "write_from_file", v8::FunctionTemplate::New(isolate, native_write_from_file));
 	v8::Local<v8::ObjectTemplate> body_object = v8::ObjectTemplate::New(isolate);
@@ -1965,6 +2115,7 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_context(v8::Isolate* iso
 	/*[Sys Object]*/
 	v8::Local<v8::ObjectTemplate> sys_object = v8::ObjectTemplate::New(isolate);
 	sys_object->Set(isolate, "read_directory", v8::FunctionTemplate::New(isolate, read_directory));
+	sys_object->Set(isolate, "exists_directory", v8::FunctionTemplate::New(isolate, exists_directory));
 	sys_object->Set(isolate, "read_directory_regx", v8::FunctionTemplate::New(isolate, read_directory_regx));
 	sys_object->Set(isolate, "create_directory", v8::FunctionTemplate::New(isolate, native_create_directory));
 	sys_object->Set(isolate, "delete_directory", v8::FunctionTemplate::New(isolate, native_delete_directory));
@@ -2003,10 +2154,17 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_context(v8::Isolate* iso
 	v8::Local<v8::ObjectTemplate> crypto_object = v8::ObjectTemplate::New(isolate);
 	crypto_object->Set(isolate, "encrypt", v8::FunctionTemplate::New(isolate, encrypt_str));
 	crypto_object->Set(isolate, "decrypt", v8::FunctionTemplate::New(isolate, decrypt_str));
+	crypto_object->Set(isolate, "generate_key_iv", v8::FunctionTemplate::New(isolate, generate_key_iv));
 	crypto_object->Set(isolate, "encrypt_source", v8::FunctionTemplate::New(isolate, encrypt_source));
 	crypto_object->Set(isolate, "decrypt_source", v8::FunctionTemplate::New(isolate, decrypt_source));
 	_v8_global->Set(isolate, "crypto", crypto_object);
 	/*[/crypto....]*/
+	/*[Base64....]*/
+	v8::Local<v8::ObjectTemplate> base64_object = v8::ObjectTemplate::New(isolate);
+	base64_object->Set(isolate, "encode", v8::FunctionTemplate::New(isolate, base64_encode));
+	base64_object->Set(isolate, "decode", v8::FunctionTemplate::New(isolate, base64_decode));
+	_v8_global->Set(isolate, "base64", base64_object);
+	/*[/Base64....]*/
 	/*[http_request]*/
 	_v8_global->Set(isolate, "create_http_request", v8::FunctionTemplate::New(isolate, http_request));
 	/*[/http_request]*/
@@ -2027,12 +2185,9 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_context(v8::Isolate* iso
 	_v8_global->Set(isolate, "__sleep", v8::FunctionTemplate::New(isolate, sleep_func));
 	
 	SetEngineInformation(isolate, _v8_global);
-	if (_headers == NULL)
-		_headers = new std::map<std::string, std::string>();
-	if (_cookies == NULL)
-		_cookies = new std::vector<std::string>();
-	if (_http_status == NULL)
-		_http_status = new std::vector<std::string>();
+	_headers = new std::map<std::string, std::string>();
+	_cookies = new std::vector<std::string>();
+	_http_status = new std::vector<std::string>();
 	_is_interactive = false;
 	/*[Create C++ Internal Context]*/
 	return _v8_global;
@@ -2126,10 +2281,17 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_console_context(v8::Isol
 	v8::Local<v8::ObjectTemplate> crypto_object = v8::ObjectTemplate::New(isolate);
 	crypto_object->Set(isolate, "encrypt", v8::FunctionTemplate::New(isolate, encrypt_str));
 	crypto_object->Set(isolate, "decrypt", v8::FunctionTemplate::New(isolate, decrypt_str));
+	crypto_object->Set(isolate, "generate_key_iv", v8::FunctionTemplate::New(isolate, generate_key_iv));
 	crypto_object->Set(isolate, "encrypt_source", v8::FunctionTemplate::New(isolate, encrypt_source));
 	crypto_object->Set(isolate, "decrypt_source", v8::FunctionTemplate::New(isolate, decrypt_source));
 	v8_global->Set(isolate, "crypto", crypto_object);
 	/*[/crypto....]*/
+	/*[Base64....]*/
+	v8::Local<v8::ObjectTemplate> base64_object = v8::ObjectTemplate::New(isolate);
+	base64_object->Set(isolate, "encode", v8::FunctionTemplate::New(isolate, base64_encode));
+	base64_object->Set(isolate, "decode", v8::FunctionTemplate::New(isolate, base64_decode));
+	v8_global->Set(isolate, "base64", base64_object);
+	/*[/Base64....]*/
 	/*[http_request]*/
 	v8_global->Set(isolate, "create_http_request", v8::FunctionTemplate::New(isolate, http_request));
 	/*[/http_request]*/
@@ -2160,6 +2322,7 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_console_context(v8::Isol
 	/*[Sys Object]*/
 	v8::Local<v8::ObjectTemplate> sys_object = v8::ObjectTemplate::New(isolate);
 	sys_object->Set(isolate, "read_directory", v8::FunctionTemplate::New(isolate, read_directory));
+	sys_object->Set(isolate, "exists_directory", v8::FunctionTemplate::New(isolate, exists_directory));
 	sys_object->Set(isolate, "read_directory_regx", v8::FunctionTemplate::New(isolate, read_directory_regx));
 	sys_object->Set(isolate, "create_directory", v8::FunctionTemplate::New(isolate, native_create_directory));
 	sys_object->Set(isolate, "delete_directory", v8::FunctionTemplate::New(isolate, native_delete_directory));
@@ -2214,9 +2377,9 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::create_v8_context_object(v8:
 	/*[Sys Object]*/
 	v8::Local<v8::ObjectTemplate> sys_object = v8::ObjectTemplate::New(isolate);
 	sys_object->Set(isolate, "read_directory", v8::FunctionTemplate::New(isolate, read_directory));
+	sys_object->Set(isolate, "exists_directory", v8::FunctionTemplate::New(isolate, exists_directory));
 	sys_object->Set(isolate, "read_directory_regx", v8::FunctionTemplate::New(isolate, read_directory_regx));
 	sys_object->Set(isolate, "create_directory", v8::FunctionTemplate::New(isolate, native_create_directory));
-
 	sys_object->Set(isolate, "delete_directory", v8::FunctionTemplate::New(isolate, native_delete_directory));
 	sys_object->Set(isolate, "create_process", v8::FunctionTemplate::New(isolate, native_create_process));
 	sys_object->Set(isolate, "create_child_process", v8::FunctionTemplate::New(isolate, native_create_child_process));
@@ -2248,11 +2411,17 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::create_v8_context_object(v8:
 	v8::Local<v8::ObjectTemplate> crypto_object = v8::ObjectTemplate::New(isolate);
 	crypto_object->Set(isolate, "encrypt", v8::FunctionTemplate::New(isolate, encrypt_str));
 	crypto_object->Set(isolate, "decrypt", v8::FunctionTemplate::New(isolate, decrypt_str));
+	crypto_object->Set(isolate, "generate_key_iv", v8::FunctionTemplate::New(isolate, generate_key_iv));
 	crypto_object->Set(isolate, "encrypt_source", v8::FunctionTemplate::New(isolate, encrypt_source));
 	crypto_object->Set(isolate, "decrypt_source", v8::FunctionTemplate::New(isolate, decrypt_source));
-	//
 	v8_global->Set(isolate, "crypto", crypto_object);
 	/*[/crypto]*/
+	/*[Base64....]*/
+	v8::Local<v8::ObjectTemplate> base64_object = v8::ObjectTemplate::New(isolate);
+	base64_object->Set(isolate, "encode", v8::FunctionTemplate::New(isolate, base64_encode));
+	base64_object->Set(isolate, "decode", v8::FunctionTemplate::New(isolate, base64_decode));
+	v8_global->Set(isolate, "base64", base64_object);
+	/*[/Base64....]*/
 	/*[http_request]*/
 	v8_global->Set(isolate, "create_http_request", v8::FunctionTemplate::New(isolate, http_request));
 	/*[/http_request]*/

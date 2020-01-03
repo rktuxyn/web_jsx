@@ -171,6 +171,10 @@ int sow_web_jsx::delete_dir(const char * name) {
 		return EXIT_SUCCESS;
 	return EXIT_FAILURE;
 }
+int sow_web_jsx::rename_dir(const char* old_dir, const char* new_dir) {
+	int result = rename(old_dir, new_dir);
+	return result;
+}
 int sow_web_jsx::read_directory_sub_directory_x(const char * name, std::vector<std::string>& directory, const std::regex& pattern) {
 	DIR *dir;
 	if (!(dir = opendir(name)))

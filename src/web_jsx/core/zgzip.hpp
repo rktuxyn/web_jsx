@@ -107,7 +107,7 @@ namespace gzip {
 		/* compress until end of stream */
 		uLong tcrc = 0;
 		do {
-			char in[CHUNK];
+			char* in = new char[CHUNK];
 			n = source.rdbuf()->sgetn(in, CHUNK);
 			strm.avail_in = (uInt)n;
 			tcrc = crc32(tcrc, (uint8_t*)in, (uInt)n);
@@ -117,7 +117,7 @@ namespace gzip {
 			/* run deflate() on input until output buffer not full, finish
 			  compression if all of source has been read in */
 			do {
-				char out[CHUNK];
+				char* out = new char[CHUNK];
 				strm.avail_out = CHUNK;
 				strm.next_out = (Bytef*)out;
 				ret = deflate(&strm, flush);    /* no bad return value */
@@ -125,9 +125,11 @@ namespace gzip {
 				have = CHUNK - strm.avail_out;
 				dest.write(out, have);
 				write_len += have;
+				delete[]out;
 			} while (strm.avail_out == 0);
 			assert(strm.avail_in == 0);     /* all input will be used */
 			 /* done when last data in file processed */
+			delete[]in;
 		} while (flush != Z_FINISH);
 		assert(ret == Z_STREAM_END);        /* stream will be complete */
 		 /* clean up and return */
@@ -139,7 +141,6 @@ namespace gzip {
 	};
 	template<class _out_stream>
 	void compress_gzip (std::stringstream&source_stream, _out_stream&out_stream) {
-		SET_BINARY_MODE_OUT();
 		_write_magic_header(out_stream);
 		_deflate_stream(source_stream, out_stream);
 	};

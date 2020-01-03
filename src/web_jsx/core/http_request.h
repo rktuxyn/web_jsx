@@ -23,26 +23,32 @@
 #if !defined(_glb_r_h)
 #include "glb_r.h"
 #endif//!_glb_r_h
+#if !defined(_curl_util_h)
+#include "curl_util.h"
+#endif//!_curl_util_h
 namespace http_client {
 	class http_request {
 	private:
-		CURL *_curl;
-		struct curl_slist *_header_chunk;
+		CURL* _curl;
+		struct curl_slist* _header_chunk;
 		bool _follow_location;
 		bool _disposed;
 		char* _internal_error;
-		const char*_full_url;
+		const char* _full_url;
 		virtual void set_error(const char* error);
 		virtual void prepare();
-		virtual int send_request(std::string & response_header, std::string &response_body);
+		virtual int send_request(std::string& response_header, std::string& response_body);
 	public:
-		http_request(const char*full_url, bool follow_location);
+		http_request(const char* full_url, bool follow_location);
 		virtual ~http_request();
 		virtual const char* get_last_error();
-		virtual void set_header(const char*header);
-		virtual void set_cookie(const char*cookie);
-		virtual int get(std::string & response_header, std::string &response_body);
-		virtual int post(const char*body, std::string & response_header, std::string &response_body);
+		virtual void set_header(const char* header);
+		virtual void set_cookie(const char* cookie);
+		virtual void read_debug_information(bool isDebug);
+		virtual void verify_ssl(bool verify);
+		virtual void verify_ssl_host(bool verify);
+		virtual int get(std::string& response_header, std::string& response_body);
+		virtual int post(const char* body, std::string& response_header, std::string& response_body);
 	};
 };
 
