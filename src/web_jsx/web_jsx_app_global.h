@@ -75,6 +75,7 @@ access(fname, 0)!=-1
 #define SET_BINARY_MODE(file) setmode(fileno(my_stdio_stream), O_BINARY)
 #elif defined(_WIN32) || defined(MSDOS) || defined(OS2)
 #  define SET_BINARY_MODE(file) _setmode(_fileno(file), _O_BINARY)
+#  define SET_BINARY_MODE_OUT() _setmode(_fileno(__acrt_iob_func(1)), _O_BINARY)
 #endif//!__CYGWIN__
 #endif//!SET_BINARY_MODE
 #if !defined(__file_exists)

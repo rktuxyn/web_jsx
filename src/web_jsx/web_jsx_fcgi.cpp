@@ -12,7 +12,7 @@ int web_jsx_cgi::fcgi_request::request_process(const app_ex_info aei, const char
 	try {
 		const char*path_translated = web_jsx_cgi::fcgi_request::freq_env_c("PATH_TRANSLATED", envp);
 		if (__file_exists(path_translated) == false) {
-			web_jsx_cgi::fcgi_request::not_found_response(content_type, envp);
+			web_jsx_cgi::fcgi_request::not_found_response(content_type, envp, aei.ex_dir->c_str());
 			fflush(stdout);
 			return EXIT_FAILURE;
 		};
@@ -35,9 +35,10 @@ int web_jsx_cgi::fcgi_request::request_process(const app_ex_info aei, const char
 		);
 		return EXIT_SUCCESS;
 	} catch (std::exception&e) {
-		write_header(content_type);
+		write_internal_server_error("text/html", aei.ex_dir->c_str(), 500, e.what());
+		/*write_header(content_type);
 		std::cout << "\r\n";
-		std::cout << e.what() << "\r\n";
+		std::cout << e.what() << "\r\n";*/
 		return EXIT_FAILURE;
 	} catch (...) {
 		std::cout << "Content-type: text/html\r\n\r\n" << "Unknown error!";
@@ -58,10 +59,18 @@ int web_jsx_cgi::fcgi_request::request_handler(const char*execute_path) {
 			if (count >= max)break;
 		}
 		if (err != 0) {
-			write_header("text/html");
-			std::cout << "Status: 500 Internal Server Error" << H_N_L;
-			std::cout << "\r\n\r\n";
-			std::cout << "Unable to initialize FastCGI module!!!";
+			app_ex_info* aei = new app_ex_info();
+			aei->ex_dir = new std::string();
+			aei->ex_name = new std::string();
+			aei->execute_path = execute_path;
+			request_file_info(aei->execute_path, *aei->ex_dir, *aei->ex_name);
+			write_internal_server_error("text/html", aei->ex_dir->c_str(), 500, "Unable to initialize FastCGI module!!!");
+			web_jsx_cgi::app_core::free_app_info(aei);
+			//write_header("text/html");
+			////write_internal_server_error("text/html",)
+			//std::cout << "Status: 500 Internal Server Error" << H_N_L;
+			//std::cout << "\r\n\r\n";
+			//std::cout << "Unable to initialize FastCGI module!!!";
 			fflush(stdout);
 			return EXIT_SUCCESS;
 		}
@@ -73,7 +82,6 @@ int web_jsx_cgi::fcgi_request::request_handler(const char*execute_path) {
 		return EXIT_SUCCESS;
 	}
 	app_ex_info *aei = new app_ex_info();
-	//memset(aei, 0, sizeof(app_ex_info));
 	aei->ex_dir = new std::string();
 	aei->ex_name = new std::string();
 	aei->execute_path = execute_path;
@@ -90,16 +98,26 @@ int web_jsx_cgi::fcgi_request::request_handler(const char*execute_path) {
 		fcgi_streambuf cout_fcgi_streambuf(request.out);
 		fcgi_streambuf cerr_fcgi_streambuf(request.err);
 #if HAVE_IOSTREAM_WITHASSIGN_STREAMBUF
-		cin = &cin_fcgi_streambuf;
-		cout = &cout_fcgi_streambuf;
-		cerr = &cerr_fcgi_streambuf;
+		std::cin = &cin_fcgi_streambuf;
+		std::cout = &cout_fcgi_streambuf;
+		std::cerr = &cerr_fcgi_streambuf;
 #else
-		cin.rdbuf(&cin_fcgi_streambuf);
-		cout.rdbuf(&cout_fcgi_streambuf);
-		cerr.rdbuf(&cerr_fcgi_streambuf);
+		std::cin.rdbuf(&cin_fcgi_streambuf);
+		std::cout.rdbuf(&cout_fcgi_streambuf);
+		std::cerr.rdbuf(&cerr_fcgi_streambuf);
 #endif
-		//count++;
-		web_jsx_cgi::fcgi_request::request_process(*aei, env_path, request.envp);
+		//std::cout.rdbuf()->pubsetbuf(0, 0);
+		try {
+			//count++;
+			web_jsx_cgi::fcgi_request::request_process(*aei, env_path, request.envp);
+			if (request.out->isClosed) {
+				sow_web_jsx::wrapper::clear_cache();
+			}
+		}
+		catch (...) {
+			sow_web_jsx::wrapper::clear_cache();
+			fflush(stdout);
+		}
 		//FCGX_Finish_r(&request);
 		//if (count > 500)break;
 	}

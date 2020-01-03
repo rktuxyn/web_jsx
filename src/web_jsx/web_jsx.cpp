@@ -4,8 +4,6 @@
 * Copyrights licensed under the New BSD License.
 * See the accompanying LICENSE file for terms.
 */
-//Required https://www.microsoft.com/en-ph/download/details.aspx?id=48145
-//Visual C++ Redistributable for Visual Studio 2015 
 #if defined(FAST_CGI_APP)
 #if !defined(_web_jsx_fcgi_h)
 #include "web_jsx_fcgi.h"

@@ -75,13 +75,34 @@ void print_envp(char*envp[]);
 void print_envp_c(char **envp);
 int print_env_var(char* val, const char* env);
 web_extension get_request_extension (const std::string& path_str);
-void request_file_info (const std::string& path_str, std::string&dir, std::string&file_name);
-void server_physical_path(const std::string& path_str, const std::string& path_info, std::string &root_dir);
+void request_file_info (
+	const std::string& path_str, 
+	std::string&dir, 
+	std::string&file_name
+);
+void server_physical_path(
+	const std::string& path_str, 
+	const std::string& path_info, 
+	std::string &root_dir
+);
 req_method determine_req_method(void);
 req_method determine_req_method(const char* request_method);
 const char* get_content_type(void);
-void read_query_string(std::map<std::string, std::string>&data, const char*query_string);
+void read_query_string(
+	std::map<std::string, std::string>&data, 
+	const char*query_string
+);
 //int write___file(const char*path, const char*buffer);
-void obj_insert(std::map<std::string, std::string>&from_obj, const char* prop, std::map<std::string, std::map<std::string, std::string>>&to_obj);
+void obj_insert(
+	std::map<std::string, std::string>&from_obj, 
+	const char* prop, 
+	std::map<std::string, std::map<std::string, std::string>>&to_obj
+);
 void write_header(const char* ct);
+void write_internal_server_error(
+	const char* content_type,
+	const char* ex_dir,
+	int error_code,
+	const std::string error_msg
+);
 #endif//!_util_h

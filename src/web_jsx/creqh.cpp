@@ -42,9 +42,8 @@ void web_jsx_cgi::cgi_request::not_found_response(const char* content_type) {
 #if defined(FAST_CGI_APP)
 	std::cout << "Status: 404 Not found" << H_N_L;
 #else
-	std::string resp(get_env_c("SERVER_PROTOCOL"));
 	resp.append(" 404 Not found\n");
-	std::cout << resp;
+	std::cout << get_env_c("SERVER_PROTOCOL");
 #endif//FAST_CGI_APP
 	std::cout << "\r\n";
 }
