@@ -4,13 +4,60 @@ web_jsx *.wjsx, *.wjsxh (Server-side Javascript) web extension handler (Run with
 Read POST data
 ```javascript
 let payload = "";
-context.request.read_payload( function ( buff, count ) {
+context.request.read_payload( ( buff, len ) => {
 	payload += buff;
 } );
 ```
+Or
+```javascript
+let http_payload = context.request.read_posted_file( context.request.content_length, context.request.content_type );
+if ( http_payload.is_multipart() ){
+    let temp_dir = context.root_dir + "/temp/";
+    sys.create_directory( "/temp/" );
+    let rs = http_payload.read_all( temp_dir );
+	let count = 1;
+    context.response.write( "<ul>" );
+	let upload_dir = context.root_dir + "/upload/";
+    sys.create_directory( "/upload/" );
+    try {
+        http_payload.read_files( ( file ) => {
+            try {
+                context.response.write( `<li>SL:${count}</li>` );
+                context.response.write( `<li>content_type:${file.get_content_type()}</li>` );
+                context.response.write( `<li>name:${file.get_name()}</li>` );
+                context.response.write( `<li>file_name:${file.get_file_name()}</li>` );
+                context.response.write( `<li>content_disposition:${file.get_content_disposition()}</li>` );
+                context.response.write( `<li>file Size: ${parseFloat( file.get_file_size() / 1024 ).toFixed( 4 )} Kb</li>` );
+                context.response.write( `<li>Writing file ${file.get_file_name()}</li>` );
+                file.save_as( `${upload_dir}${file.get_file_name()}` );
+            } catch ( e ) {
+                context.response.write( `<li style="color:red;">Error:${e.message}</li>` );
+            }
+            count++;
+        } );
+    } catch ( e ) {
+        context.response.write( `<li style="color:red;">Error:${e.message}</li>` );
+    }
+    context.response.write( "</ul>" );
+    context.response.write( `Total ${rs} file(s) saved...` );
+	
+	//Or Save all file to $upload_dir
+	http_payload.save_to_file( upload_dir );
+	
+} else {
+
+	http_payload.read_line( ( buff, len ) => {
+		context.response.write( buff );
+	} );
+	
+}
+http_payload.release();
+```
 Write payload to file<br/>
 ```javascript
-let c = fs.write_file_from_payload( "post_data.txt" );
+let temp_dir = context.root_dir + "/temp/";
+sys.create_directory( "/temp/" );
+let c = context.request.write_file_from_payload( temp_dir );
 ```
 #Content-Encoding Gzip response 
 ```javascript
@@ -25,7 +72,7 @@ let resp = npgsql.execute_io("Server=localhost; Port=5432; UserId=postgres;Passw
 );
 __print(JSON.stringify(resp));
 ```
-Implement module with require
+Connect WebJsx with PostgreSQL
 ```javascript
 /** read web config module **/
 let cfg = require( "/addon/web.conf.js" );
@@ -63,6 +110,49 @@ let res = _pgsql.execute_scalar( "data_storage.__get__historical_data", params )
 context.response.write( res.ret_val );
 context.response.write( res.ret_msg );
 context.response.write( JSON.stringify( res.ret_data_table ) );
+//Or Create new Instance and execute multiple quary
+let pgsql = new PgSql();
+//Connect database once and execute multiple quary
+pgsql.connect( cfg.database.db_conn );
+//Execute stored procedure
+let resp = pgsql.execute_io(
+	"aut.user_info",
+	JSON.stringify( {} ),
+	JSON.stringify( {} )
+);
+//Release all Active Connection and release all resource
+pgsql.exit_nicely();
+```
+Connect WebJsx with MySQL
+```javascript
+let mysql = new MySql();
+mysql.connect( {
+	host: "localhost",
+	database: "web_jsx_db",
+	user: "root",
+	password: "mysql123",
+	port: 0
+} );
+//Drop Database
+mysql.exec( 'DROP DATABASE IF EXISTS web_jsx_db_2' );
+//Create Database
+mysql.exec( 'CREATE DATABASE IF NOT EXISTS web_jsx_db_2' );
+//Switch Database
+mysql.switch_database("web_jsx_db_2");
+//Create TABLE
+mysql.exec('CREATE TABLE IF NOT EXISTS Persons ( PersonID int,LastName varchar(255),FirstName varchar(255),Address varchar(255), City varchar(255))');
+//Truncate TABLE
+mysql.exec( "truncate table Persons" );
+//Execute Insert statement
+mysql.exec( "INSERT INTO Persons (`PersonID`, `LastName`, `FirstName`, `Address`, `City`)VALUES (11, 'Rajib', 'Chy', 'Panchlaish, katalgong', 'Chittagong');" );
+//Execute multiple row select statement
+mysql.execute_query( "select * from Persons", ( i, row ) => {
+	print( row );
+} );
+//Execute 1 cell select statement
+let address = mysql.exec('select Address from Persons limit 1');
+//Release all Active Connection and release all resource
+mysql.clear();
 ```
 Send @Email with #web_jsx
 ```javascript
