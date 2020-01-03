@@ -59,7 +59,10 @@ DLLAPI extern	FCGI_FILE	_fcgi_sF[];
 #define FCGI_stdin	(&_fcgi_sF[0])
 #define FCGI_stdout	(&_fcgi_sF[1])
 #define FCGI_stderr	(&_fcgi_sF[2])
-
+//#undef SET_BINARY_MODE_OUT
+//#undef SET_BINARY_MODE_IN
+//#define SET_BINARY_MODE_IN() _setmode(_fileno(FCGI_ToFILE(stdin)), _O_BINARY)
+//#define SET_BINARY_MODE_OUT() _setmode(_fileno(FCGI_ToFILE(stdout)), _O_BINARY)
 /*
  * Wrapper function prototypes, grouped according to sections
  * of Harbison & Steele, "C: A Reference Manual," fourth edition,
@@ -182,7 +185,7 @@ DLLAPI int        FCGI_pclose(FCGI_FILE *);
 #define	getchar  FCGI_getchar
 #undef  ungetc
 #define ungetc   FCGI_ungetc
-
+//#define _fgets	 fgets
 #undef  fgets
 #define fgets    FCGI_fgets
 #undef  gets
