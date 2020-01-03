@@ -40,16 +40,13 @@ if ( http_payload.is_multipart() ){
     }
     context.response.write( "</ul>" );
     context.response.write( `Total ${rs} file(s) saved...` );
-	
-	//Or Save all file to $upload_dir
-	http_payload.save_to_file( upload_dir );
+    //Or Save all file to $upload_dir
+    http_payload.save_to_file( upload_dir );
 	
 } else {
-
 	http_payload.read_line( ( buff, len ) => {
 		context.response.write( buff );
 	} );
-	
 }
 http_payload.release();
 ```
@@ -63,17 +60,15 @@ let c = context.request.write_file_from_payload( temp_dir );
 ```javascript
 context.response.as_gzip()
 ```
-Read data from Postgres SQL<br/>
+Connect WebJsx with PostgreSQL
 ```javascript
+//Read data from Postgres SQL
 let resp = npgsql.execute_io("Server=localhost; Port=5432; UserId=postgres;Password=1##$1@6Z;Database=sow; keepalive=10; CommandTimeout=100000;", 
 	"__sql_execute", JSON.stringify( {} ), JSON.stringify( {
 		"sql":"select * from jsx.community"
 	} )
 );
 __print(JSON.stringify(resp));
-```
-Connect WebJsx with PostgreSQL
-```javascript
 /** read web config module **/
 let cfg = require( "/addon/web.conf.js" );
 /** get pgsql addon **/
