@@ -75,14 +75,14 @@ namespace gzip {
 	//https://stackoverflow.com/questions/54256829/zlib-gzip-invalid-response-defined-in-web-browser-c
 	static int gz_magic[2] = { 0x1f, 0x8b }; /* gzip magic header */
 	template<class _out_stream>
-	void _write_magic_header(_out_stream&output) {
-		char*dest = (char*)malloc(10);
+	void write_magic_header(_out_stream&output) {
+		char* dest = new char[10];
 		sprintf(dest, "%c%c%c%c%c%c%c%c%c%c", gz_magic[0], gz_magic[1], Z_DEFLATED, 0 /*flags*/, 0, 0, 0, 0 /*time*/, 0 /*xflags*/, OS_CODE);
 		output.write(const_cast<const char*>(dest), 10);
-		free(dest);
-	};
+		delete[]dest;
+	}
 	template<class _out_stream>
-	int _deflate_stream(std::stringstream&source, _out_stream&dest, int level = Z_BEST_SPEED) {
+	int deflate_stream(std::stringstream&source, _out_stream&dest, int level = Z_BEST_SPEED) {
 		//6:08 AM 1/17/2019
 		int ret, flush;
 		unsigned have;
@@ -137,12 +137,131 @@ namespace gzip {
 		/* write gzip footer to out stream*/
 		dest.write((char*)&tcrc, sizeof(tcrc));
 		dest.write((char*)&utotalSize, sizeof(utotalSize));
+		//std::ifstream ifs;
 		return write_len;
-	};
+	}
 	template<class _out_stream>
 	void compress_gzip (std::stringstream&source_stream, _out_stream&out_stream) {
-		_write_magic_header(out_stream);
-		_deflate_stream(source_stream, out_stream);
+		write_magic_header(out_stream);
+		deflate_stream(source_stream, out_stream);
+	}
+	//2:28 PM 1/4/2020
+	template<class _out_stream>
+	class gzip_deflate {
+	public:
+		gzip_deflate(_out_stream& dest, int level);
+		~gzip_deflate();
+		size_t write(const char* buff, int do_flush);
+		void flush();
+		const char* get_last_error();
+	private:
+		_out_stream& _dest;
+		z_stream _strm;
+		uLong _tcrc;
+		int _stream_flush;
+		int _is_flush;
+		long _total_size;
+		int _is_error;
+		char* _internal_error;
+		void panic(const char* error, int error_code);
 	};
+	template<class _out_stream>
+	inline gzip_deflate<_out_stream>::gzip_deflate(_out_stream& dest, int level){
+		_is_flush = FALSE; _total_size = NULL; _tcrc = NULL; _is_error = FALSE;
+		if (level == FALSE)level = Z_BEST_SPEED;
+		_internal_error = new char;
+		write_magic_header(dest);
+		_strm.zalloc = Z_NULL;
+		_strm.zfree = Z_NULL;
+		_strm.opaque = Z_NULL;
+		int ret = deflateInit2_(&_strm, level, Z_DEFLATED,
+			-MAX_WBITS, DEF_MEM_LEVEL, Z_DEFAULT_STRATEGY,
+			ZLIB_VERSION, (int)sizeof(z_stream)
+		);
+		if (ret != Z_OK) {
+			panic("Unable to initilize deflateInit2_", TRUE);
+			return;
+		}
+		_stream_flush = Z_NO_FLUSH;
+	}
+	template<class _out_stream>
+	inline gzip_deflate<_out_stream>::~gzip_deflate(){
+		if (_is_flush == TRUE)return;
+		this->flush();
+		if (_internal_error != NULL) {
+			delete[]_internal_error;
+			_internal_error = NULL;
+		}
+	}
+	template<class _out_stream>
+	inline size_t gzip_deflate<_out_stream>::write(const char* buff, int do_flush){
+		//Z_FINISH : Z_NO_FLUSH
+		if (_is_flush == TRUE)return FALSE;
+		if (_is_error == TRUE)return -1;
+		_is_error = FALSE;
+		int ret; _stream_flush = do_flush;
+		unsigned have; size_t len = strlen(buff);
+		char* in = strdup(buff);
+		_strm.avail_in = (uInt)len;
+		_tcrc = crc32(_tcrc, (uint8_t*)in, (uInt)len);
+		_strm.next_in = (Bytef*)in;
+		/* run deflate() on input until output buffer not full, finish
+		  compression if all of source has been read in */
+		do {
+			char* out = new char[CHUNK];
+			_strm.avail_out = CHUNK;
+			_strm.next_out = (Bytef*)out;
+			ret = deflate(&_strm, _stream_flush);    /* no bad return value */
+			if (ret == Z_STREAM_ERROR) {
+				return panic("deflate::state not clobbered", TRUE);
+			}
+			//assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
+			have = CHUNK - _strm.avail_out;
+			_dest.write(out, have);
+			_total_size += have;
+			delete[]out;
+		} while (_strm.avail_out == 0);
+		if (_strm.avail_in != 0) {
+			return panic("deflate::all input unable to use", TRUE);
+		}
+		//assert(_strm.avail_in == 0);     /* all input will be used */
+		if (ret != Z_STREAM_END) {
+			return panic("deflate::stream not completed yet", TRUE);
+		}
+		//assert(ret == Z_STREAM_END);        /* stream will be complete */
+		 /* done when last data in file processed */
+		delete[]in;
+		return len;
+	}
+	template<class _out_stream>
+	inline void gzip_deflate<_out_stream>::flush(){
+		if (_is_flush)return;
+		_is_flush = TRUE;
+		if (_stream_flush != Z_FINISH) {
+			return panic("deflate::state yet not Z_FINISH", -1);
+		}
+		/* clean up and return */
+		(void)deflateEnd(&_strm);
+		/* write gzip footer to out stream*/
+		_dest.write((char*)& _tcrc, sizeof(_tcrc));
+		_dest.write((char*)& _total_size, sizeof(_total_size));
+		_strm = NULL;
+	}
+	template<class _out_stream>
+	inline const char* gzip_deflate<_out_stream>::get_last_error() {
+		if (_is_error == TRUE || _is_error < 0) {
+			return const_cast<const char*>(_internal_error);
+		}
+		return "No Error Found!!!";
+		
+	}
+	template<class _out_stream>
+	inline void gzip_deflate<_out_stream>::panic(const char* error, int error_code){
+		if (_internal_error != NULL)
+			delete[]_internal_error;
+		_internal_error = new char[strlen(error) + 1];
+		strcpy(_internal_error, error);
+		_is_error = error_code;
+	}
 }; // namespace gzip
 #endif//_zgzip_h
