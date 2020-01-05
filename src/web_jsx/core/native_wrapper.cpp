@@ -1982,6 +1982,10 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 	v8::Local<v8::ObjectTemplate> prototype = tpl->PrototypeTemplate();
 	prototype->Set(isolate, "flush_header", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* isolate = args.GetIsolate();
+		if (_is_flush) {
+			throw_js_error(isolate, "Headers already been flushed...");
+			return;
+		}
 		if (write_http_status() == FALSE)return;
 		if (set_binary_output() == FALSE)return;
 		_is_flush = true;
@@ -1993,6 +1997,10 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 	}));
 	prototype->Set(isolate, "write", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* isolate = args.GetIsolate();
+		if (_is_flush == false) {
+			throw_js_error(isolate, "Headers did not flushed yet...");
+			return;
+		}
 		if (!args[0]->IsString()) {
 			throw_js_error(isolate, "data required....");
 			return;
@@ -2015,7 +2023,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 			std::stringstream source_stream(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
 			source_stream.write(data, len);
 			ret = deflate->write(source_stream, do_flush);
-			std::stringstream().swap(source_stream);
+			source_stream.clear(); std::stringstream().swap(source_stream);
 		}
 		else {
 			ret = deflate->write(data, do_flush);
@@ -2033,6 +2041,10 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 	}));
 	prototype->Set(isolate, "write_from_file", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* isolate = args.GetIsolate();
+		if (_is_flush == false) {
+			throw_js_error(isolate, "Headers did not flushed yet...");
+			return;
+		}
 		if (!args[0]->IsString()) {
 			throw_js_error(isolate, "File Path Required required....");
 			return;
@@ -2066,6 +2078,10 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 	}));
 	prototype->Set(isolate, "flush", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* isolate = args.GetIsolate();
+		if (_is_flush == false) {
+			throw_js_error(isolate, "Headers did not flushed yet...");
+			return;
+		}
 		gzip::gzip_deflate<std::ostream>* deflate = sow_web_jsx::unwrap<gzip::gzip_deflate<std::ostream>>(args);
 		if (deflate == NULL) {
 			throw_js_error(isolate, "Stream already flashed...");
@@ -2077,6 +2093,8 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 	}));
 	v8::Local<v8::ObjectTemplate> gzip_object = v8::ObjectTemplate::New(isolate);
 	gzip_object->Set(isolate, "compress", tpl);
+	gzip_object->Set(isolate, "Z_NO_FLUSH", v8::Number::New(isolate, (double)Z_NO_FLUSH));
+	gzip_object->Set(isolate, "Z_FINISH", v8::Number::New(isolate, (double)Z_FINISH));
 	ctx->Set(isolate, "gzip", gzip_object);
 }
 void SetEngineInformation(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> v8_global) {
@@ -2319,38 +2337,6 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_context(v8::Isolate* iso
 	/*[Create C++ Internal Context]*/
 	return _v8_global;
 }
-
-//v8::Handle<v8::String> ReadLine() {
-//	const int kBufferSize = 1024 + 1;
-//	char buffer[kBufferSize];
-//	char* res = _fgets(buffer, kBufferSize, _stdin);
-//	v8::Isolate* isolate = v8::Isolate::GetCurrent();
-//	if (res == NULL) {
-//		v8::Handle<v8::Primitive> t = v8::Undefined(isolate);
-//		return v8::Handle<v8::String>::Cast(t);
-//	}
-//	// Remove newline char
-//	for (char* pos = buffer; *pos != '\0'; pos++) {
-//		if (*pos == '\n') {
-//			*pos = '\0';
-//			break;
-//		}
-//	}
-//	return v8::String::NewFromUtf8(isolate, buffer);
-//}
-//// The callback that is invoked by v8 whenever the JavaScript 'read_line'
-//// function is called. Reads a string from standard input and returns.
-//void ReadLine(const v8::FunctionCallbackInfo<v8::Value>& args) {
-//	if (args.Length() > 0) {
-//		args.GetIsolate()->ThrowException(
-//			v8::String::NewFromUtf8(args.GetIsolate(), "Unexpected arguments"));
-//		return;
-//	}
-//	args.GetReturnValue().Set(ReadLine());
-//}
-// The callback that is invoked by v8 whenever the JavaScript 'print'
-// function is called.  Prints its arguments on stdout separated by
-// spaces and ending with a newline.
 void Print(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	bool first = true;
 	v8::Isolate* isolate = args.GetIsolate();
