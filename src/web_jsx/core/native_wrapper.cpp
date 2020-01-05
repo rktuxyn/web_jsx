@@ -28,6 +28,94 @@ void throw_js_error(v8::Isolate* isolate, const char* err) {
 		sow_web_jsx::v8_str(isolate, err)));
 	return;
 }
+void jsx_file_bind(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx) {
+	v8::Local<v8::FunctionTemplate> tpl = v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		v8::Isolate* iso = args.GetIsolate();
+		if (!args.IsConstructCall()) {
+			iso->ThrowException(v8::Exception::TypeError(
+				sow_web_jsx::v8_str(iso, "Cannot call constructor as function!!!")));
+			return;
+		}
+		if (args[0]->IsNullOrUndefined() || !args[0]->IsString()) {
+			iso->ThrowException(v8::Exception::TypeError(
+				sow_web_jsx::v8_str(iso, "Path required!!!")));
+			return;
+		}
+		if (args[1]->IsNullOrUndefined() || !args[1]->IsString()) {
+			iso->ThrowException(v8::Exception::TypeError(
+				sow_web_jsx::v8_str(iso, "Mood required!!!")));
+			return;
+		}
+		v8::String::Utf8Value utf_abs_path_str(iso, args[0]);
+		v8::String::Utf8Value utf_mood_str(iso, args[1]);
+		//sow_web_jsx::make_object<jsx_file>(iso, args.This(), *utf_abs_path_str, *utf_mood_str);
+		v8::Local<v8::Object> obj = args.This();
+		std::string* abs_path = new std::string();
+		abs_path->append(_root_dir->c_str());
+		sow_web_jsx::get_server_map_path(*utf_abs_path_str, *abs_path);
+		jsx_file* xx = new jsx_file(abs_path->c_str(), *utf_mood_str);
+		obj->SetInternalField(0, v8::External::New(iso, xx));
+		v8::Persistent<v8::Object, v8::CopyablePersistentTraits<v8::Object>> pobj(iso, obj);
+		pobj.SetWeak<jsx_file*>(&xx, [](const v8::WeakCallbackInfo<jsx_file*>& data) {
+			delete[] data.GetParameter();
+		}, v8::WeakCallbackType::kParameter);
+		delete abs_path;
+	});
+	tpl->SetClassName(sow_web_jsx::v8_str(isolate, "file"));
+	tpl->InstanceTemplate()->SetInternalFieldCount(1);
+	v8::Local<v8::ObjectTemplate> prototype = tpl->PrototypeTemplate();
+	// Add object properties to the prototype
+	// Methods, Properties, etc.
+	prototype->Set(isolate, "read", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		v8::Isolate* iso = args.GetIsolate();
+		jsx_file* jf = sow_web_jsx::unwrap<jsx_file>(args);
+		if (jf->err != 0) {
+			iso->ThrowException(v8::Exception::TypeError(
+				sow_web_jsx::v8_str(iso, "Unable to create or open the file!!!")));
+			return;
+		}
+		args.GetReturnValue().Set(sow_web_jsx::v8_str(iso, jf->read()));
+	}));
+	prototype->Set(isolate, "write", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		v8::Isolate* iso = args.GetIsolate();
+		jsx_file* jf = sow_web_jsx::unwrap<jsx_file>(args);
+		if (jf->err != 0) {
+			iso->ThrowException(v8::Exception::TypeError(
+				sow_web_jsx::v8_str(iso, "Unable to create or open the file!!!")));
+			return;
+		}
+		if (jf->is_flush == 1) {
+			iso->ThrowException(v8::Exception::TypeError(
+				sow_web_jsx::v8_str(iso, "Already flush this file!!!")));
+			return;
+		}
+		v8::String::Utf8Value utf_str(iso, args[0]);
+		size_t ret = jf->write(*utf_str);
+		if (ret > 0) {
+			args.GetReturnValue().Set(v8::Number::New(iso, (double)ret));
+			return;
+		}
+		iso->ThrowException(v8::Exception::TypeError(
+			sow_web_jsx::v8_str(iso, "Unable to write data to file!!!")));
+		return;
+	}));
+	prototype->Set(isolate, "flush", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		v8::Isolate* iso = args.GetIsolate();
+		jsx_file* jf = sow_web_jsx::unwrap<jsx_file>(args);
+		if (jf->err != 0) {
+			iso->ThrowException(v8::Exception::TypeError(
+				sow_web_jsx::v8_str(iso, "Unable to create or open the file!!!")));
+			return;
+		}
+		if (jf->is_flush == 1) {
+			iso->ThrowException(v8::Exception::TypeError(
+				sow_web_jsx::v8_str(iso, "Already flush this file!!!")));
+			return;
+		}
+		jf->flush();
+	}));
+	ctx->Set(isolate, "file", tpl);
+}
 void v8_gc(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	args.GetIsolate()->LowMemoryNotification();
 }
@@ -317,94 +405,6 @@ void native_current_process_id(const v8::FunctionCallbackInfo<v8::Value>& args) 
 	args.GetReturnValue().Set(v8::Number::New(isolate, rec));
 }
 //[FileSystem]
-void jsx_file_bind(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx) {
-	v8::Local<v8::FunctionTemplate> tpl = v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		v8::Isolate* iso = args.GetIsolate();
-		if (!args.IsConstructCall()) {
-			iso->ThrowException(v8::Exception::TypeError(
-				sow_web_jsx::v8_str(iso, "Cannot call constructor as function!!!")));
-			return;
-		}
-		if (args[0]->IsNullOrUndefined() || !args[0]->IsString()) {
-			iso->ThrowException(v8::Exception::TypeError(
-				sow_web_jsx::v8_str(iso, "Path required!!!")));
-			return;
-		}
-		if (args[1]->IsNullOrUndefined() || !args[1]->IsString()) {
-			iso->ThrowException(v8::Exception::TypeError(
-				sow_web_jsx::v8_str(iso, "Mood required!!!")));
-			return;
-		}
-		v8::String::Utf8Value utf_abs_path_str(iso, args[0]);
-		v8::String::Utf8Value utf_mood_str(iso, args[1]);
-		//sow_web_jsx::make_object<jsx_file>(iso, args.This(), *utf_abs_path_str, *utf_mood_str);
-		v8::Local<v8::Object> obj = args.This();
-		std::string* abs_path = new std::string();
-		abs_path->append(_root_dir->c_str());
-		sow_web_jsx::get_server_map_path(*utf_abs_path_str, *abs_path);
-		jsx_file* xx = new jsx_file(abs_path->c_str(), *utf_mood_str);
-		obj->SetInternalField(0, v8::External::New(iso, xx));
-		v8::Persistent<v8::Object, v8::CopyablePersistentTraits<v8::Object>> pobj(iso, obj);
-		pobj.SetWeak<jsx_file*>(&xx, [](const v8::WeakCallbackInfo<jsx_file*>& data) {
-			delete[] data.GetParameter();
-		}, v8::WeakCallbackType::kParameter);
-		delete abs_path;
-	});
-	tpl->SetClassName(sow_web_jsx::v8_str(isolate, "file"));
-	tpl->InstanceTemplate()->SetInternalFieldCount(1);
-	v8::Local<v8::ObjectTemplate> prototype = tpl->PrototypeTemplate();
-	// Add object properties to the prototype
-	// Methods, Properties, etc.
-	prototype->Set(isolate, "read", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		v8::Isolate* iso = args.GetIsolate();
-		jsx_file* jf = sow_web_jsx::unwrap<jsx_file>(args);
-		if (jf->err != 0) {
-			iso->ThrowException(v8::Exception::TypeError(
-				sow_web_jsx::v8_str(iso, "Unable to create or open the file!!!")));
-			return;
-		}
-		args.GetReturnValue().Set(sow_web_jsx::v8_str(iso, jf->read()));
-	}));
-	prototype->Set(isolate, "write", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		v8::Isolate* iso = args.GetIsolate();
-		jsx_file* jf = sow_web_jsx::unwrap<jsx_file>(args);
-		if (jf->err != 0) {
-			iso->ThrowException(v8::Exception::TypeError(
-				sow_web_jsx::v8_str(iso, "Unable to create or open the file!!!")));
-			return;
-		}
-		if (jf->is_flush == 1) {
-			iso->ThrowException(v8::Exception::TypeError(
-				sow_web_jsx::v8_str(iso, "Already flush this file!!!")));
-			return;
-		}
-		v8::String::Utf8Value utf_str(iso, args[0]);
-		size_t ret = jf->write(*utf_str);
-		if (ret > 0) {
-			args.GetReturnValue().Set(v8::Number::New(iso, (double)ret));
-			return;
-		}
-		iso->ThrowException(v8::Exception::TypeError(
-			sow_web_jsx::v8_str(iso, "Unable to write data to file!!!")));
-		return;
-	}));
-	prototype->Set(isolate, "flush", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		v8::Isolate* iso = args.GetIsolate();
-		jsx_file* jf = sow_web_jsx::unwrap<jsx_file>(args);
-		if (jf->err != 0) {
-			iso->ThrowException(v8::Exception::TypeError(
-				sow_web_jsx::v8_str(iso, "Unable to create or open the file!!!")));
-			return;
-		}
-		if (jf->is_flush == 1) {
-			iso->ThrowException(v8::Exception::TypeError(
-				sow_web_jsx::v8_str(iso, "Already flush this file!!!")));
-			return;
-		}
-		jf->flush();
-	}));
-	ctx->Set(isolate, "file", tpl);
-}
 void native_exists_file(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
@@ -1822,7 +1822,7 @@ size_t get_content_length() {
 	_body_stream.seekg(0, std::ios::beg);//Back to begain of stream
 	return (size_t)totalSize;
 }
-void __clear_cache(int clean_body = 0) {
+void __clear_cache(int clean_body = 0, int clean_root=1) {
 	if (_http_status != NULL) {
 		_http_status->clear(); delete _http_status; _http_status = NULL;
 	}
@@ -1832,10 +1832,12 @@ void __clear_cache(int clean_body = 0) {
 	if (_cookies != NULL) {
 		_cookies->clear(); delete _cookies; _cookies = NULL;
 	}
-	if (_root_dir != NULL) {
-		_root_dir->clear(); delete _root_dir; _root_dir = NULL;
+	if (clean_root == TRUE) {
+		if (_root_dir != NULL) {
+			_root_dir->clear(); delete _root_dir; _root_dir = NULL;
+		}
 	}
-	if (clean_body == 1) {
+	if (clean_body == TRUE) {
 		if (get_content_length() > 0) {
 			_body_stream.clear();
 			std::stringstream().swap(_body_stream);
@@ -1953,6 +1955,129 @@ void sow_web_jsx::wrapper::response_body_flush(bool end_req) {
 	fflush(stdout);
 	_body_stream.clear(); std::stringstream().swap(_body_stream);
 	return;
+}
+void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx) {
+	v8::Local<v8::FunctionTemplate> tpl = v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		v8::Isolate* isolate = args.GetIsolate();
+		if (!args.IsConstructCall()) {
+			throw_js_error(isolate, "Cannot call constructor as function!!!");
+			return;
+		}
+		gzip::gzip_deflate<std::ostream>* deflate = new gzip::gzip_deflate(std::cout, Z_BEST_SPEED);
+		if (deflate->has_error() == TRUE) {
+			throw_js_error(isolate, deflate->get_last_error());
+			delete deflate;
+			return;
+		}
+		//TODO write header without dispose _root_dir
+		v8::Local<v8::Object> obj = args.This();
+		obj->SetInternalField(0, v8::External::New(isolate, deflate));
+		v8::Persistent<v8::Object, v8::CopyablePersistentTraits<v8::Object>> pobj(isolate, obj);
+		pobj.SetWeak<gzip::gzip_deflate<std::ostream>*>(&deflate, [](const v8::WeakCallbackInfo<gzip::gzip_deflate<std::ostream>*>& data) {
+			delete[] data.GetParameter();
+		}, v8::WeakCallbackType::kParameter);
+	});
+	tpl->SetClassName(sow_web_jsx::v8_str(isolate, "compress"));
+	tpl->InstanceTemplate()->SetInternalFieldCount(1);
+	v8::Local<v8::ObjectTemplate> prototype = tpl->PrototypeTemplate();
+	prototype->Set(isolate, "flush_header", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		v8::Isolate* isolate = args.GetIsolate();
+		if (write_http_status() == FALSE)return;
+		if (set_binary_output() == FALSE)return;
+		_is_flush = true;
+		n_help::write_header(*_headers);
+		n_help::write_cookies(*_cookies);
+		__clear_cache(TRUE, FALSE);
+		std::cout << "\r\n";
+		fflush(stdout);
+	}));
+	prototype->Set(isolate, "write", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		v8::Isolate* isolate = args.GetIsolate();
+		if (!args[0]->IsString()) {
+			throw_js_error(isolate, "data required....");
+			return;
+		}
+		int do_flush = Z_NO_FLUSH;
+		//Z_FINISH : Z_NO_FLUSH
+		if (args[1]->IsNumber()) {
+			v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
+			do_flush = args[1]->Int32Value(ctx).FromMaybe(0);
+			if (!(do_flush == Z_FINISH || do_flush == Z_NO_FLUSH)) {
+				throw_js_error(isolate, "deflate::Invalid stream end request.");
+				return;
+			}
+		}
+		native_string str(isolate, args[0]);
+		const char* data = str.c_str();
+		gzip::gzip_deflate<std::ostream>* deflate = sow_web_jsx::unwrap<gzip::gzip_deflate<std::ostream>>(args);
+		size_t ret = 0; size_t len = strlen(data);
+		if (len > CHUNK) {
+			std::stringstream source_stream(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
+			source_stream.write(data, len);
+			ret = deflate->write(source_stream, do_flush);
+			std::stringstream().swap(source_stream);
+		}
+		else {
+			ret = deflate->write(data, do_flush);
+		}
+		str.clear();
+		if (ret == FALSE) {
+			throw_js_error(isolate, "Stream already flashed...");
+			return;
+		}
+		if (ret == std::string::npos || ret < 0) {
+			throw_js_error(isolate, deflate->get_last_error());
+			return;
+		}
+		args.GetReturnValue().Set(v8::Number::New(isolate, (double)ret));
+	}));
+	prototype->Set(isolate, "write_from_file", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		v8::Isolate* isolate = args.GetIsolate();
+		if (!args[0]->IsString()) {
+			throw_js_error(isolate, "File Path Required required....");
+			return;
+		}
+		native_string utf_abs_path_str(isolate, args[0]);
+		std::string* abs_path = new std::string();
+		abs_path->append(_root_dir->c_str());
+		sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
+		int do_flush = Z_NO_FLUSH;
+		//Z_FINISH : Z_NO_FLUSH
+		if (args[1]->IsNumber()) {
+			v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
+			do_flush = args[1]->Int32Value(ctx).FromMaybe(0);
+			if (!(do_flush == Z_FINISH || do_flush == Z_NO_FLUSH)) {
+				throw_js_error(isolate, "deflate::Invalid stream end request.");
+				return;
+			}
+		}
+		gzip::gzip_deflate<std::ostream>* deflate = sow_web_jsx::unwrap<gzip::gzip_deflate<std::ostream>>(args);
+		size_t ret = deflate->write(*abs_path, do_flush);
+		abs_path->clear(); delete abs_path; utf_abs_path_str.clear();
+		if (ret == FALSE) {
+			throw_js_error(isolate, "Stream already flashed...");
+			return;
+		}
+		if (ret == std::string::npos || ret < 0) {
+			throw_js_error(isolate, deflate->get_last_error());
+			return;
+		}
+		args.GetReturnValue().Set(v8::Number::New(isolate, (double)ret));
+	}));
+	prototype->Set(isolate, "flush", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		v8::Isolate* isolate = args.GetIsolate();
+		gzip::gzip_deflate<std::ostream>* deflate = sow_web_jsx::unwrap<gzip::gzip_deflate<std::ostream>>(args);
+		if (deflate == NULL) {
+			throw_js_error(isolate, "Stream already flashed...");
+			return;
+		}
+		deflate->flush(); delete deflate;
+		fflush(stdout);
+		args.Holder()->SetAlignedPointerInInternalField(0, nullptr);
+	}));
+	v8::Local<v8::ObjectTemplate> gzip_object = v8::ObjectTemplate::New(isolate);
+	gzip_object->Set(isolate, "compress", tpl);
+	ctx->Set(isolate, "gzip", gzip_object);
 }
 void SetEngineInformation(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> v8_global) {
 	v8::Local<v8::ObjectTemplate> js_engine_object = v8::ObjectTemplate::New(isolate);
@@ -2183,7 +2308,9 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_context(v8::Isolate* iso
 	_v8_global->Set(isolate, "setTimeout", v8::FunctionTemplate::New(isolate, set_time_out_func));
 	//
 	_v8_global->Set(isolate, "__sleep", v8::FunctionTemplate::New(isolate, sleep_func));
-	
+	/*[gzip_compressor]*/
+	gzip_compressor_export(isolate, _v8_global);
+	/*[/gzip_compressor]*/
 	SetEngineInformation(isolate, _v8_global);
 	_headers = new std::map<std::string, std::string>();
 	_cookies = new std::vector<std::string>();
@@ -2437,7 +2564,11 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::create_v8_context_object(v8:
 	v8_global->Set(isolate, "__sleep", v8::FunctionTemplate::New(isolate, sleep_func));
 	v8_global->Set(isolate, "__async_t", v8::FunctionTemplate::New(isolate, async_t));
 	v8_global->Set(isolate, "is_interactive", v8::Boolean::New(isolate, _is_interactive));
-	
+	if (_is_cli == false) {
+		/*[gzip_compressor]*/
+		gzip_compressor_export(isolate, v8_global);
+		/*[/gzip_compressor]*/
+	}
 	SetEngineInformation(isolate, v8_global);
 	return v8_global;
 }
