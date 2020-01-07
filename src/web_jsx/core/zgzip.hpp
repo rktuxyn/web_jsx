@@ -161,8 +161,8 @@ namespace gzip {
 		void write_header(_out_stream& dest);
 		template<class _out_stream>
 		size_t write(_out_stream&dest, const char* buff, int do_flush);
-		template<class _out_stream>
-		size_t write(_out_stream& dest, std::stringstream& source, int do_flush);
+		template<class _out_stream, class _source_stream>
+		size_t write(_out_stream& dest, _source_stream& source, int do_flush, int bypass);
 		template<class _out_stream>
 		size_t write_file(_out_stream& dest, const std::string file_path, int do_flush);
 		template<class _out_stream>
@@ -268,15 +268,17 @@ namespace gzip {
 		delete[]in;
 		return ret;
 	}
-	template<class _out_stream>
-	inline size_t gzip_deflate::write(_out_stream& dest, std::stringstream& source, int do_flush){
-		if (_is_flush == TRUE)return FALSE;
-		if (_is_error == TRUE)return -1;
-		if (_stream_flush == Z_FINISH) {
-			return panic("deflate::state Z_FINISH", -1);
-		}
-		if (!(do_flush == Z_FINISH || do_flush == Z_NO_FLUSH)) {
-			return panic("deflate::Invalid stream end request.", -1);
+	template<class _out_stream, class _source_stream>
+	inline size_t gzip_deflate::write(_out_stream& dest, _source_stream& source, int do_flush, int bypass){
+		if (bypass == FALSE) {
+			if (_is_flush == TRUE)return FALSE;
+			if (_is_error == TRUE)return -1;
+			if (_stream_flush == Z_FINISH) {
+				return panic("deflate::state Z_FINISH", -1);
+			}
+			if (!(do_flush == Z_FINISH || do_flush == Z_NO_FLUSH)) {
+				return panic("deflate::Invalid stream end request.", -1);
+			}
 		}
 		source.seekg(0, std::ios::end);//Go to end of stream
 		std::streamoff totalSize = source.tellg();
@@ -284,25 +286,22 @@ namespace gzip {
 		source.seekg(0, std::ios::beg);//Back to begain of stream
 		int end_flush = do_flush == Z_FINISH ? Z_FINISH : Z_NO_FLUSH;
 		do_flush = Z_NO_FLUSH;
-		size_t ret; size_t read_len = 0;
+		size_t ret; size_t read_len = 0; int eof = FALSE;
 		do {
 			char* in;
 			read_len = totalSize > CHUNK ? CHUNK : totalSize;
 			in = new char[read_len];
-			source.rdbuf()->sgetn(in, read_len);
+			source.read(in, read_len);
+			//source.rdbuf()->sgetn(in, read_len);
 			totalSize -= read_len;
 			if (totalSize <= 0) {
-				ret = this->write(dest, in, read_len, end_flush, TRUE);
-				/* Free memory */
-				delete[]in;
-				if (ret == FALSE || ret == std::string::npos || ret < 0)return ret;
-				break;
+				do_flush = end_flush; eof = TRUE;
 			}
 			ret = this->write(dest, in, read_len, do_flush, TRUE);
 			/* Free memory */
 			delete[]in;
 			if (ret == FALSE || ret == std::string::npos || ret < 0)return ret;
-		} while (true);
+		} while (eof == FALSE);
 		return total_len;
 	}
 	template<class _out_stream>
@@ -315,43 +314,40 @@ namespace gzip {
 		if (!(do_flush == Z_FINISH || do_flush == Z_NO_FLUSH)) {
 			return panic("deflate::Invalid stream end request.", -1);
 		}
-		std::ifstream file(file_path.c_str(), std::ifstream::binary);
-		if (!file.is_open()) {
+		if (_is_error != FALSE) _is_error = FALSE;
+		std::ifstream file_stream(file_path.c_str(), std::ifstream::binary);
+		if (!file_stream.is_open()) {
 			return panic("Unable to open file....", -1);
 		}
-		file.seekg(0, std::ios::end);//Go to end of stream
-		std::streamoff totalSize = file.tellg();
-		size_t total_len = (size_t)totalSize;
-		file.seekg(0, std::ios::beg);//Back to begain of stream
-		int end_flush = do_flush == Z_FINISH ? Z_FINISH : Z_NO_FLUSH;
-		do_flush = Z_NO_FLUSH;
-		size_t ret; size_t read_len = 0;
-		do {
-			char* in;
-			read_len = totalSize > CHUNK ? CHUNK : totalSize;
-			in = new char[read_len];
-			file.read(in, read_len);
-			totalSize -= read_len;
-			if (totalSize <= 0) {
-				ret = this->write(dest, in, read_len, end_flush, TRUE);
-				/* Free memory */
-				delete[]in;
-				if (ret == FALSE || ret == std::string::npos || ret < 0) {
-					file.close();
-					return ret;
-				}
-				break;
-			}
-			ret = this->write(dest, in, read_len, do_flush, TRUE);
-			/* Free memory */
-			delete[]in;
-			if (ret == FALSE || ret == std::string::npos || ret < 0) {
-				file.close();
-				return ret;
-			}
-		} while (true);
-		file.close();
-		return total_len;
+		size_t ret = this->write(dest, file_stream, do_flush, TRUE);
+		file_stream.close();
+		return ret;
+		//file_stream.seekg(0, std::ios::end);//Go to end of stream
+		//std::streamoff totalSize = file_stream.tellg();
+		//size_t total_len = (size_t)totalSize;
+		//file_stream.seekg(0, std::ios::beg);//Back to begain of stream
+		//int end_flush = do_flush == Z_FINISH ? Z_FINISH : Z_NO_FLUSH;
+		//do_flush = Z_NO_FLUSH;
+		//size_t ret; size_t read_len = 0; int eof = FALSE;
+		//do {
+		//	char* in;
+		//	read_len = totalSize > CHUNK ? CHUNK : totalSize;
+		//	in = new char[read_len];
+		//	file_stream.read(in, read_len);
+		//	totalSize -= read_len;
+		//	if (totalSize <= 0) {
+		//		do_flush = end_flush; eof = TRUE;
+		//	}
+		//	ret = this->write(dest, in, read_len, do_flush, TRUE);
+		//	/* Free memory */
+		//	delete[]in;
+		//	if (ret == FALSE || ret == std::string::npos || ret < 0) {
+		//		file_stream.close();
+		//		return ret;
+		//	}
+		//} while (eof == FALSE);
+		//file_stream.close();
+		//return total_len;
 	}
 	template<class _out_stream>
 	inline int gzip_deflate::flush(_out_stream& dest){
