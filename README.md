@@ -60,7 +60,7 @@ let c = context.request.write_file_from_payload( temp_dir );
 ```javascript
 context.response.as_gzip()
 ```
-This compression work directly outstream
+This compression write directly outstream
 ```javascript
 //If you like to response compressed file
 let compress = new gzip.compress();
