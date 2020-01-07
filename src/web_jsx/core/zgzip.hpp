@@ -157,7 +157,7 @@ namespace gzip {
 		template<class _out_stream>
 		size_t write(_out_stream& dest, std::stringstream& source, int do_flush);
 		template<class _out_stream>
-		size_t write(_out_stream& dest, const std::string file_path, int do_flush);
+		size_t write_file(_out_stream& dest, const std::string file_path, int do_flush);
 		template<class _out_stream>
 		int flush(_out_stream& dest);
 		int has_error();
@@ -293,7 +293,7 @@ namespace gzip {
 		return total_len;
 	}
 	template<class _out_stream>
-	inline size_t gzip_deflate::write(_out_stream& dest, const std::string file_path, int do_flush){
+	inline size_t gzip_deflate::write_file(_out_stream& dest, const std::string file_path, int do_flush){
 		if (_is_flush == TRUE)return FALSE;
 		if (_is_error == TRUE)return -1;
 		if (_stream_flush == Z_FINISH) {
