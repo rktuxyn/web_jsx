@@ -1,4 +1,7 @@
 #include "creqh.h"
+#if !defined(_npgsql_tools_h)
+#include <npgsql_tools.h>
+#endif//_npgsql_tools_h
 void web_jsx_cgi::cgi_request::get_global_obj(std::map<std::string, std::string>& global, std::string&root_dir, const char*app_path) {
 	replace_back_slash(root_dir);
 	global["root_dir"] = root_dir;

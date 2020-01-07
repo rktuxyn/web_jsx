@@ -6,6 +6,9 @@
 */
 //4:02 PM 2/3/2019
 #include "web_jsx_app_core.h"
+#if !defined(_npgsql_tools_h)
+#include <npgsql_tools.h>
+#endif//_npgsql_tools_h
 void web_jsx_cgi::app_core::run__js_scrip(const char * content_type, std::string & root_dir, const app_ex_info aei, req_method & method, template_result & tr) {
 	std::map<std::string, std::map<std::string, std::string>>* ctx = new std::map<std::string, std::map<std::string, std::string>>();
 	std::map<std::string, std::string>* req_obj = new std::map<std::string, std::string>();

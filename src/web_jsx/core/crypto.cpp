@@ -122,9 +122,8 @@ int crypto::evp_encrypt_decrypt(
 	std::streamoff totalSize = source.tellg();
 	std::streamoff utotalSize = totalSize;
 	source.seekg(0, std::ios::beg);//Back to begain of stream
-	int write_len = 0;
-	std::streamsize n; int read_len = 0; int out_len; int cipher_len;
-	int result_len = 0;
+	int write_len = 0; std::streamsize n; int read_len = 0;
+	int out_len; int cipher_len; int result_len = 0;
 	while (true) {
 		char* read_buf;
 		if (utotalSize >= BUFSIZE) {
@@ -239,8 +238,14 @@ int crypto::decrypt(
 	const char* key, const char* iv, 
 	std::stringstream& dest
 ) {
-	if (key == NULL || (key != NULL && key[0] == '\0'))return FALSE;
-	if (iv == NULL || (iv != NULL && iv[0] == '\0'))return FALSE;
+	if (key == NULL || (key != NULL && key[0] == '\0')) {
+		dest << "Base64 Key required...";
+		return FALSE;
+	}
+	if (iv == NULL || (iv != NULL && iv[0] == '\0')) {
+		dest << "Base64 Iv required...";
+		return FALSE;
+	}
 	std::stringstream source(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
 	std::string str = sow_web_jsx::base64::to_decode_str(encrypt_text);
 	source.write(str.c_str(), str.size()); str.clear();

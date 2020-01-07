@@ -34,4 +34,4 @@ namespace crypto {
 	int encrypt(const char*plain_text, const char*key, const char *iv, std::stringstream&dest);
 	int decrypt(const char*encrypt_text, const char*key, const char *iv, std::stringstream& dest);
 };
-#endif//!CRYPTO_H
+#endif//!_crypto_h

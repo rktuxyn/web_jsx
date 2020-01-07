@@ -83,18 +83,9 @@ access(fname, 0)!=-1
 _access(fname, 0)!=-1
 #endif//!__file_exists
 #endif//_WIN32||__unix__
-#if !defined(_encryption_h)
-#include <encryption.h>
-#endif//!_encryption_h
 #if !defined(CHUNK)
 #define CHUNK 16384
 #endif//!CHUNK
-#if !defined(_npgsql_h)
-#include <npgsql.h>
-#endif//!_npgsql_h
-#if !defined(_npgsql_tools_h)
-#include <npgsql_tools.h>
-#endif//_npgsql_tools_h
 #if defined(FAST_CGI_APP)
 #if !defined(H_N_L)
 #define H_N_L "\r\n"

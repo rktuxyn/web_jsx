@@ -31,30 +31,82 @@ namespace sow_web_jsx {
 		v8::String::Utf8Value str(isolate, x);
 		return _toCharStr(str);
 	}
+	v8::Handle<v8::String> read_line() {
+		const int kBufferSize = 1024 + 1;
+		char* buffer = new char[kBufferSize];
+		char* res = std::fgets(buffer, kBufferSize, stdin);
+		v8::Isolate* isolate = v8::Isolate::GetCurrent();
+		if (res == NULL) {
+			v8::Handle<v8::Primitive> t = v8::Undefined(isolate);
+			return v8::Handle<v8::String>::Cast(t);
+		}
+		delete[]res;
+		// Remove newline char
+		for (char* pos = buffer; *pos != '\0'; pos++) {
+			if (*pos == '\n') {
+				*pos = '\0';
+				break;
+			}
+		}
+		v8::Local<v8::String>result = v8::String::NewFromUtf8(isolate, const_cast<const char*>(buffer));
+		delete[]buffer; 
+		return result;
+	}
+	// The callback that is invoked by v8 whenever the JavaScript 'read_line'
+	// function is called. Reads a string from standard input and returns.
+	void sow_web_jsx::read_line(const v8::FunctionCallbackInfo<v8::Value>& args) {
+		if (args.Length() > 0) {
+			args.GetIsolate()->ThrowException(v8::String::NewFromUtf8(args.GetIsolate(), "Unexpected arguments"));
+			return;
+		}
+		args.GetReturnValue().Set(read_line());
+	}
 	v8::Local<v8::String> sow_web_jsx::v8_str(v8::Isolate* isolate, const char* x) {
 		return v8::String::NewFromUtf8(isolate, x, v8::NewStringType::kNormal).ToLocalChecked();
 	}
+	void add_stack_trace(v8::Isolate* isolate, v8::MaybeLocal<v8::Value> trace, std::string&error_str) {
+		if (trace.IsEmpty()) {
+			error_str.append("\r\nNo StackTrace found.");
+			return;
+		}
+		native_string stackTrace(isolate, trace.ToLocalChecked());
+		error_str.append("\r\nStackTrace:\r\n");
+		error_str.append(stackTrace.c_str());
+		stackTrace.clear();
+	}
 	void sow_web_jsx::set__exception(v8::Isolate* isolate, v8::TryCatch* try_catch, template_result& tr) {
 		tr.is_error = true;
-		v8::String::Utf8Value exception(isolate, try_catch->Exception());
-		tr.err_msg = _toCharStr(exception);
+		native_string exception(isolate, try_catch->Exception());
 		v8::MaybeLocal<v8::Value> st = try_catch->StackTrace(isolate->GetCurrentContext());
-		if (!st.IsEmpty()) {
-			v8::String::Utf8Value stackTrace(isolate, st.ToLocalChecked());
-			tr.err_msg.append("\r\nStackTrace:\r\n");
-			tr.err_msg.append(_toCharStr(stackTrace));
+		if (exception.is_empty()) {
+			add_stack_trace(isolate, st, tr.err_msg);
+			return;
 		}
+		tr.err_msg = std::string(exception.c_str()); exception.clear();
+		add_stack_trace(isolate, st, tr.err_msg);
 	}
-	const char* sow_web_jsx::set__exception(v8::Isolate* isolate, v8::TryCatch* try_catch) {
-		v8::String::Utf8Value exception(isolate, try_catch->Exception());
-		std::string error_str = _toCharStr(exception);
+	
+	void sow_web_jsx::set__exception(
+		v8::Isolate* isolate, 
+		v8::TryCatch* try_catch, 
+		std::string&error_str
+	) {
 		v8::MaybeLocal<v8::Value> st = try_catch->StackTrace(isolate->GetCurrentContext());
-		if (!st.IsEmpty()) {
-			v8::String::Utf8Value stackTrace(isolate, st.ToLocalChecked());
-			error_str.append("\r\nStackTrace:\r\n");
-			error_str.append(_toCharStr(stackTrace));
+		v8::Local<v8::Value> v8_exception = try_catch->Exception();
+		if (v8_exception->IsNullOrUndefined() || v8_exception.IsEmpty()) {
+			add_stack_trace(isolate, st, error_str);
+			return;
 		}
-		return error_str.c_str();
+		//v8::String::Utf8Value exception(isolate, v8_exception);
+		native_string exception(isolate, v8_exception);
+		if (!exception.is_empty()) {
+			error_str = std::string(exception.c_str()); exception.clear();
+		}
+		add_stack_trace(isolate, st, error_str);
+		if (error_str.empty()) {
+			error_str = "No Error Found...";
+		}
+		return;
 	}
 	void sow_web_jsx::get_server_map_path(const char* req_path, std::string& output) {
 		output.append(req_path);
@@ -143,57 +195,60 @@ namespace sow_web_jsx {
 	}
 	/*[native_string 9:17 PM 12/5/2019]*/
 	native_string::native_string(v8::Isolate* isolate, const v8::Local<v8::Value>& value){
-		if (value->IsNullOrUndefined()) {
-			data = nullptr;
-			length = 0;
+		if (value->IsNullOrUndefined() || value->IsUndefined() || value.IsEmpty()) {
+			_data = nullptr;
+			_length = 0;
 		}
 		else if (value->IsString()) {
-			utf8Value = new (utf8ValueMemory) v8::String::Utf8Value(isolate, value);
-			data = (**utf8Value);
-			length = utf8Value->length();
+			_utf8Value = new (_utf8ValueMemory) v8::String::Utf8Value(isolate, value);
+			_data = (**_utf8Value);
+			_length = _utf8Value->length();
 		}
 		else if (value->IsTypedArray()) {
 			v8::Local<v8::ArrayBufferView> arrayBufferView = v8::Local<v8::ArrayBufferView>::Cast(value);
 			v8::ArrayBuffer::Contents contents = arrayBufferView->Buffer()->GetContents();
-			length = arrayBufferView->ByteLength();
-			data = (char*)contents.Data() + arrayBufferView->ByteOffset();
+			_length = arrayBufferView->ByteLength();
+			_data = (char*)contents.Data() + arrayBufferView->ByteOffset();
 		}
 		else if (value->IsArrayBuffer()) {
 			v8::Local<v8::ArrayBuffer> arrayBuffer = v8::Local<v8::ArrayBuffer>::Cast(value);
 			v8::ArrayBuffer::Contents contents = arrayBuffer->GetContents();
-			length = contents.ByteLength();
-			data = (char*)contents.Data();
+			_length = contents.ByteLength();
+			_data = (char*)contents.Data();
 		}
 		else {
-			invalid = true;
-			isolate->ThrowException(v8::Exception::TypeError(
-				sow_web_jsx::v8_str(isolate, "form_data required!!!")));
+			_invalid = true;
+			_data = nullptr;
+			_length = 0;
+			/*isolate->ThrowException(v8::Exception::TypeError(
+				sow_web_jsx::v8_str(isolate, "form_data required!!!")));*/
 		}
 	}
 	bool native_string::is_invalid(v8::Isolate* isolate) {
-		if ( invalid ) {
+		if ( _invalid ) {
 			isolate->ThrowException(v8::Exception::TypeError(
 				sow_web_jsx::v8_str(isolate, "form_data required!!!")));
 		}
-		return invalid;
+		return _invalid;
 	}
 	std::string_view native_string::get_string(){
-		return { data, length };
+		return { _data, _length };
 	}
 	const char* native_string::c_str() {
-		return get_string().data();
+		return _length == 0 ? "" : get_string().data();
 	}
 	bool native_string::is_empty(){
-		return length == 0;
+		return _length == 0;
 	}
 	size_t native_string::size(){
-		return length;
+		return _length;
 	}
 	void native_string::clear(){
-		if (utf8Value && length > 0) {
-			utf8Value->~Utf8Value();
-			utf8Value = nullptr;
-			data = nullptr; length = 0;
+		if (_invalid == true)return;
+		if (_utf8Value && _length > 0) {
+			_utf8Value->~Utf8Value();
+			_utf8Value = nullptr;
+			_data = nullptr; _length = 0;
 		}
 	}
 	native_string::~native_string(){

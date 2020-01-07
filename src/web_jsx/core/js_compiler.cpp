@@ -112,10 +112,6 @@ int sow_web_jsx::js_compiler::run_script_x(const char*script_source, std::map<st
 	v8::MaybeLocal<v8::Script> cscript = v8::Script::Compile(v8_ctx, source);
 	if (cscript.IsEmpty()) {
 		std::cout << "Unable to compile script. Check your script than try again.\r\n";
-		/*std::cout << "------------------------\r\n";
-		std::cout << "Source:\r\n";
-		std::cout << script_source;
-		std::cout << "------------------------";*/
 		v8_ctx->DetachGlobal();
 		v8_ctx.Clear();
 		return -1;
@@ -123,7 +119,12 @@ int sow_web_jsx::js_compiler::run_script_x(const char*script_source, std::map<st
 	v8::TryCatch trycatch(isolate);
 	cscript.ToLocalChecked()->Run(v8_ctx);
 	if (trycatch.HasCaught()) {
-		std::cout << set__exception(isolate, &trycatch);
+		/*const char* err = set__exception(isolate, &trycatch);
+		std::cout << err;*/
+		std::cout << "Script runtime error:\n";
+		std::string err("");
+		set__exception(isolate, &trycatch, err);
+		std::cout << err.c_str(); err.clear();
 		v8_ctx->DetachGlobal();
 		v8_ctx.Clear();
 		return -1;

@@ -1,5 +1,8 @@
 #include "fcreqh.h"
 #if defined(FAST_CGI_APP)
+#if !defined(_npgsql_tools_h)
+#include <npgsql_tools.h>
+#endif//_npgsql_tools_h
 const char * web_jsx_cgi::fcgi_request::freq_env_c(const char* var_name, char **envp) {
 	char *env_val = FCGX_GetParam(var_name, envp);
 	if (((env_val != NULL) && (env_val[0] == '\0')) || env_val == NULL) {

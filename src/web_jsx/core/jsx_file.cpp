@@ -8,14 +8,14 @@
 using namespace sow_web_jsx;
 jsx_file::jsx_file(const char *path, const char*mode) {
 	//https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/fopen-s-wfopen-s?view=vs-2017
-	this->is_flush = 0;
+	this->is_flush = FALSE;
 #if defined(_WINDOWS_)
 	this->_fstream = _fsopen(path, mode, _SH_DENYWR);
 	if (ferror(this->_fstream)) {
-		this->err = -1;
+		this->err = TRUE;
 	}
 	else {
-		this->err = 0;
+		this->err = FALSE;
 	}
 #else
 	this->err = fopen_s(&this->_fstream, path, mode);
@@ -27,9 +27,10 @@ const char * jsx_file::read() {
 }
 
 size_t jsx_file::write(const char *buffer) {
-	if (this->is_flush == 1)return -1;
+	if (this->is_flush == TRUE)return -1;
 	size_t len = fwrite (buffer, sizeof(char), strlen(buffer), this->_fstream);
 	if (ferror(this->_fstream)) {
+		this->err = TRUE;
 		this->flush();
 		return -2;
 	}
@@ -37,8 +38,8 @@ size_t jsx_file::write(const char *buffer) {
 }
 
 void jsx_file::flush() {
-	if (this->is_flush == 1)return;
-	this->is_flush = 1;
+	if (this->is_flush == TRUE)return;
+	this->is_flush = TRUE;
 	fclose(this->_fstream);
 	fflush(this->_fstream);
 }

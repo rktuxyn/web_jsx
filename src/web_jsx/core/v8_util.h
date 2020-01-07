@@ -43,9 +43,18 @@ namespace sow_web_jsx {
 	const char* _toCharStr(const v8::String::Utf8Value& value);
 #define T_CHAR _toCharStr
 	const char* to_char_str(v8::Isolate* isolate, v8::Local<v8::Value> x);
+	void read_line(const v8::FunctionCallbackInfo<v8::Value>& args);
 	v8::Local<v8::String> v8_str(v8::Isolate* isolate, const char* x);
-	void set__exception(v8::Isolate * isolate, v8::TryCatch*try_catch, template_result&tr);
-	const char* set__exception(v8::Isolate * isolate, v8::TryCatch*try_catch);
+	void set__exception(
+		v8::Isolate * isolate, 
+		v8::TryCatch*try_catch, 
+		template_result&tr
+	);
+	void set__exception(
+		v8::Isolate * isolate, 
+		v8::TryCatch*try_catch, 
+		std::string& error_str
+	);
 	void get_server_map_path(const char* req_path, std::string&output);
 	const char* get_prop_value(v8::Isolate* isolate, v8::Local<v8::Context>ctx, v8::Local<v8::Object>v8_obj, const char* prop);
 
@@ -53,11 +62,11 @@ namespace sow_web_jsx {
 	v8::Handle<v8::Object> native_write_filei(v8::Isolate* isolate, const std::string abs_path, const char* buffer);
 	class native_string {
 	private:
-		char* data;
-		size_t length;
-		char utf8ValueMemory[sizeof(v8::String::Utf8Value)];
-		v8::String::Utf8Value* utf8Value = nullptr;
-		bool invalid = false;
+		char* _data;
+		size_t _length;
+		char _utf8ValueMemory[sizeof(v8::String::Utf8Value)];
+		v8::String::Utf8Value* _utf8Value = nullptr;
+		bool _invalid = false;
 	public:
 		native_string(v8::Isolate* isolate, const v8::Local<v8::Value>& value);
 		bool is_invalid(v8::Isolate* isolate);
@@ -73,8 +82,8 @@ namespace sow_web_jsx {
 	};
 	template <typename T>
 	T* unwrap(const v8::FunctionCallbackInfo<v8::Value>& args) {
-		auto self = args.Holder();
-		auto wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
+		v8::Local<v8::Object> self = args.Holder();
+		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
 		return static_cast<T*>(wrap->Value());
 	}
 	template <typename T, typename... Args>
