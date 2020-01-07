@@ -81,22 +81,28 @@ namespace gzip {
 		output.write(const_cast<const char*>(dest), 10);
 		delete[]dest;
 	}
+	static void free_zstream(z_stream* strm) {
+		if (strm == NULL)return;
+		delete strm; strm = NULL;
+	}
 	template<class _out_stream>
 	int deflate_stream(std::stringstream&source, _out_stream&dest, int level = Z_BEST_SPEED) {
 		//6:08 AM 1/17/2019
 		int ret, flush;
 		unsigned have;
-		z_stream strm;
+		z_stream* strm = new z_stream();
 		/* allocate deflate state */
-		strm.zalloc = Z_NULL;
-		strm.zfree = Z_NULL;
-		strm.opaque = Z_NULL;
-		ret = deflateInit2_(&strm, level, Z_DEFLATED,
+		strm->zalloc = Z_NULL;
+		strm->zfree = Z_NULL;
+		strm->opaque = Z_NULL;
+		ret = deflateInit2_(strm, level, Z_DEFLATED,
 			-MAX_WBITS,
 			DEF_MEM_LEVEL, Z_DEFAULT_STRATEGY,
 			ZLIB_VERSION, (int)sizeof(z_stream));
-		if (ret != Z_OK)
+		if (ret != Z_OK) {
+			free_zstream(strm);
 			return ret;
+		}
 		source.seekg(0, std::ios::end);//Go to end of stream
 		std::streamoff totalSize = source.tellg();
 		std::streamoff utotalSize = totalSize;
@@ -109,31 +115,32 @@ namespace gzip {
 		do {
 			char* in = new char[CHUNK];
 			n = source.rdbuf()->sgetn(in, CHUNK);
-			strm.avail_in = (uInt)n;
+			strm->avail_in = (uInt)n;
 			tcrc = crc32(tcrc, (uint8_t*)in, (uInt)n);
 			totalSize -= n;
 			flush = totalSize <= 0 ? Z_FINISH : Z_NO_FLUSH;
-			strm.next_in = (Bytef*)in;
+			strm->next_in = (Bytef*)in;
 			/* run deflate() on input until output buffer not full, finish
 			  compression if all of source has been read in */
 			do {
 				char* out = new char[CHUNK];
-				strm.avail_out = CHUNK;
-				strm.next_out = (Bytef*)out;
-				ret = deflate(&strm, flush);    /* no bad return value */
+				strm->avail_out = CHUNK;
+				strm->next_out = (Bytef*)out;
+				ret = deflate(strm, flush);    /* no bad return value */
 				assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
-				have = CHUNK - strm.avail_out;
+				have = CHUNK - strm->avail_out;
 				dest.write(out, have);
 				write_len += have;
 				delete[]out;
-			} while (strm.avail_out == 0);
-			assert(strm.avail_in == 0);     /* all input will be used */
-			 /* done when last data in file processed */
+			} while (strm->avail_out == 0);
+			assert(strm->avail_in == 0);     /* all input will be used */
+			 /* Free memory */
 			delete[]in;
 		} while (flush != Z_FINISH);
 		assert(ret == Z_STREAM_END);        /* stream will be complete */
 		 /* clean up and return */
-		(void)deflateEnd(&strm);
+		(void)deflateEnd(strm);
+		free_zstream(strm);
 		/* write gzip footer to out stream*/
 		dest.write((char*)&tcrc, sizeof(tcrc));
 		dest.write((char*)&utotalSize, sizeof(utotalSize));
@@ -188,6 +195,7 @@ namespace gzip {
 			ZLIB_VERSION, (int)sizeof(z_stream)
 		);
 		if (ret != Z_OK) {
+			free_zstream(_strm);
 			panic("Unable to initilize deflateInit2_", TRUE);
 			return;
 		}
@@ -210,11 +218,9 @@ namespace gzip {
 			if (_is_flush == TRUE)return FALSE;
 			if (_is_error == TRUE)return -1;
 			if (_stream_flush == Z_FINISH) {
-				delete[]in;
 				return panic("deflate::state Z_FINISH", -1);
 			}
 			if (!(do_flush == Z_FINISH || do_flush == Z_NO_FLUSH)) {
-				delete[]in;
 				return panic("deflate::Invalid stream end request.", -1);
 			}
 			_is_error = FALSE;
@@ -234,21 +240,20 @@ namespace gzip {
 			_strm_ret = deflate(_strm, _stream_flush);    /* no bad return value */
 			/* state not clobbered */
 			if (_strm_ret == Z_STREAM_ERROR) {
-				delete[]in;
+				/* Free memory */
+				delete[]out;
 				return panic("deflate::state not clobbered", TRUE);
 			}
 			have = chunk - _strm->avail_out;
 			dest.write(out, have);
 			_total_size += have;
+			/* Free memory */
 			delete[]out;
 		} while (_strm->avail_out == 0);
 		/* all input will be used */
 		if (_strm->avail_in != 0) {
-			delete[]in;
 			return panic("deflate::all input unable to use", TRUE);
 		}
-		/* done when last data in file processed */
-		delete[]in;
 		return len;
 	}
 	template<class _out_stream>
@@ -257,7 +262,11 @@ namespace gzip {
 	}
 	template<class _out_stream>
 	inline size_t gzip_deflate::write(_out_stream& dest, const char* buff, int do_flush){
-		return this->write(dest, strdup(buff), strlen(buff), do_flush, FALSE);
+		char* in = strdup(buff);
+		size_t ret = this->write(dest, in, strlen(buff), do_flush, FALSE);
+		/* Free memory */
+		delete[]in;
+		return ret;
 	}
 	template<class _out_stream>
 	inline size_t gzip_deflate::write(_out_stream& dest, std::stringstream& source, int do_flush){
@@ -284,10 +293,14 @@ namespace gzip {
 			totalSize -= read_len;
 			if (totalSize <= 0) {
 				ret = this->write(dest, in, read_len, end_flush, TRUE);
+				/* Free memory */
+				delete[]in;
 				if (ret == FALSE || ret == std::string::npos || ret < 0)return ret;
 				break;
 			}
 			ret = this->write(dest, in, read_len, do_flush, TRUE);
+			/* Free memory */
+			delete[]in;
 			if (ret == FALSE || ret == std::string::npos || ret < 0)return ret;
 		} while (true);
 		return total_len;
@@ -321,6 +334,8 @@ namespace gzip {
 			totalSize -= read_len;
 			if (totalSize <= 0) {
 				ret = this->write(dest, in, read_len, end_flush, TRUE);
+				/* Free memory */
+				delete[]in;
 				if (ret == FALSE || ret == std::string::npos || ret < 0) {
 					file.close();
 					return ret;
@@ -328,6 +343,8 @@ namespace gzip {
 				break;
 			}
 			ret = this->write(dest, in, read_len, do_flush, TRUE);
+			/* Free memory */
+			delete[]in;
 			if (ret == FALSE || ret == std::string::npos || ret < 0) {
 				file.close();
 				return ret;
@@ -345,14 +362,11 @@ namespace gzip {
 		}
 		/* stream will be complete */
 		if (_strm_ret != Z_STREAM_END) {
-			delete[]in;
 			return panic("deflate::stream not completed yet", TRUE);
 		}
 		/* clean up and return */
 		(void)deflateEnd(_strm);
-		if (_strm != NULL) {
-			delete _strm; _strm = NULL;
-		}
+		free_zstream(_strm);
 		/* write gzip footer to out stream*/
 		dest.write((char*)& _tcrc, sizeof(_tcrc));
 		dest.write((char*)& _total_size, sizeof(_total_size));
@@ -377,5 +391,6 @@ namespace gzip {
 		_is_error = error_code;
 		return _is_error;
 	}
+	//Done 12:10 PM 1/7/2020
 }; // namespace gzip
 #endif//_zgzip_h
