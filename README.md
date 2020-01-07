@@ -60,6 +60,34 @@ let c = context.request.write_file_from_payload( temp_dir );
 ```javascript
 context.response.as_gzip()
 ```
+This compression work directly outstream
+```javascript
+//If you like to response compressed file
+let compress = new gzip.compress();
+context.response.header( "Content-Type", "image/jpeg" );
+compress.flush_header();
+compress.write_from_file( "/images/web_jsx.jpg", gzip.Z_FINISH );
+compress.flush();
+//Or If you like to response compressed string
+let compress = new gzip.compress();
+context.response.header( "Content-Type", "text/plain" );
+compress.flush_header();
+compress.write( `Welcome to`, gzip.Z_NO_FLUSH );
+compress.write( `WebJsx`, gzip.Z_NO_FLUSH );
+compress.write_from_file( "context.json", gzip.Z_NO_FLUSH );
+compress.write( `You should write finsh stream`, gzip.Z_FINISH );
+compress.flush();
+```
+Direct write to outstream
+```javascript
+let cout = new stdout();
+context.response.header( "Content-Type", "text/plain" );
+cout.flush_header();
+cout.write( "Hello world...\r\n" );
+//Or you may write file directly outstream
+cout.write_from_file( "context.json" );
+cout.flush();
+```
 Connect WebJsx with PostgreSQL
 ```javascript
 //Read data from Postgres SQL
