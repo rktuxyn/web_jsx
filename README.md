@@ -56,11 +56,11 @@ let temp_dir = context.root_dir + "/temp/";
 sys.create_directory( "/temp/" );
 let c = context.request.write_file_from_payload( temp_dir );
 ```
-#Content-Encoding Gzip response 
+#Content-Encoding Gzip (zlib) response 
 ```javascript
 context.response.as_gzip()
 ```
-This compression write directly outstream
+This zlib compression write directly outstream
 ```javascript
 //If you like to response compressed file
 let compress = new gzip.compress();
@@ -77,6 +77,13 @@ compress.write( `WebJsx`, gzip.Z_NO_FLUSH );
 compress.write_from_file( "context.json", gzip.Z_NO_FLUSH );
 compress.write( `You should write finsh stream`, gzip.Z_FINISH );
 compress.flush();
+```
+Inflate/Deflate file with zlib
+```javascript
+//Compress file with zlib
+let ret = gzip.deflate("/input.file","/output.gzip", gzip.Z_BEST_SPEED);
+//Decompress file with zlib
+let ret = gzip.inflate("/input.gzip","/output_unzip.file");
 ```
 Direct write to outstream
 ```javascript
