@@ -38,6 +38,8 @@ int gzip::deflate_file(const std::string input_path, const std::string output_pa
 	size_t totalSize = get_size_of_stream(*source);
 	int flush = Z_NO_FLUSH; size_t read_len = 0;
 	unsigned have;
+	size_t			block_size = 0;
+	const size_t	max_block_size = 10485760;/*(Max block size (1024*1024)*10) = 10 MB*/
 	/* compress until end of stream */
 	do {
 		char* in;
@@ -70,6 +72,7 @@ int gzip::deflate_file(const std::string input_path, const std::string output_pa
 				return FALSE;
 			}
 			have = CHUNK - strm->avail_out;
+			block_size += have;
 			dest->write(out, have);
 			/* Free memory */
 			delete[]out;
@@ -84,6 +87,9 @@ int gzip::deflate_file(const std::string input_path, const std::string output_pa
 			(void)deflateEnd(strm);
 			free_zstream(strm);
 			return FALSE;
+		}
+		if (block_size >= max_block_size) {
+			block_size = 0; dest->flush();
 		}
 	} while (flush != Z_FINISH);
 	source->close(); delete source;
@@ -112,6 +118,8 @@ int gzip::inflate_file(const std::string input_path, const std::string output_pa
 	std::ifstream* source = new std::ifstream(input_path.c_str(), std::ifstream::binary);
 	std::ofstream* dest = new std::ofstream(output_path.c_str(), std::ofstream::out | std::ofstream::binary);
 	size_t totalSize = get_size_of_stream(*source);
+	size_t			block_size = 0;
+	const size_t	max_block_size = 10485760;/*(Max block size (1024*1024)*10) = 10 MB*/
 	int eof = FALSE; size_t read_len = 0;
 	unsigned have;
 	do {
@@ -155,6 +163,7 @@ int gzip::inflate_file(const std::string input_path, const std::string output_pa
 			dest->write(out, have);
 			/* Free memory */
 			delete[]out;
+			block_size += have;
 		} while (strm->avail_out == 0);
 		/* Free memory */
 		delete[]in;
@@ -166,6 +175,9 @@ int gzip::inflate_file(const std::string input_path, const std::string output_pa
 			(void)inflateEnd(strm);
 			free_zstream(strm);
 			return FALSE;
+		}
+		if (block_size >= max_block_size) {
+			block_size = 0; dest->flush();
 		}
 	} while (eof != TRUE);
 	source->close(); delete source;
