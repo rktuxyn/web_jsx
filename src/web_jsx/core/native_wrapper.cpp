@@ -2683,7 +2683,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 	gzip_object->Set(isolate, "Z_BEST_COMPRESSION", v8::Number::New(isolate, (double)Z_BEST_COMPRESSION));
 	gzip_object->Set(isolate, "Z_DEFAULT_COMPRESSION", v8::Number::New(isolate, (double)Z_DEFAULT_COMPRESSION));
 	gzip_object->Set(isolate, "ZLIB_VERSION", sow_web_jsx::v8_str(isolate, ZLIB_VERSION));
-	ctx->Set(isolate, "gzip", gzip_object);
+	ctx->Set(isolate, "zlib", gzip_object);
 }
 class std_out {
 public:

@@ -101,6 +101,7 @@ namespace gzip {
 		delete[]dest;
 	}
 	void free_zstream(z_stream* strm);
+	z_stream* create_z_stream();
 	template<class _stream>
 	size_t get_size_of_stream(_stream& _strm) {
 		_strm.seekg(0, std::ios::end);//Go to end of stream
@@ -115,11 +116,7 @@ namespace gzip {
 		//6:08 AM 1/17/2019
 		int ret, flush;
 		unsigned have;
-		z_stream* strm = new z_stream();
-		/* allocate deflate state */
-		strm->zalloc = Z_NULL;
-		strm->zfree = Z_NULL;
-		strm->opaque = Z_NULL;
+		z_stream* strm = create_z_stream();
 		ret = deflateInit2_(strm, level, Z_DEFLATED,
 			-MAX_WBITS,
 			DEF_MEM_LEVEL, Z_DEFAULT_STRATEGY,
@@ -306,10 +303,8 @@ namespace gzip {
 				return panic("deflate::Invalid stream end request.", -1);
 			}
 		}
-		source.seekg(0, std::ios::end);//Go to end of stream
-		std::streamoff totalSize = source.tellg();
-		size_t total_len = (size_t)totalSize;
-		source.seekg(0, std::ios::beg);//Back to begain of stream
+		size_t totalSize = get_size_of_stream(source);
+		size_t total_len = totalSize;
 		if (total_len == std::string::npos || total_len == 0)return total_len;
 		int end_flush = do_flush == Z_FINISH ? Z_FINISH : Z_NO_FLUSH;
 		do_flush = Z_NO_FLUSH;
@@ -479,10 +474,8 @@ namespace gzip {
 				return panic("inflate::Invalid stream end request.", -1);
 			}
 		}
-		source.seekg(0, std::ios::end);//Go to end of stream
-		std::streamoff totalSize = source.tellg();
-		size_t total_len = (size_t)totalSize;
-		source.seekg(0, std::ios::beg);//Back to begain of stream
+		size_t totalSize = get_size_of_stream(source);
+		size_t total_len = totalSize;
 		if (total_len == std::string::npos || total_len == 0)return total_len;
 		int end_flush = do_flush == Z_FINISH ? Z_FINISH : Z_NO_FLUSH;
 		do_flush = Z_NO_FLUSH;

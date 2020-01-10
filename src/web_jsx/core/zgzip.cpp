@@ -6,8 +6,9 @@ void gzip::free_zstream(z_stream* strm) {
 	if (strm == NULL)return;
 	delete strm; strm = NULL;
 }
-z_stream* create_z_stream() {
+z_stream* gzip::create_z_stream() {
 	z_stream* _strm = new z_stream();
+	/* allocate deflate state */
 	_strm->zalloc = Z_NULL;
 	_strm->zfree = Z_NULL;
 	_strm->opaque = Z_NULL;
@@ -15,7 +16,6 @@ z_stream* create_z_stream() {
 }
 
 int gzip::deflate_file(const std::string input_path, const std::string output_path, int level, std::string& error){
-	//std::ifstream& source, std::ofstream& dest
 	z_stream* strm = create_z_stream();
 	int ret = deflateInit(strm, level);
 	if (ret != Z_OK) {
@@ -181,10 +181,7 @@ gzip::gzip_deflate::gzip_deflate(int level) {
 	if (level == FALSE)level = Z_BEST_SPEED;
 	_fs = NULL;
 	_internal_error = new char;
-	_strm = new z_stream();
-	_strm->zalloc = Z_NULL;
-	_strm->zfree = Z_NULL;
-	_strm->opaque = Z_NULL;
+	_strm = create_z_stream();
 	int ret = deflateInit2_(_strm, level, Z_DEFLATED,
 		-MAX_WBITS, DEF_MEM_LEVEL, Z_DEFAULT_STRATEGY,
 		ZLIB_VERSION, (int)sizeof(z_stream)
@@ -292,11 +289,8 @@ gzip::gzip_inflate::gzip_inflate(){
 	_is_flush = FALSE; _is_error = FALSE;
 	_fs = NULL; _total_size = NULL;
 	_internal_error = new char;
-	_strm = new z_stream();
-	_strm->zalloc = Z_NULL;
-	_strm->zfree = Z_NULL;
-	_strm->opaque = Z_NULL;
-	int ret = inflateInit2(_strm, -MAX_WBITS);
+	_strm = create_z_stream();
+	int ret = inflateInit(_strm);
 	if (ret != Z_OK) {
 		free_zstream(_strm);
 		panic("Unable to initilize inflateInit", TRUE);
