@@ -63,27 +63,27 @@ context.response.as_gzip()
 This zlib compression write directly outstream
 ```javascript
 //If you like to response compressed file
-let compress = new gzip.compress();
+let compress = new zlib.compress();
 context.response.header( "Content-Type", "image/jpeg" );
 compress.flush_header();
-compress.write_from_file( "/images/web_jsx.jpg", gzip.Z_FINISH );
+compress.write_from_file( "/images/web_jsx.jpg", zlib.Z_FINISH );
 compress.flush();
 //Or If you like to response compressed string
-let compress = new gzip.compress();
+let compress = new zlib.compress();
 context.response.header( "Content-Type", "text/plain" );
 compress.flush_header();
-compress.write( `Welcome to`, gzip.Z_NO_FLUSH );
-compress.write( `WebJsx`, gzip.Z_NO_FLUSH );
-compress.write_from_file( "context.json", gzip.Z_NO_FLUSH );
-compress.write( `You should write finsh stream`, gzip.Z_FINISH );
+compress.write( `Welcome to`, zlib.Z_NO_FLUSH );
+compress.write( `WebJsx`, zlib.Z_NO_FLUSH );
+compress.write_from_file( "context.json", zlib.Z_NO_FLUSH );
+compress.write( `You should write finsh stream`, zlib.Z_FINISH );
 compress.flush();
 ```
 Inflate/Deflate file with zlib
 ```javascript
 //Compress file with zlib
-let ret = gzip.deflate("/input.file","/output.gzip", gzip.Z_BEST_SPEED);
+let ret = zlib.deflate("/input.file","/output.gzip", zlib.Z_BEST_SPEED);
 //Decompress file with zlib
-let ret = gzip.inflate("/input.gzip","/output_unzip.file");
+let ret = zlib.inflate("/input.gzip","/output_unzip.file");
 ```
 Direct write to outstream
 ```javascript
