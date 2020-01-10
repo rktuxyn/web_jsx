@@ -9,9 +9,12 @@ void gzip::free_zstream(z_stream* strm) {
 z_stream* gzip::create_z_stream() {
 	z_stream* _strm = new z_stream();
 	/* allocate deflate state */
-	_strm->zalloc = Z_NULL;
+	/*_strm->zalloc = Z_NULL;
 	_strm->zfree = Z_NULL;
-	_strm->opaque = Z_NULL;
+	_strm->opaque = Z_NULL;*/
+	_strm->zalloc = (alloc_func)0;
+	_strm->zfree = (free_func)0;
+	_strm->opaque = (voidpf)0;
 	return _strm;
 }
 
@@ -194,6 +197,7 @@ gzip::gzip_deflate::gzip_deflate(int level) {
 	_fs = NULL;
 	_internal_error = new char;
 	_strm = create_z_stream();
+	/* negative windowBits to deflateInit2_ means "no header" */
 	int ret = deflateInit2_(_strm, level, Z_DEFLATED,
 		-MAX_WBITS, DEF_MEM_LEVEL, Z_DEFAULT_STRATEGY,
 		ZLIB_VERSION, (int)sizeof(z_stream)
@@ -297,19 +301,26 @@ int gzip::gzip_deflate::panic(char* erro_msg) {
 }
 //[/Deflate==>Compress]
 //[Inflate==>Decompress]
-gzip::gzip_inflate::gzip_inflate(){
+gzip::gzip_inflate::gzip_inflate(int window_bits){
 	_is_flush = FALSE; _is_error = FALSE;
 	_fs = NULL; _total_size = NULL;
 	_internal_error = new char;
 	_strm = create_z_stream();
-	int ret = inflateInit(_strm);
+	_no_footer = window_bits < 0 ? TRUE : FALSE;
+	if (window_bits > 32) {
+		panic("Invalid window bits", TRUE);
+		return;
+	}
+	/* negative windowBits to inflateInit2_ means "no header" */
+	//int ret = inflateInit2(_strm, MAX_WBITS + 16);
+	int ret = inflateInit2(_strm, window_bits);
+	//int ret = inflateInit(_strm);
 	if (ret != Z_OK) {
 		free_zstream(_strm);
 		panic("Unable to initilize inflateInit", TRUE);
 		return;
 	}
 	_strm_ret = Z_OK;
-	_stream_flush = Z_NO_FLUSH;
 }
 gzip::gzip_inflate::~gzip_inflate(){
 	if (_is_flush == TRUE)return;
@@ -334,17 +345,17 @@ int gzip::gzip_inflate::f_open_file(const std::string path) {
 	}
 	return TRUE;
 }
-size_t gzip::gzip_inflate::f_write_file(const std::string file_path, int do_flush) {
+size_t gzip::gzip_inflate::f_write_file(const std::string file_path) {
 	if (this->_fs == NULL) {
 		return panic("FileStream not open yet....", -1);
 	}
-	return this->write_file(*this->_fs, file_path, do_flush);
+	return this->write_file(*this->_fs, file_path);
 }
-size_t gzip::gzip_inflate::f_write(const char* buff, int do_flush) {
+size_t gzip::gzip_inflate::f_write(const char* buff) {
 	if (this->_fs == NULL) {
 		return panic("FileStream not open yet....", -1);
 	}
-	return this->write(*this->_fs, buff, do_flush);
+	return this->write(*this->_fs, buff);
 }
 int gzip::gzip_inflate::f_flush() {
 	if (this->_fs == NULL) {

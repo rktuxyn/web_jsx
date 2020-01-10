@@ -2011,7 +2011,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 			pobj.SetWeak<gzip::gzip_deflate*>(&deflate, [](const v8::WeakCallbackInfo<gzip::gzip_deflate*>& data) {
 				delete[] data.GetParameter();
 				}, v8::WeakCallbackType::kParameter);
-			});
+		});
 		tpl->SetClassName(sow_web_jsx::v8_str(isolate, "compress"));
 		tpl->InstanceTemplate()->SetInternalFieldCount(1);
 		v8::Local<v8::ObjectTemplate> prototype = tpl->PrototypeTemplate();
@@ -2040,7 +2040,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 			std::cout << "\r\n";
 			fflush(stdout);
 			deflate->write_header(std::cout);
-			}));
+		}));
 		prototype->Set(isolate, "write", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 			v8::Isolate* isolate = args.GetIsolate();
 			if (_is_flush == false) {
@@ -2087,7 +2087,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 				return;
 			}
 			args.GetReturnValue().Set(v8::Number::New(isolate, (double)ret));
-			}));
+		}));
 		prototype->Set(isolate, "write_from_file", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 			v8::Isolate* isolate = args.GetIsolate();
 			if (_is_flush == false) {
@@ -2126,7 +2126,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 				return;
 			}
 			args.GetReturnValue().Set(v8::Number::New(isolate, (double)ret));
-			}));
+		}));
 		prototype->Set(isolate, "flush", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 			v8::Isolate* isolate = args.GetIsolate();
 			if (_is_flush == false) {
@@ -2155,7 +2155,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 			if (_root_dir != NULL) {
 				_root_dir->clear(); delete _root_dir; _root_dir = NULL;
 			}
-			}));
+		}));
 		//[/Out Stream std::cout]
 		//[File Write]
 		prototype->Set(isolate, "fs_open", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -2180,12 +2180,12 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 				return;
 			}
 			args.GetReturnValue().Set(v8::Number::New(isolate, (double)ret));
-			}));
+		}));
 		prototype->Set(isolate, "fs_write_gzip_header", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 			v8::Isolate* isolate = args.GetIsolate();
 			gzip::gzip_deflate* deflate = sow_web_jsx::unwrap<gzip::gzip_deflate>(args);
 			deflate->f_write_header();
-			}));
+		}));
 		prototype->Set(isolate, "fs_write_from_file", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 			v8::Isolate* isolate = args.GetIsolate();
 			if (!args[0]->IsString()) {
@@ -2220,7 +2220,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 				return;
 			}
 			args.GetReturnValue().Set(v8::Number::New(isolate, (double)ret));
-			}));
+		}));
 		prototype->Set(isolate, "fs_write", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 			v8::Isolate* isolate = args.GetIsolate();
 			if (!args[0]->IsString()) {
@@ -2263,7 +2263,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 				return;
 			}
 			args.GetReturnValue().Set(v8::Number::New(isolate, (double)ret));
-			}));
+		}));
 		prototype->Set(isolate, "fs_flush", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 			v8::Isolate* isolate = args.GetIsolate();
 			gzip::gzip_deflate* deflate = sow_web_jsx::unwrap<gzip::gzip_deflate>(args);
@@ -2277,17 +2277,17 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 				return;
 			}
 
-			}));
+		}));
 		prototype->Set(isolate, "fs_write_gzip_footer", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 			v8::Isolate* isolate = args.GetIsolate();
 			gzip::gzip_deflate* deflate = sow_web_jsx::unwrap<gzip::gzip_deflate>(args);
 			deflate->f_write_footer();
-			}));
+		}));
 		prototype->Set(isolate, "fs_close_file", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 			v8::Isolate* isolate = args.GetIsolate();
 			gzip::gzip_deflate* deflate = sow_web_jsx::unwrap<gzip::gzip_deflate>(args);
 			deflate->f_close_file();
-			}));
+		}));
 		//[/File Write]
 		prototype->Set(isolate, "release", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 			gzip::gzip_deflate* deflate = sow_web_jsx::unwrap<gzip::gzip_deflate>(args);
@@ -2295,7 +2295,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 				delete deflate; deflate = NULL;
 				args.Holder()->SetAlignedPointerInInternalField(0, nullptr);
 			}
-			}));
+		}));
 		//[/gzip_deflate]
 		//[gzip_inflate]
 		v8::Local<v8::FunctionTemplate> inflate_tpl = v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -2304,7 +2304,17 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 				throw_js_error(isolate, "Cannot call constructor as function!!!");
 				return;
 			}
-			gzip::gzip_inflate* inflate = new gzip::gzip_inflate();
+			if (args.Length() <= 0) {
+				throw_js_error(isolate, "window bits required!!!");
+				return;
+			}
+			if (!args[0]->IsNumber()) {
+				throw_js_error(isolate, "window bits should be number!!!");
+				return;
+			}
+			v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
+			int window_bits = args[0]->Int32Value(ctx).FromMaybe(0);
+			gzip::gzip_inflate* inflate = new gzip::gzip_inflate(window_bits);
 			if (!SET_BINARY_MODE_IN()) {/*[Nothing to do when failed...]*/ }
 			if (inflate->has_error() == TRUE) {
 				throw_js_error(isolate, inflate->get_last_error());
@@ -2316,8 +2326,8 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 			v8::Persistent<v8::Object, v8::CopyablePersistentTraits<v8::Object>> pobj(isolate, obj);
 			pobj.SetWeak<gzip::gzip_inflate*>(&inflate, [](const v8::WeakCallbackInfo<gzip::gzip_inflate*>& data) {
 				delete[] data.GetParameter();
-				}, v8::WeakCallbackType::kParameter);
-			});
+			}, v8::WeakCallbackType::kParameter);
+		});
 		inflate_tpl->SetClassName(sow_web_jsx::v8_str(isolate, "decompress"));
 		inflate_tpl->InstanceTemplate()->SetInternalFieldCount(1);
 		v8::Local<v8::ObjectTemplate> inflate_prototype = inflate_tpl->PrototypeTemplate();
@@ -2346,7 +2356,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 			__clear_cache(TRUE, FALSE);
 			std::cout << "\r\n";
 			fflush(stdout);
-			}));
+		}));
 		inflate_prototype->Set(isolate, "write", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 			v8::Isolate* isolate = args.GetIsolate();
 			if (_is_flush == false) {
@@ -2357,19 +2367,6 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 				throw_js_error(isolate, "data required....");
 				return;
 			}
-			int do_flush = Z_NO_FLUSH;
-			//Z_FINISH : Z_NO_FLUSH
-			if (args.Length() > 1) {
-				if (args[1]->IsNumber()) {
-					v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
-					do_flush = args[1]->Int32Value(ctx).FromMaybe(0);
-					if (!(do_flush == Z_FINISH || do_flush == Z_NO_FLUSH)) {
-						throw_js_error(isolate, "deflate::Invalid stream end request.");
-						return;
-					}
-				}
-			}
-
 			native_string str(isolate, args[0]);
 			const char* data = str.c_str();
 			gzip::gzip_inflate* inflate = sow_web_jsx::unwrap<gzip::gzip_inflate>(args);
@@ -2377,11 +2374,11 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 			if (len > CHUNK) {
 				std::stringstream source_stream(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
 				source_stream.write(data, len);
-				ret = inflate->write(std::cout, source_stream, do_flush, FALSE);
+				ret = inflate->write(std::cout, source_stream, FALSE);
 				source_stream.clear(); std::stringstream().swap(source_stream);
 			}
 			else {
-				ret = inflate->write(std::cout, data, do_flush);
+				ret = inflate->write(std::cout, data);
 			}
 			str.clear();
 			if (ret == FALSE) {
@@ -2393,7 +2390,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 				return;
 			}
 			args.GetReturnValue().Set(v8::Number::New(isolate, (double)ret));
-			}));
+		}));
 		inflate_prototype->Set(isolate, "write_from_file", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 			v8::Isolate* isolate = args.GetIsolate();
 			if (_is_flush == false) {
@@ -2408,20 +2405,8 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 			std::string* abs_path = new std::string();
 			abs_path->append(_root_dir->c_str());
 			sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
-			int do_flush = Z_NO_FLUSH;
-			//Z_FINISH : Z_NO_FLUSH
-			if (args.Length() > 1) {
-				if (args[1]->IsNumber()) {
-					v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
-					do_flush = args[1]->Int32Value(ctx).FromMaybe(0);
-					if (!(do_flush == Z_FINISH || do_flush == Z_NO_FLUSH)) {
-						throw_js_error(isolate, "deflate::Invalid stream end request.");
-						return;
-					}
-				}
-			}
 			gzip::gzip_inflate* inflate = sow_web_jsx::unwrap<gzip::gzip_inflate>(args);
-			size_t ret = inflate->write_file(std::cout, *abs_path, do_flush);
+			size_t ret = inflate->write_file(std::cout, *abs_path);
 			abs_path->clear(); delete abs_path; utf_abs_path_str.clear();
 			if (ret == FALSE) {
 				throw_js_error(isolate, "Stream already flashed...");
@@ -2432,7 +2417,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 				return;
 			}
 			args.GetReturnValue().Set(v8::Number::New(isolate, (double)ret));
-			}));
+		}));
 		inflate_prototype->Set(isolate, "flush", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 			v8::Isolate* isolate = args.GetIsolate();
 			if (_is_flush == false) {
@@ -2460,7 +2445,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 			if (_root_dir != NULL) {
 				_root_dir->clear(); delete _root_dir; _root_dir = NULL;
 			}
-			}));
+		}));
 		//[/Out Stream std::cout]
 		//[File Write]
 		inflate_prototype->Set(isolate, "fs_open", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -2485,7 +2470,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 				return;
 			}
 			args.GetReturnValue().Set(v8::Number::New(isolate, (double)ret));
-			}));
+		}));
 		inflate_prototype->Set(isolate, "fs_write_from_file", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 			v8::Isolate* isolate = args.GetIsolate();
 			if (!args[0]->IsString()) {
@@ -2496,20 +2481,8 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 			std::string* abs_path = new std::string();
 			abs_path->append(_root_dir->c_str());
 			sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
-			int do_flush = Z_NO_FLUSH;
-			//Z_FINISH : Z_NO_FLUSH
-			if (args.Length() > 1) {
-				if (args[1]->IsNumber()) {
-					v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
-					do_flush = args[1]->Int32Value(ctx).FromMaybe(0);
-					if (!(do_flush == Z_FINISH || do_flush == Z_NO_FLUSH)) {
-						throw_js_error(isolate, "deflate::Invalid stream end request.");
-						return;
-					}
-				}
-			}
 			gzip::gzip_inflate* inflate = sow_web_jsx::unwrap<gzip::gzip_inflate>(args);
-			size_t ret = inflate->f_write_file(*abs_path, do_flush);
+			size_t ret = inflate->f_write_file(*abs_path);
 			abs_path->clear(); delete abs_path; utf_abs_path_str.clear();
 			if (ret == FALSE) {
 				throw_js_error(isolate, "Stream already flashed...");
@@ -2520,26 +2493,13 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 				return;
 			}
 			args.GetReturnValue().Set(v8::Number::New(isolate, (double)ret));
-			}));
+		}));
 		inflate_prototype->Set(isolate, "fs_write", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 			v8::Isolate* isolate = args.GetIsolate();
 			if (!args[0]->IsString()) {
 				throw_js_error(isolate, "data required....");
 				return;
 			}
-			int do_flush = Z_NO_FLUSH;
-			//Z_FINISH : Z_NO_FLUSH
-			if (args.Length() > 1) {
-				if (args[1]->IsNumber()) {
-					v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
-					do_flush = args[1]->Int32Value(ctx).FromMaybe(0);
-					if (!(do_flush == Z_FINISH || do_flush == Z_NO_FLUSH)) {
-						throw_js_error(isolate, "deflate::Invalid stream end request.");
-						return;
-					}
-				}
-			}
-
 			native_string str(isolate, args[0]);
 			const char* data = str.c_str();
 			gzip::gzip_inflate* inflate = sow_web_jsx::unwrap<gzip::gzip_inflate>(args);
@@ -2547,11 +2507,11 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 			if (len > CHUNK) {
 				std::stringstream source_stream(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
 				source_stream.write(data, len);
-				ret = inflate->f_write(source_stream, do_flush);
+				ret = inflate->f_write(source_stream);
 				source_stream.clear(); std::stringstream().swap(source_stream);
 			}
 			else {
-				ret = inflate->f_write(data, do_flush);
+				ret = inflate->f_write(data);
 			}
 			str.clear();
 			if (ret == FALSE) {
@@ -2563,7 +2523,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 				return;
 			}
 			args.GetReturnValue().Set(v8::Number::New(isolate, (double)ret));
-			}));
+		}));
 		inflate_prototype->Set(isolate, "fs_flush", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 			v8::Isolate* isolate = args.GetIsolate();
 			gzip::gzip_inflate* inflate = sow_web_jsx::unwrap<gzip::gzip_inflate>(args);
@@ -2577,12 +2537,12 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 				return;
 			}
 
-			}));
+		}));
 		inflate_prototype->Set(isolate, "fs_close_file", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 			v8::Isolate* isolate = args.GetIsolate();
 			gzip::gzip_inflate* inflate = sow_web_jsx::unwrap<gzip::gzip_inflate>(args);
 			inflate->f_close_file();
-			}));
+		}));
 		//[/File Write]
 		inflate_prototype->Set(isolate, "release", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 			gzip::gzip_inflate* inflate = sow_web_jsx::unwrap<gzip::gzip_inflate>(args);
@@ -2590,7 +2550,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 				delete inflate; inflate = NULL;
 				args.Holder()->SetAlignedPointerInInternalField(0, nullptr);
 			}
-			}));
+		}));
 		//[/gzip_inflate]
 		gzip_object->Set(isolate, "compress", tpl);
 		gzip_object->Set(isolate, "decompress", inflate_tpl);
@@ -2682,6 +2642,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 	gzip_object->Set(isolate, "Z_BEST_SPEED", v8::Number::New(isolate, (double)Z_BEST_SPEED));
 	gzip_object->Set(isolate, "Z_BEST_COMPRESSION", v8::Number::New(isolate, (double)Z_BEST_COMPRESSION));
 	gzip_object->Set(isolate, "Z_DEFAULT_COMPRESSION", v8::Number::New(isolate, (double)Z_DEFAULT_COMPRESSION));
+	gzip_object->Set(isolate, "MAX_WBITS", v8::Number::New(isolate, (double)MAX_WBITS));
 	gzip_object->Set(isolate, "ZLIB_VERSION", sow_web_jsx::v8_str(isolate, ZLIB_VERSION));
 	ctx->Set(isolate, "zlib", gzip_object);
 }
@@ -2699,7 +2660,10 @@ public:
 	int flush(_out_stream& dest);
 	int has_error();
 	const char* get_last_error();
+	void set_mood_gzip();
+	int is_gzip();
 private:
+	int _is_gzip;
 	int _is_flush;
 	int _is_error;
 	char* _internal_error;
@@ -2708,7 +2672,7 @@ private:
 };
 std_out::std_out() {
 	_is_flush = FALSE; _is_error = FALSE;
-	_internal_error = new char;
+	_internal_error = new char; _is_gzip = FALSE;
 }
 std_out::~std_out() {
 	this->clear();
@@ -2721,6 +2685,12 @@ const char* std_out::get_last_error() {
 		return const_cast<const char*>(_internal_error);
 	}
 	return "No Error Found!!!";
+}
+void std_out::set_mood_gzip(){
+	_is_gzip = TRUE;
+}
+int std_out::is_gzip(){
+	return _is_gzip;
 }
 void std_out::clear() {
 	if (_is_flush == TRUE)return;
@@ -2843,8 +2813,24 @@ void stdout_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx) {
 		if (is_gzip == FALSE) {
 			cout->write(std::cout, _body_stream, FALSE);
 		}
+		else {
+			cout->set_mood_gzip();
+		}
 		__clear_cache(TRUE, FALSE);
 		fflush(stdout);
+	}));
+	prototype->Set(isolate, "write_gzip_header", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		v8::Isolate* isolate = args.GetIsolate();
+		if (_is_flush == false) {
+			throw_js_error(isolate, "Headers did not flushed yet...");
+			return;
+		}
+		std_out* cout = sow_web_jsx::unwrap<std_out>(args);
+		if (cout->is_gzip() == FALSE) {
+			throw_js_error(isolate, "This is not gzip mood...");
+			return;
+		}
+		gzip::write_magic_header(std::cout);
 	}));
 	prototype->Set(isolate, "write", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* isolate = args.GetIsolate();
