@@ -37,7 +37,7 @@
 #if !defined(SET_BINARY_MODE)
 #if defined(__CYGWIN__)
 #define SET_BINARY_MODE(file) setmode(fileno(my_stdio_stream), O_BINARY)
-#elif defined(_WIN32) || defined(MSDOS) || defined(OS2)
+#else
 #  define SET_BINARY_MODE(file) _setmode(_fileno(file), _O_BINARY)
 #endif//!__CYGWIN__
 #endif//!SET_BINARY_MODE
@@ -101,6 +101,15 @@ namespace gzip {
 		delete[]dest;
 	}
 	void free_zstream(z_stream* strm);
+	template<class _stream>
+	size_t get_size_of_stream(_stream& _strm) {
+		_strm.seekg(0, std::ios::end);//Go to end of stream
+		std::streamoff length = _strm.tellg();
+		_strm.seekg(0, std::ios::beg);//Back to begain of stream
+		return (size_t)length;
+	}
+	int deflate_file(const std::string input_path, const std::string output_path, int level, std::string&error);
+	int inflate_file(const std::string input_path, const std::string output_path, std::string& error);
 	template<class _out_stream>
 	int deflate_stream(std::stringstream&source, _out_stream&dest, int level = Z_BEST_SPEED) {
 		//6:08 AM 1/17/2019
@@ -119,10 +128,8 @@ namespace gzip {
 			free_zstream(strm);
 			return ret;
 		}
-		source.seekg(0, std::ios::end);//Go to end of stream
-		std::streamoff totalSize = source.tellg();
+		size_t totalSize = get_size_of_stream(source);
 		std::streamoff utotalSize = totalSize;
-		source.seekg(0, std::ios::beg);//Back to begain of stream
 		int write_len = 0;
 		//bool is_first = true;
 		std::streamsize n;
@@ -440,8 +447,8 @@ namespace gzip {
 				case Z_MEM_ERROR:
 					/* Free memory */
 					delete[]out;
-					return panic(std::to_string(_total_size).append(_strm->msg).c_str(), TRUE);
-					//return panic(_strm->msg);
+					//return panic(std::to_string(_total_size).append(_strm->msg).c_str(), TRUE);
+					return panic(_strm->msg);
 				}
 			}
 			have = chunk - _strm->avail_out;
