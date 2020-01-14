@@ -53,6 +53,9 @@
 #include "encryption.h"
 #endif//!_encryption_h
 #endif//__client_build
+#if !defined(_bitmap_h)
+#include "bitmap.h"
+#endif//!_bitmap_h
 using namespace sow_web_jsx;
 /*[Help]*/
 std::string* _root_dir = NULL;
@@ -2065,17 +2068,17 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> 
 			}
 
 			native_string str(isolate, args[0]);
-			const char* data = str.c_str();
+			//const char* data = str.c_str();
 			gzip::gzip_deflate* deflate = sow_web_jsx::unwrap<gzip::gzip_deflate>(args);
-			size_t ret = 0; size_t len = strlen(data);
+			size_t ret = 0; size_t len = str.size();
 			if (len > CHUNK) {
 				std::stringstream source_stream(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
-				source_stream.write(data, len);
+				source_stream.write(str.c_str(), len);
 				ret = deflate->write(std::cout, source_stream, do_flush, FALSE);
 				source_stream.clear(); std::stringstream().swap(source_stream);
 			}
 			else {
-				ret = deflate->write(std::cout, data, do_flush);
+				ret = deflate->write(std::cout, str.c_str(), do_flush);
 			}
 			str.clear();
 			if (ret == FALSE) {
@@ -2850,7 +2853,7 @@ void stdout_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx) {
 			throw_js_error(isolate, "Stream already flashed...");
 			return;
 		}
-		if (ret == std::string::npos || ret < 0) {
+		if (is_error_code(ret) == TRUE) {
 			throw_js_error(isolate, cout->get_last_error());
 			return;
 		}
@@ -2901,6 +2904,354 @@ void stdout_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx) {
 		}
 	}));
 	ctx->Set(isolate, "stdout", tpl);
+}
+int v8_object_get_number(v8::Isolate* isolate, v8::Local<v8::Context>ctx, v8::Local<v8::Object>obj, const char* prop) {
+	v8::MaybeLocal<v8::Value> mval;
+	mval = obj->Get(ctx, sow_web_jsx::v8_str(isolate, prop));
+	if (mval.IsEmpty()) {
+		throw_js_error(isolate, "Value should be number...");
+		return -500;
+	}
+	v8::Local<v8::Value> val = mval.ToLocalChecked();
+	if (!val->IsNumber()) {
+		throw_js_error(isolate, "Value should be number...");
+		return -500;
+	}
+	return val->Int32Value(ctx).FromMaybe(0);
+}
+void bitmap_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx) {
+	v8::Local<v8::FunctionTemplate> tpl = v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		v8::Isolate* isolate = args.GetIsolate();
+		if (!args.IsConstructCall()) {
+			throw_js_error(isolate, "Cannot call constructor as function!!!");
+			return;
+		}
+		bitmap* bmp = NULL;
+		if (args[0]->IsString()) {
+			native_string utf_str(isolate, args[0]);
+			std::string* abs_path = new std::string();
+			abs_path->append(_root_dir->c_str());
+			sow_web_jsx::get_server_map_path(utf_str.c_str(), *abs_path);
+
+			bmp = new bitmap(abs_path->c_str());
+			utf_str.clear(); abs_path->clear(); delete abs_path;
+		}
+		else {
+			bmp = new bitmap();
+		}
+		v8::Local<v8::Object> obj = args.This();
+		obj->SetInternalField(0, v8::External::New(isolate, bmp));
+		v8::Persistent<v8::Object, v8::CopyablePersistentTraits<v8::Object>> pobj(isolate, obj);
+		pobj.SetWeak<bitmap*>(&bmp, [](const v8::WeakCallbackInfo<bitmap*>& data) {
+			delete[] data.GetParameter();
+		}, v8::WeakCallbackType::kParameter);
+	});
+	tpl->SetClassName(sow_web_jsx::v8_str(isolate, "bitmap"));
+	tpl->InstanceTemplate()->SetInternalFieldCount(1);
+	v8::Local<v8::ObjectTemplate> prototype = tpl->PrototypeTemplate();
+	prototype->Set(isolate, "release", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		bitmap* bmp = sow_web_jsx::unwrap<bitmap>(args);
+		if (bmp == NULL)return;
+		bmp->free_memory();
+		delete bmp; bmp = NULL;
+		args.Holder()->SetAlignedPointerInInternalField(0, nullptr);
+	}));
+	prototype->Set(isolate, "reset", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		bitmap* bmp = sow_web_jsx::unwrap<bitmap>(args);
+		if (bmp == NULL) {
+			throw_js_error(args.GetIsolate(), "bitmap object disposed...");
+			return;
+		}
+		if (bmp->is_loaded() == FALSE) {
+			throw_js_error(args.GetIsolate(), "Image does not loaded yet...");
+			return;
+		}
+		bmp->reset_rgb();
+		args.GetReturnValue().Set(args.Holder());
+	}));
+	prototype->Set(isolate, "release_mem", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		bitmap* bmp = sow_web_jsx::unwrap<bitmap>(args);
+		if (bmp == NULL)return;
+		bmp->clear();
+		args.GetReturnValue().Set(args.Holder());
+	}));
+	prototype->Set(isolate, "dump_data", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		bitmap* bmp = sow_web_jsx::unwrap<bitmap>(args);
+		if (bmp == NULL) {
+			throw_js_error(args.GetIsolate(), "bitmap object disposed...");
+			return;
+		}
+		if (bmp->is_loaded() == FALSE) {
+			throw_js_error(args.GetIsolate(), "Image does not loaded yet...");
+			return;
+		}
+		bmp->dump_data();
+		args.GetReturnValue().Set(args.Holder());
+	}));
+	prototype->Set(isolate, "load", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		v8::Isolate* isolate = args.GetIsolate();
+		if (!args[0]->IsString()) {
+			throw_js_error(isolate, "File Path Required required....");
+			return;
+		}
+		bitmap* bmp = sow_web_jsx::unwrap<bitmap>(args);
+		if (bmp == NULL) {
+			throw_js_error(isolate, "bitmap object disposed...");
+			return;
+		}
+		native_string utf_abs_path_str(isolate, args[0]);
+		std::string* abs_path = new std::string();
+		abs_path->append(_root_dir->c_str());
+		sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
+		int ret = bmp->load(abs_path->c_str());
+		abs_path->clear(); delete abs_path; utf_abs_path_str.clear();
+		if (is_error_code(ret) == TRUE) {
+			throw_js_error(isolate, bmp->get_last_error());
+			return;
+		}
+		args.GetReturnValue().Set(v8::Integer::New(isolate, ret));
+	}));
+	prototype->Set(isolate, "to_base64", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		
+		bitmap* bmp = sow_web_jsx::unwrap<bitmap>(args);
+		if (bmp == NULL) {
+			throw_js_error(args.GetIsolate(), "bitmap object disposed...");
+			return;
+		}
+		if (bmp->is_loaded() == FALSE) {
+			throw_js_error(args.GetIsolate(), "Image does not loaded yet...");
+			return;
+		}
+		std::string* out = new std::string();
+		int ret = bmp->to_base64(*out);
+		if (is_error_code(ret) == TRUE) {
+			throw_js_error(args.GetIsolate(), "Unable to convert base64 image...");
+		}
+		else {
+			args.GetReturnValue().Set(sow_web_jsx::v8_str(args.GetIsolate(), out->c_str()));
+		}
+		
+		out->clear(); delete out;
+	}));
+	prototype->Set(isolate, "load_from_base64", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		v8::Isolate* isolate = args.GetIsolate();
+		if (!args[0]->IsString()) {
+			throw_js_error(isolate, "base64 Data required....");
+			return;
+		}
+		bitmap* bmp = sow_web_jsx::unwrap<bitmap>(args);
+		if (bmp == NULL) {
+			throw_js_error(isolate, "bitmap object disposed...");
+			return;
+		}
+		native_string utf_base64(isolate, args[0]);
+		int ret = bmp->from_base64(utf_base64.c_str());
+		utf_base64.clear();
+		if (is_error_code(ret) == TRUE) {
+			throw_js_error(isolate, bmp->get_last_error());
+			return;
+		}
+		args.GetReturnValue().Set(v8::Integer::New(isolate, ret));
+	}));
+	prototype->Set(isolate, "save", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		v8::Isolate* isolate = args.GetIsolate();
+		if (!args[0]->IsString()) {
+			throw_js_error(isolate, "File Path required....");
+			return;
+		}
+		bitmap* bmp = sow_web_jsx::unwrap<bitmap>(args);
+		if (bmp == NULL) {
+			throw_js_error(isolate, "bitmap object disposed...");
+			return;
+		}
+		if (bmp->is_loaded() == FALSE) {
+			throw_js_error(isolate, "Image does not loaded yet...");
+			return;
+		}
+		native_string utf_abs_path_str(isolate, args[0]);
+		std::string* abs_path = new std::string();
+		abs_path->append(_root_dir->c_str());
+		sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
+		int ret = bmp->save(abs_path->c_str());
+		abs_path->clear(); delete abs_path; utf_abs_path_str.clear();
+		if (is_error_code(ret) == TRUE) {
+			throw_js_error(isolate, bmp->get_last_error());
+			return;
+		}
+		args.GetReturnValue().Set(v8::Integer::New(isolate, ret));
+	}));
+	prototype->Set(isolate, "get_width", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		bitmap* bmp = sow_web_jsx::unwrap<bitmap>(args);
+		v8::Isolate* isolate = args.GetIsolate();
+		if (bmp == NULL) {
+			throw_js_error(isolate, "bitmap object disposed...");
+			return;
+		}
+		if (bmp->is_loaded() == FALSE) {
+			throw_js_error(isolate, "Image does not loaded yet...");
+			return;
+		}
+		uint32_t width = bmp->get_width();
+		args.GetReturnValue().Set(v8::Integer::New(isolate, static_cast<int>(width)));
+	}));
+	prototype->Set(isolate, "get_height", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		bitmap* bmp = sow_web_jsx::unwrap<bitmap>(args);
+		v8::Isolate* isolate = args.GetIsolate();
+		if (bmp == NULL) {
+			throw_js_error(isolate, "bitmap object disposed...");
+			return;
+		}
+		if (bmp->is_loaded() == FALSE) {
+			throw_js_error(isolate, "Image does not loaded yet...");
+			return;
+		}
+		uint32_t height = bmp->get_height();
+		args.GetReturnValue().Set(v8::Integer::New(isolate, static_cast<int>(height)));
+	}));
+	prototype->Set(isolate, "get_pixel", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		bitmap* bmp = sow_web_jsx::unwrap<bitmap>(args);
+		v8::Isolate* isolate = args.GetIsolate();
+		if (bmp == NULL) {
+			throw_js_error(isolate, "bitmap object disposed...");
+			return;
+		}
+		if (bmp->is_loaded() == FALSE) {
+			throw_js_error(isolate, bmp->get_last_error());
+			return;
+		}
+		if (args.Length() < 2) {
+			throw_js_error(isolate, "x y required...");
+			return;
+		}
+		if (!args[0]->IsNumber() || !args[1]->IsNumber()) {
+			throw_js_error(isolate, "x y should be number...");
+			return;
+		}
+		v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
+		int x = args[0]->Int32Value(ctx).FromMaybe(0);
+		int y = args[1]->Int32Value(ctx).FromMaybe(0);
+		rgb32* pixel = bmp->get_pixel(static_cast<unsigned int>(x), static_cast<unsigned int>(y));
+		v8::Handle<v8::Object> v8_result = v8::Object::New(isolate);
+		v8_result->Set(ctx, sow_web_jsx::v8_str(isolate, "r"), v8::Integer::New(isolate, static_cast<int>(pixel->r)));
+		v8_result->Set(ctx, sow_web_jsx::v8_str(isolate, "g"), v8::Integer::New(isolate, static_cast<int>(pixel->g)));
+		v8_result->Set(ctx, sow_web_jsx::v8_str(isolate, "b"), v8::Integer::New(isolate, static_cast<int>(pixel->b)));
+		v8_result->Set(ctx, sow_web_jsx::v8_str(isolate, "a"), v8::Integer::New(isolate, static_cast<int>(pixel->a)));
+		args.GetReturnValue().Set(v8_result); v8_result.Clear();
+	}));
+	prototype->Set(isolate, "resize", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		bitmap* bmp = sow_web_jsx::unwrap<bitmap>(args);
+		v8::Isolate* isolate = args.GetIsolate();
+		if (bmp == NULL) {
+			throw_js_error(isolate, "bitmap object disposed...");
+			return;
+		}
+		if (bmp->is_loaded() == FALSE) {
+			throw_js_error(isolate, bmp->get_last_error());
+			return;
+		}
+		if (args.Length() < 2) {
+			throw_js_error(isolate, "Height and Width required...");
+			return;
+		}
+		if (!args[0]->IsNumber()) {
+			throw_js_error(isolate, "Height required...");
+			return;
+		}
+		if (!args[1]->IsNumber()) {
+			throw_js_error(isolate, "Width required...");
+			return;
+		}
+		v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
+		int width = args[0]->Int32Value(ctx).FromMaybe(0);
+		int height = args[1]->Int32Value(ctx).FromMaybe(0);
+		int ret = bmp->resize(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+		if (is_error_code(ret) == TRUE) {
+			throw_js_error(isolate, bmp->get_last_error());
+		}
+		else {
+			args.GetReturnValue().Set(args.Holder());
+		}
+	}));
+	prototype->Set(isolate, "create_canvas", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		bitmap* bmp = sow_web_jsx::unwrap<bitmap>(args);
+		v8::Isolate* isolate = args.GetIsolate();
+		if (bmp == NULL) {
+			throw_js_error(isolate, "bitmap object disposed...");
+			return;
+		}
+		if (args.Length() < 2) {
+			throw_js_error(isolate, "Height and Width required...");
+			return;
+		}
+		if (!args[0]->IsNumber()) {
+			throw_js_error(isolate, "Height required...");
+			return;
+		}
+		if (!args[1]->IsNumber()) {
+			throw_js_error(isolate, "Width required...");
+			return;
+		}
+		v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
+		int width = args[0]->Int32Value(ctx).FromMaybe(0);
+		int height = args[1]->Int32Value(ctx).FromMaybe(0);
+		int ret = bmp->create_canvas(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+		if (is_error_code(ret) == TRUE) {
+			throw_js_error(isolate, bmp->get_last_error());
+		}
+		else {
+			args.GetReturnValue().Set(args.Holder());
+		}
+	}));
+	prototype->Set(isolate, "set_pixel", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		bitmap* bmp = sow_web_jsx::unwrap<bitmap>(args);
+		v8::Isolate* isolate = args.GetIsolate();
+		if (bmp == NULL) {
+			throw_js_error(isolate, "bitmap object disposed...");
+			return;
+		}
+		if (bmp->is_loaded() == FALSE) {
+			throw_js_error(isolate, bmp->get_last_error());
+			return;
+		}
+		if (args.Length() < 3) {
+			throw_js_error(isolate, "rgba and x y required...");
+			return;
+		}
+		if (!args[0]->IsObject()) {
+			throw_js_error(isolate, "rgba should be object...");
+			return;
+		}
+		if (!args[1]->IsNumber() || !args[2]->IsNumber()) {
+			throw_js_error(isolate, "x y should be number...");
+			return;
+		}
+		v8::Local<v8::Object> rgba = v8::Handle<v8::Object>::Cast(args[0]);
+		v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
+		rgb32* pixel = new rgb32();
+		int val = v8_object_get_number(isolate, ctx, rgba, "r");
+		if (val == -500) { delete pixel; return; }
+		pixel->r = (uint8_t)val;
+		val = v8_object_get_number(isolate, ctx, rgba, "g");
+		if (val == -500) { delete pixel; return; }
+		pixel->g = (uint8_t)val;
+		val = v8_object_get_number(isolate, ctx, rgba, "b");
+		if (val == -500) { delete pixel; return; }
+		pixel->b = (uint8_t)val;
+		val = v8_object_get_number(isolate, ctx, rgba, "a");
+		if (val == -500) { delete pixel; return; }
+		pixel->a = (uint8_t)val;
+		int x = args[1]->Int32Value(ctx).FromMaybe(0);
+		int y = args[2]->Int32Value(ctx).FromMaybe(0);
+		int ret = bmp->set_pixel(pixel, static_cast<unsigned int>(x), static_cast<unsigned int>(y));
+		//delete pixel;
+		if (is_error_code(ret) == TRUE) {
+			throw_js_error(isolate, bmp->get_last_error());
+		}
+		else {
+			args.GetReturnValue().Set(args.Holder());
+		}
+	}));
+	ctx->Set(isolate, "bitmap", tpl);
 }
 void SetEngineInformation(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> v8_global) {
 	v8::Local<v8::ObjectTemplate> js_engine_object = v8::ObjectTemplate::New(isolate);
@@ -3137,6 +3488,9 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_context(v8::Isolate* iso
 	/*[stdout]*/
 	stdout_export(isolate, _v8_global);
 	/*[/stdout]*/
+	/*[bitmap]*/
+	bitmap_export(isolate, _v8_global);
+	/*[/bitmap]*/
 	SetEngineInformation(isolate, _v8_global);
 	_headers = new std::map<std::string, std::string>();
 	_cookies = new std::vector<std::string>();
@@ -3292,6 +3646,9 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_console_context(v8::Isol
 	/*[gzip_compressor]*/
 	gzip_compressor_export(isolate, v8_global);
 	/*[/gzip_compressor]*/
+	/*[bitmap]*/
+	bitmap_export(isolate, v8_global);
+	/*[/bitmap]*/
 	SetEngineInformation(isolate, v8_global);
 	return v8_global;
 }
@@ -3377,6 +3734,9 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::create_v8_context_object(v8:
 	/*[gzip_compressor]*/
 	gzip_compressor_export(isolate, v8_global);
 	/*[/gzip_compressor]*/
+	/*[bitmap]*/
+	bitmap_export(isolate, v8_global);
+	/*[/bitmap]*/
 	SetEngineInformation(isolate, v8_global);
 	return v8_global;
 }
