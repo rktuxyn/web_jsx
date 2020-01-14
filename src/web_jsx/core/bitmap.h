@@ -103,7 +103,7 @@ public:
 	uint32_t get_width() const;
 	uint32_t get_height() const;
 	int has_error();
-	int is_loaded();
+	int is_loaded() const;
 	const char* get_last_error();
 	void free_memory();
 	void reset_rgb();

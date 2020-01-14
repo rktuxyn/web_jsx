@@ -207,6 +207,7 @@ int bitmap::resize(const uint32_t new_width, const uint32_t new_height){
 }
 //Assignment operator creates a deep copy of the source image.
 bitmap& bitmap::operator = (const bitmap& other){
+	if (other.is_loaded() == FALSE)return *this;
 	this->free_memory();
 	_header = new bitmap_header;
 	memcpy(_header, other.header(), sizeof(bitmap_header));
@@ -269,7 +270,7 @@ uint32_t bitmap::get_height() const {
 int bitmap::has_error(){
 	return _is_error == TRUE || _is_error < 0 ? TRUE : FALSE;
 }
-int bitmap::is_loaded(){
+int bitmap::is_loaded() const {
 	return _is_loaded;
 }
 const char* bitmap::get_last_error() {
