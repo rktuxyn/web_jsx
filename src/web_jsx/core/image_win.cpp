@@ -55,19 +55,13 @@ enum image_format {
 	UNKNOWN = -2
 };
 typedef struct {
-	uint8_t r, g, b, a;
+	uint8_t a, r, g, b;
 } rgb32;
 enum _mood {
 	UNKNOWN_ = 0,
 	READ = 1,
 	WRITE = 2
 };
-//wchar_t* ccr2ws(const char* s) {
-//	size_t len = strlen(s);
-//	wchar_t* buf = new wchar_t[len + sizeof(wchar_t)]();
-//	mbsrtowcs(buf, &s, len, NULL);
-//	return buf;
-//}
 void to_lower(std::string& str) {
 	std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) {
 		return std::tolower(c);
@@ -153,13 +147,11 @@ private:
 	UINT _width;
 	byte* _pixels;
 	Gdiplus::BitmapData* _bitmap_data;
-	//Gdiplus::Image* _image;
 	Gdiplus::Bitmap* _bit_map;
 	image_format _format;
 	_mood _task_mood;
 	int _gd_is_init;
 	ULONG_PTR _gdiplus_token;
-	//ULONG_PTR _gdiplus_token_ext;
 	int _is_loaded;
 	int _errc;
 	char* _internal_error;
@@ -178,7 +170,6 @@ private:
 		Gdiplus::Status  stat;
 		if (_gd_is_init == TRUE)return _gd_is_init;
 		stat = GdiplusStartup(&_gdiplus_token, &gdiplusStartupInput, NULL);
-		//ULONG_PTR gdiplusToken;
 		if (stat == Gdiplus::Ok) {
 			_gd_is_init = TRUE;
 			return TRUE;
@@ -212,7 +203,6 @@ public:
 		return;
 	}
 	__forceinline int load(const char* path) {
-		//this->free_memory(); this->gdiplus_shutdown(_gdiplus_token);
 		this->dispose();
 		if (__file_exists(path) == false) {
 			return panic("ERROR: File not found...", TRUE);
@@ -230,32 +220,54 @@ public:
 		return TRUE;
 	}
 	__forceinline int load_from_base64(const char* data, image_format format = image_format::BMP) {
-		this->dispose();
-		std::string* out = new std::string();
-		if (sow_web_jsx::base64::to_encode_str(data, *out) == false) {
-			delete out; out = NULL;
-			return this->panic("Please convert base64 Image. Please try again.", TRUE);
-		}
-		int ret = this->gd_init();
-		if (is_error_code(ret) == TRUE) {
-			delete out; out = NULL;
-			return ret;
-		}
-		DWORD imageSize = (DWORD)out->length();
-		HGLOBAL hMem = ::GlobalAlloc(GMEM_MOVEABLE, imageSize);
-		LPVOID pImage = ::GlobalLock(hMem);
-		memcpy(pImage, out->c_str(), imageSize);
-		IStream* pStream = NULL;
-		HRESULT hrs = ::CreateStreamOnHGlobal(hMem, FALSE, &pStream);
-		if (hrs < 0) {
-			delete out; out = NULL;
-			return this->panic("Unable to create memmory stream.", TRUE);
-		}
-		_bit_map = new Gdiplus::Bitmap(pStream);
-		delete out; out = NULL;
-		delete pStream; pStream = NULL;
-		_is_loaded = TRUE; _format = format;
-		return ret;
+		return this->panic("Not implimented yet.", TRUE);
+		//this->dispose();
+		//std::string* out = new std::string();
+		//if (sow_web_jsx::base64::to_encode_str(data, *out) == false) {
+		//	delete out; out = NULL;
+		//	return this->panic("Please convert base64 Image. Please try again.", TRUE);
+		//}
+		//int ret = this->gd_init();
+		//if (is_error_code(ret) == TRUE) {
+		//	delete out; out = NULL;
+		//	return ret;
+		//}
+		//DWORD imageSize = (DWORD)out->length();
+		//HGLOBAL hMem = ::GlobalAlloc(GMEM_MOVEABLE, imageSize);
+		//HGLOBAL pImage = ::GlobalLock(hMem);
+		//if (pImage != NULL) {
+		//	memcpy(pImage, out->c_str(), imageSize);
+		//	IStream* pStream = NULL;
+		//	HRESULT hrs = ::CreateStreamOnHGlobal(hMem, FALSE, &pStream);
+		//	if (hrs == S_OK) {
+		//		//Gdiplus::Rect rect(0, 0, _width, _height);
+		//		_bit_map = Gdiplus::Bitmap::FromStream(pStream);
+		//		if (_bit_map != NULL) {
+		//			Gdiplus::Status  stat = _bit_map->GetLastStatus();
+		//			if (stat == Gdiplus::Ok) {
+		//				_height = _bit_map->GetHeight();
+		//				_width = _bit_map->GetWidth();
+		//				_is_loaded = TRUE; _format = format;
+		//			}
+		//			else {
+		//				std::string err("Unable to create Bitmap from stream. Error reason:");
+		//				err.append(get_gdiplus_error_reason(stat));
+		//				ret = this->panic(err.c_str(), TRUE);
+		//				delete _bit_map;
+		//				_bit_map = NULL;
+		//			}
+		//		}
+		//	}
+		//	else {
+		//		ret = this->panic("Unable to create memmory stream.", TRUE);
+		//	}
+		//	pStream->Release();
+		//	//delete pStream; pStream = NULL;
+		//}
+		//delete out; out = NULL;
+		//::GlobalUnlock(hMem);
+		//::GlobalFree(hMem);
+		//return ret;
 	}
 	__forceinline int create_canvas(const INT width, const INT height) {
 		this->dispose();
@@ -295,10 +307,6 @@ public:
 	__forceinline void unlock_bits() {
 		if (_bit_map == NULL)return;
 		if (_bitmap_data == NULL)return;
-		/*if (_task_mood == _mood::WRITE) {
-			::DeleteObject(_bitmap_data->Scan0);
-			memcpy(_bitmap_data->Scan0, _pixels, sizeof(byte));
-		}*/
 		_bit_map->UnlockBits(_bitmap_data);
 		::DeleteObject(_bitmap_data);
 		_bitmap_data = NULL;
@@ -325,19 +333,13 @@ public:
 		this->unlock_bits();
 		_bitmap_data = new Gdiplus::BitmapData;
 		Gdiplus::Rect rect(0, 0, _width, _height);
-		//Gdiplus::ImageLockModeRead
-		//Gdiplus::ImageLockModeWrite
 		// Lock a 5x3 rectangular portion of the bitmap for reading.
 		_bit_map->LockBits(&rect, lock_mode, PixelFormat32bppARGB, _bitmap_data);
-		//std::cout << "_bit_map->LockBits" << std::endl;
 		if (_pixels != NULL) {
 			::DeleteObject(_pixels);
 			_pixels = NULL;
 		}
-		//rgb32
-		//Problem..... !TODO
-		_pixels = reinterpret_cast<byte*>(_bitmap_data->Scan0);//(byte*)_bitmap_data->Scan0;
-		//std::cout << "(byte*)_bitmap_data->Scan0" << std::endl;
+		_pixels = reinterpret_cast<byte*>(_bitmap_data->Scan0);
 		return TRUE;
 	}
 	__forceinline rgb32* get_pixel(INT x, INT y) const {
@@ -406,16 +408,15 @@ public:
 	}
 	__forceinline int save_as(const char* path, const image_format format) {
 		if (_is_loaded == FALSE)return this->panic("Please Load an Image than try again.", TRUE);
-		int ret;/* = this->gd_init();
-		if (is_error_code(ret) == TRUE)return ret*/;
+		const char* cmime_type = get_mime_type(format);
+		if (cmime_type == NULL) return this->panic("Unsupported Image format.\nSupported .bmp, .png, .jpeg, .jpg, .gif, .tiff, .tif", TRUE);
 		CLSID encoder_clsid;
-		wchar_t* mime_type = ccr2ws(get_mime_type(format));
-		ret = get_encoder_clsid(const_cast<const wchar_t*>(mime_type), &encoder_clsid);
+		wchar_t* mime_type = ccr2ws(cmime_type);
+		int ret = get_encoder_clsid(const_cast<const wchar_t*>(mime_type), &encoder_clsid);
 		delete[]mime_type;
-		//ret = get_encoder_clsid(format, _encoder_clsid);
 		if (ret < 0)return this->panic("Unable to create mime type.", TRUE);
 		wchar_t* wpath = ccr2ws(path);
-		Gdiplus::Status stat;// = Gdiplus::Status::Aborted;
+		Gdiplus::Status stat;
 		Gdiplus::EncoderParameters* encoder_parameters = NULL;
 		if (format == image_format::JPEG || format == image_format::JPG) {
 			encoder_parameters = new Gdiplus::EncoderParameters();
@@ -439,12 +440,14 @@ public:
 	__forceinline int to_base64(std::string& out, image_format format = image_format::BMP) {
 		if (_is_loaded == FALSE) return this->panic("Please Load an Image than try again.", TRUE);
 		if (_bit_map == NULL) return this->panic("Please Load an Image than try again.", TRUE);
+		const char* cmime_type = get_mime_type(format);
+		if (cmime_type == NULL) return this->panic("Unsupported Image format.\nSupported .bmp, .png, .jpeg, .jpg, .gif, .tiff, .tif", TRUE);
 		IStream* oStream = NULL;
 		HRESULT hrs = CreateStreamOnHGlobal(NULL, TRUE, (LPSTREAM*)& oStream);
 		if (hrs < 0)return this->panic("Unable to create memmory stream.", TRUE);
 		this->unlock_bits();
 		CLSID encoder_clsid;
-		wchar_t* mime_type = ccr2ws(get_mime_type(format));
+		wchar_t* mime_type = ccr2ws(cmime_type);
 		int ret = get_encoder_clsid(const_cast<const wchar_t*>(mime_type), &encoder_clsid);
 		delete[]mime_type;
 		if (ret < 0)return this->panic("Unable to create mime type.", TRUE);
@@ -484,11 +487,9 @@ public:
 			::DeleteObject(_bitmap_data); _bitmap_data = NULL;
 		}
 		if (_internal_error != NULL) {
-			//std::free(_internal_error);
 			delete[]_internal_error; _internal_error = NULL; _errc = FALSE;
 		}
 		if (_pixels != NULL) {
-			//delete[] _pixels; _pixels = NULL;
 			::DeleteObject(_pixels);
 		}
 		if (_bit_map != NULL) {
@@ -836,7 +837,6 @@ void image_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx){
 			throw_js_error(isolate, "Unable to set your request pixel...");
 		}
 		else {
-			//std::cout << "rgb(" << (int)pixel->b << "," << (int)pixel->g << "," << (int)pixel->r << ") " << std::endl;
 			args.GetReturnValue().Set(args.Holder());
 		}
 	}));
@@ -869,3 +869,4 @@ void image_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx){
 	ctx->Set(isolate, "Image", image_tpl);
 }
 #endif//!_WIN32||_WIN64
+//End 3:56 PM 1/18/2020
