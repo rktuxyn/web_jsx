@@ -217,7 +217,7 @@ let rs = smtp.sendMail( msg );
 /*{success:true|false, msg: reason}*/
 context.response.write( JSON.stringify( rs ) );
 ```
-Work with Image in #web_jsx
+Work with Image in #web_jsx (Supported: .bmp, .png, .jpeg, .jpg, .gif, .tiff, .tif)
 ```javascript
 function resize_to( source, dest ) {
     source.lock_bits(); dest.lock_bits( 2 );
