@@ -367,6 +367,7 @@ public:
 		if (other.is_loaded() == FALSE)return *this;
 		this->free_memory();
 		this->_bit_map = other.get_data();
+		_width = other.get_width(); _height = other.get_height();
 		this->_gdiplus_token = other.gdiplus_token();
 		_is_loaded = TRUE; _format = other.get_format();
 		return *this;
