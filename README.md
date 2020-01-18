@@ -217,6 +217,43 @@ let rs = smtp.sendMail( msg );
 /*{success:true|false, msg: reason}*/
 context.response.write( JSON.stringify( rs ) );
 ```
+Work with Image in #web_jsx
+```javascript
+function resize_to( source, dest ) {
+    source.lock_bits(); dest.lock_bits( 2 );
+    let swidth = source.get_width();
+    let sheight = source.get_height();
+    let width = dest.get_width();
+    let height = dest.get_height();
+    let scale_width = width / swidth, scale_height = height / sheight;
+    for ( let y = 0; y < height; y++ ) {
+        for ( let x = 0; x < width; x++ ) {
+            let tmp_pixel = source.get_pixel( parseInt( x / scale_width ), parseInt( y / scale_height ) );
+            dest.set_pixel( tmp_pixel, x, y );
+        }
+    }
+    source.unlock_bits(); dest.unlock_bits();
+    return;
+}
+let full_img = new Image();
+full_img.load( `${env.root_dir}test.bmp` );
+let width = full_img.get_width();
+let height = full_img.get_height();
+let thumb_img = new Image();
+thumb_img.create_canvas( width / 2, height / 2 );
+//resize to another Image object
+resize_to( full_img, thumb_img );
+//read base64 image data
+let base64_data = thumb_img.to_base64();
+//resize same Image object
+full_img.resize( width / 2, height / 2 );
+thumb_img.save( `${env.root_dir}test_thumb_t.png` );
+full_img.save( `${env.root_dir}test_thumb.jpg` );
+//Release all resource of thumb_img
+thumb_img.release();
+//Release all resource of full_img
+full_img.release();
+```
 OpenSSL EVP Symmetric Encryption and Decryption
 ```javascript
 let
