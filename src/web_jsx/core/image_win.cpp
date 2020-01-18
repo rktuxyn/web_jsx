@@ -62,6 +62,12 @@ enum _mood {
 	READ = 1,
 	WRITE = 2
 };
+//wchar_t* ccr2ws(const char* s) {
+//	size_t len = strlen(s);
+//	wchar_t* buf = new wchar_t[len + sizeof(wchar_t)]();
+//	mbsrtowcs(buf, &s, len, NULL);
+//	return buf;
+//}
 void to_lower(std::string& str) {
 	std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) {
 		return std::tolower(c);
@@ -147,11 +153,13 @@ private:
 	UINT _width;
 	byte* _pixels;
 	Gdiplus::BitmapData* _bitmap_data;
+	//Gdiplus::Image* _image;
 	Gdiplus::Bitmap* _bit_map;
 	image_format _format;
 	_mood _task_mood;
 	int _gd_is_init;
 	ULONG_PTR _gdiplus_token;
+	//ULONG_PTR _gdiplus_token_ext;
 	int _is_loaded;
 	int _errc;
 	char* _internal_error;
@@ -170,6 +178,7 @@ private:
 		Gdiplus::Status  stat;
 		if (_gd_is_init == TRUE)return _gd_is_init;
 		stat = GdiplusStartup(&_gdiplus_token, &gdiplusStartupInput, NULL);
+		//ULONG_PTR gdiplusToken;
 		if (stat == Gdiplus::Ok) {
 			_gd_is_init = TRUE;
 			return TRUE;
@@ -203,6 +212,7 @@ public:
 		return;
 	}
 	__forceinline int load(const char* path) {
+		//this->free_memory(); this->gdiplus_shutdown(_gdiplus_token);
 		this->dispose();
 		if (__file_exists(path) == false) {
 			return panic("ERROR: File not found...", TRUE);
@@ -225,7 +235,7 @@ public:
 		//std::string* out = new std::string();
 		//if (sow_web_jsx::base64::to_encode_str(data, *out) == false) {
 		//	delete out; out = NULL;
-		//	return this->panic("Please convert base64 Image. Please try again.", TRUE);
+		//	return this->panic("Unablet to convert base64 data. Please try again.", TRUE);
 		//}
 		//int ret = this->gd_init();
 		//if (is_error_code(ret) == TRUE) {
@@ -307,6 +317,10 @@ public:
 	__forceinline void unlock_bits() {
 		if (_bit_map == NULL)return;
 		if (_bitmap_data == NULL)return;
+		/*if (_task_mood == _mood::WRITE) {
+			::DeleteObject(_bitmap_data->Scan0);
+			memcpy(_bitmap_data->Scan0, _pixels, sizeof(byte));
+		}*/
 		_bit_map->UnlockBits(_bitmap_data);
 		::DeleteObject(_bitmap_data);
 		_bitmap_data = NULL;
@@ -333,13 +347,19 @@ public:
 		this->unlock_bits();
 		_bitmap_data = new Gdiplus::BitmapData;
 		Gdiplus::Rect rect(0, 0, _width, _height);
+		//Gdiplus::ImageLockModeRead
+		//Gdiplus::ImageLockModeWrite
 		// Lock a 5x3 rectangular portion of the bitmap for reading.
 		_bit_map->LockBits(&rect, lock_mode, PixelFormat32bppARGB, _bitmap_data);
+		//std::cout << "_bit_map->LockBits" << std::endl;
 		if (_pixels != NULL) {
 			::DeleteObject(_pixels);
 			_pixels = NULL;
 		}
-		_pixels = reinterpret_cast<byte*>(_bitmap_data->Scan0);
+		//rgb32
+		//Problem..... !TODO
+		_pixels = reinterpret_cast<byte*>(_bitmap_data->Scan0);//(byte*)_bitmap_data->Scan0;
+		//std::cout << "(byte*)_bitmap_data->Scan0" << std::endl;
 		return TRUE;
 	}
 	__forceinline rgb32* get_pixel(INT x, INT y) const {
@@ -415,9 +435,10 @@ public:
 		wchar_t* mime_type = ccr2ws(cmime_type);
 		int ret = get_encoder_clsid(const_cast<const wchar_t*>(mime_type), &encoder_clsid);
 		delete[]mime_type;
+		//ret = get_encoder_clsid(format, _encoder_clsid);
 		if (ret < 0)return this->panic("Unable to create mime type.", TRUE);
 		wchar_t* wpath = ccr2ws(path);
-		Gdiplus::Status stat;
+		Gdiplus::Status stat;// = Gdiplus::Status::Aborted;
 		Gdiplus::EncoderParameters* encoder_parameters = NULL;
 		if (format == image_format::JPEG || format == image_format::JPG) {
 			encoder_parameters = new Gdiplus::EncoderParameters();
@@ -488,9 +509,11 @@ public:
 			::DeleteObject(_bitmap_data); _bitmap_data = NULL;
 		}
 		if (_internal_error != NULL) {
+			//std::free(_internal_error);
 			delete[]_internal_error; _internal_error = NULL; _errc = FALSE;
 		}
 		if (_pixels != NULL) {
+			//delete[] _pixels; _pixels = NULL;
 			::DeleteObject(_pixels);
 		}
 		if (_bit_map != NULL) {
@@ -838,6 +861,7 @@ void image_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx){
 			throw_js_error(isolate, "Unable to set your request pixel...");
 		}
 		else {
+			//std::cout << "rgb(" << (int)pixel->b << "," << (int)pixel->g << "," << (int)pixel->r << ") " << std::endl;
 			args.GetReturnValue().Set(args.Holder());
 		}
 	}));
