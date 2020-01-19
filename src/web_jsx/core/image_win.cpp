@@ -151,7 +151,6 @@ private:
 		this->gdiplus_shutdown();
 		Gdiplus::GdiplusStartupInput gdiplusStartupInput;
 		Gdiplus::Status  stat;
-		if (_gd_is_init == TRUE)return _gd_is_init;
 		stat = GdiplusStartup(&_gdiplus_token, &gdiplusStartupInput, NULL);
 		if (stat == Gdiplus::Ok) {
 			_gd_is_init = TRUE;
@@ -177,7 +176,6 @@ public:
 		this->free_memory(); this->gdiplus_shutdown();
 	}
 	__forceinline void gdiplus_shutdown() {
-		if (_gd_is_init == TRUE)return;
 		if (_gdiplus_token != NULL) {
 			Gdiplus::GdiplusShutdown(_gdiplus_token);
 			_gdiplus_token = NULL;
@@ -202,22 +200,14 @@ public:
 		_width = _bit_map->GetWidth(); _is_loaded = TRUE;
 		return TRUE;
 	}
-	__forceinline int load_from_base64(const char* data, image_format format = image_format::BMP) {
+	__forceinline int load_from_buff(char* buffer, ULONG size, image_format format = image_format::BMP) {
 		this->release_all();
-		std::string* out = new std::string();
-		if (sow_web_jsx::base64::to_decode_str(data, *out) == false) {
-			delete out; out = NULL;
-			return this->panic("Unablet to convert base64 data. Please try again.", TRUE);
-		}
 		int ret = this->gd_init();
-		if (is_error_code(ret) == TRUE) {
-			out->clear(); delete out; out = NULL;
-			return ret;
-		}
+		if (is_error_code(ret) == TRUE)return ret;
 		IStream* pStream = NULL;
-		if (::CreateStreamOnHGlobal(NULL, TRUE, &pStream) == S_OK) {
+		if (::CreateStreamOnHGlobal(NULL, TRUE, (LPSTREAM*)&pStream) == S_OK) {
 			ULONG ulBytesWrite;
-			if (pStream->Write(out->data(), static_cast<ULONG>(out->size()), NULL) == S_OK) {
+			if (pStream->Write(buffer, size, NULL) == S_OK) {
 				_bit_map = Gdiplus::Bitmap::FromStream(pStream);
 				if (_bit_map != NULL) {
 					Gdiplus::Status stat = _bit_map->GetLastStatus();
@@ -243,6 +233,15 @@ public:
 		else {
 			ret = this->panic("Unable to create memmory stream.", TRUE);
 		}
+		return ret;
+	}
+	__forceinline int load_from_base64(const char* data, image_format format = image_format::BMP) {
+		std::string* out = new std::string();
+		if (sow_web_jsx::base64::to_decode_str(data, *out) == false) {
+			delete out; out = NULL;
+			return this->panic("Unablet to decode base64 data. Please try again.", TRUE);
+		}
+		int ret = this->load_from_buff(out->data(), static_cast<ULONG>(out->size()), format);
 		out->clear(); delete out; out = NULL;
 		return ret;
 	}
@@ -266,8 +265,8 @@ public:
 		in->b = (uint8_t)(0xff);
 		in->a = (uint8_t)(0xff);
 		rgb32* out = reinterpret_cast<rgb32*>(_pixels);
-		for (INT i = 0; i < _height; ++i) {
-			for (INT j = 0; j < _width; ++j) {
+		for (UINT i = 0; i < _height; ++i) {
+			for (UINT j = 0; j < _width; ++j) {
 				out->b = in->b;
 				out->g = in->g;
 				out->r = in->r;
@@ -297,8 +296,8 @@ public:
 	__forceinline void dump_data() {
 		this->lock_bits(Gdiplus::ImageLockModeRead);
 		rgb32* out = reinterpret_cast<rgb32*>(_pixels);
-		for (INT i = 0; i < _height; ++i) {
-			for (INT j = 0; j < _width; ++j) {
+		for (UINT i = 0; i < _height; ++i) {
+			for (UINT j = 0; j < _width; ++j) {
 				std::cout << "rgb(" << (int)out->b << "," << (int)out->g << "," << (int)out->r << ") ";
 				++out;
 			}
@@ -415,14 +414,13 @@ public:
 		this->panic(err.c_str(), TRUE);
 		return _errc;
 	}
-	__forceinline int to_base64(std::string& out, image_format format = image_format::BMP) {
+	__forceinline int get_image_buff(std::string&out, image_format format = image_format::BMP) {
 		if (_is_loaded == FALSE) return this->panic("Please Load an Image than try again.", TRUE);
 		if (_bit_map == NULL) return this->panic("Please Load an Image than try again.", TRUE);
 		const char* cmime_type = get_mime_type(format);
 		if (cmime_type == NULL) return this->panic("Unsupported Image format.\nSupported .bmp, .png, .jpeg, .jpg, .gif, .tiff, .tif", TRUE);
 		IStream* oStream = NULL;
-		HRESULT hrs = CreateStreamOnHGlobal(NULL, TRUE, (LPSTREAM*)& oStream);
-		if (hrs < 0)return this->panic("Unable to create memmory stream.", TRUE);
+		if (::CreateStreamOnHGlobal(NULL, TRUE, (LPSTREAM*)& oStream) != S_OK)return this->panic("Unable to create memmory stream.", TRUE);
 		this->unlock_bits();
 		CLSID encoder_clsid;
 		wchar_t* mime_type = ccr2ws(cmime_type);
@@ -430,18 +428,25 @@ public:
 		delete[]mime_type;
 		if (ret < 0)return this->panic("Unable to create mime type.", TRUE);
 		_bit_map->Save(oStream, &encoder_clsid);
-		ULARGE_INTEGER ulnSize;
-		LARGE_INTEGER lnOffset;
+		ULARGE_INTEGER ulnSize; LARGE_INTEGER lnOffset;
 		lnOffset.QuadPart = 0;
 		oStream->Seek(lnOffset, STREAM_SEEK_END, &ulnSize);
 		oStream->Seek(lnOffset, STREAM_SEEK_SET, NULL);
 		char* pBuff = new char[(unsigned int)ulnSize.QuadPart];
 		ULONG ulBytesRead;
 		oStream->Read(pBuff, (ULONG)ulnSize.QuadPart, &ulBytesRead);
-		delete oStream; oStream = NULL;
-		std::string* data = new std::string(pBuff, ulBytesRead);
-		ret = sow_web_jsx::base64::to_encode_str(*data, out) == true ? TRUE : FALSE;
-		data->clear(); delete data; delete[]pBuff; pBuff = NULL;
+		oStream->Release();
+		out = std::string(pBuff, ulBytesRead);
+		delete[]pBuff; pBuff = NULL;
+		return TRUE;
+	}
+	__forceinline int to_base64(std::string& out, image_format format = image_format::BMP) {
+		std::string* data = new std::string();
+		int ret = this->get_image_buff(*data, format);
+		if (is_error_code(ret) == FALSE) {
+			ret = sow_web_jsx::base64::to_encode_str(*data, out) == true ? TRUE : FALSE;
+		}
+		data->clear(); delete data;
 		return ret;
 	}
 	__forceinline UINT get_width() const {
@@ -548,6 +553,26 @@ void image_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx){
 		img->release_all();
 		args.GetReturnValue().Set(args.Holder());
 	}));
+	prototype->Set(isolate, "get_data", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		image* img = sow_web_jsx::unwrap<image>(args);
+		if (img == NULL) {
+			throw_js_error(args.GetIsolate(), "Image object disposed...");
+			return;
+		}
+		if (img->is_loaded() == FALSE) {
+			throw_js_error(args.GetIsolate(), "Image does not loaded yet...");
+			return;
+		}
+		std::string* out = new std::string();
+		int ret = img->get_image_buff(*out);
+		if (is_error_code(ret) == TRUE) {
+			throw_js_error(args.GetIsolate(), img->get_last_error());
+		}
+		else {
+			args.GetReturnValue().Set(v8_str(args.GetIsolate(), out->c_str()));
+		}
+		out->clear(); delete out;
+	}));
 	prototype->Set(isolate, "to_base64", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		image* img = sow_web_jsx::unwrap<image>(args);
 		if (img == NULL) {
@@ -561,13 +586,34 @@ void image_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx){
 		std::string* out = new std::string();
 		int ret = img->to_base64(*out);
 		if (is_error_code(ret) == TRUE) {
-			throw_js_error(args.GetIsolate(), "Unable to convert base64 image...");
+			throw_js_error(args.GetIsolate(), img->get_last_error());
 		}
 		else {
 			args.GetReturnValue().Set(v8_str(args.GetIsolate(), out->c_str()));
 		}
 		
 		out->clear(); delete out;
+	}));
+	prototype->Set(isolate, "load_from_data", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		v8::Isolate* isolate = args.GetIsolate();
+		if (!args[0]->IsString()) {
+			throw_js_error(isolate, "base64 Data required....");
+			return;
+		}
+		image* img = sow_web_jsx::unwrap<image>(args);
+		if (img == NULL) {
+			throw_js_error(args.GetIsolate(), "Image object disposed...");
+			return;
+		}
+		native_string utf_base64(isolate, args[0]);
+		std::string* img_data = new std::string(utf_base64.c_str(), utf_base64.size());
+		int ret = img->load_from_buff(img_data->data(), static_cast<ULONG>(img_data->size()));
+		utf_base64.clear(); img_data->clear(); delete img_data;
+		if (is_error_code(ret) == TRUE) {
+			throw_js_error(isolate, img->get_last_error());
+			return;
+		}
+		args.GetReturnValue().Set(v8::Integer::New(isolate, ret));
 	}));
 	prototype->Set(isolate, "load_from_base64", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* isolate = args.GetIsolate();
