@@ -245,6 +245,8 @@ thumb_img.create_canvas( width / 2, height / 2 );
 resize_to( full_img, thumb_img );
 //read base64 image data
 let base64_data = thumb_img.to_base64();
+//Create image from base64 encoded image
+thumb_img.load_from_base64( base64_encoded_character );
 //resize same Image object
 full_img.resize( width / 2, height / 2 );
 thumb_img.save( `${env.root_dir}test_thumb_t.png` );
