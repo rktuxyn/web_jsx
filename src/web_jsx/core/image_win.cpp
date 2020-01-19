@@ -205,7 +205,7 @@ public:
 	__forceinline int load_from_base64(const char* data, image_format format = image_format::BMP) {
 		this->release_all();
 		std::string* out = new std::string();
-		if (sow_web_jsx::base64::to_encode_str(data, *out) == false) {
+		if (sow_web_jsx::base64::to_decode_str(data, *out) == false) {
 			delete out; out = NULL;
 			return this->panic("Unablet to convert base64 data. Please try again.", TRUE);
 		}
