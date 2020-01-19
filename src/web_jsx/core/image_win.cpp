@@ -9,6 +9,7 @@
 #include "image_win.h"
 #include "v8_util.h"
 #include "base64.h"
+#include <iostream>
 #include <string>
 #include <algorithm>
 #include <stdio.h>
@@ -81,9 +82,6 @@ const char* get_mime_type(image_format format) {
 	if (format == image_format::TIF)return "image/tiff";
 	return NULL;
 }
-#if !defined(_IOSTREAM_)
-#include <iostream>
-#endif // !_IOSTREAM_
 INT get_encoder_clsid(const WCHAR* format, CLSID* pClsid) {
 	UINT num, size;
 	Gdiplus::GetImageEncodersSize(&num, &size);
