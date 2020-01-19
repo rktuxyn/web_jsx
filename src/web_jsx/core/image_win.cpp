@@ -171,9 +171,9 @@ public:
 		_format = image_format::UNKNOWN; _gdiplus_token = NULL;
 	}
 	__forceinline ~image() {
-		this->dispose();
+		this->release_all();
 	}
-	__forceinline void dispose() {
+	__forceinline void release_all() {
 		this->free_memory(); this->gdiplus_shutdown();
 	}
 	__forceinline void gdiplus_shutdown() {
@@ -186,7 +186,7 @@ public:
 		return;
 	}
 	__forceinline int load(const char* path) {
-		this->dispose();
+		this->release_all();
 		if (__file_exists(path) == false) {
 			return panic("ERROR: File not found...", TRUE);
 		}
@@ -203,29 +203,22 @@ public:
 		return TRUE;
 	}
 	__forceinline int load_from_base64(const char* data, image_format format = image_format::BMP) {
-		//return this->panic("Not implimented yet.", TRUE);
-		this->dispose();
+		this->release_all();
 		std::string* out = new std::string();
 		if (sow_web_jsx::base64::to_encode_str(data, *out) == false) {
 			delete out; out = NULL;
-			return this->panic("Unable to convert base64 data. Please try again.", TRUE);
+			return this->panic("Unablet to convert base64 data. Please try again.", TRUE);
 		}
 		int ret = this->gd_init();
 		if (is_error_code(ret) == TRUE) {
-			delete out; out = NULL;
+			out->clear(); delete out; out = NULL;
 			return ret;
 		}
-		DWORD imageSize = (DWORD)out->length();
-		HGLOBAL hBuffer = ::GlobalAlloc(GMEM_MOVEABLE, imageSize);
-		void* pBuffer = ::GlobalLock(hBuffer);
-		if (pBuffer != NULL) {
-			CopyMemory(pBuffer, out->data(), imageSize);
-			IStream* pStream = NULL;
-			if (::CreateStreamOnHGlobal(hBuffer, FALSE, &pStream) == S_OK) {
-				//ULONG ulBytesWrite;
-				//pStream->Write(out->data(), out->size(), &ulBytesWrite);
+		IStream* pStream = NULL;
+		if (::CreateStreamOnHGlobal(NULL, TRUE, &pStream) == S_OK) {
+			ULONG ulBytesWrite;
+			if (pStream->Write(out->data(), static_cast<ULONG>(out->size()), NULL) == S_OK) {
 				_bit_map = Gdiplus::Bitmap::FromStream(pStream);
-				pStream->Release();
 				if (_bit_map != NULL) {
 					Gdiplus::Status stat = _bit_map->GetLastStatus();
 					if (stat == Gdiplus::Ok) {
@@ -243,19 +236,18 @@ public:
 				}
 			}
 			else {
-				ret = this->panic("Unable to create memmory stream.", TRUE);
+				ret = this->panic("Unable to write data to memmory stream.", TRUE);
 			}
+			pStream->Release();
 		}
 		else {
-			ret = this->panic("Unable to create memmory image.", TRUE);
+			ret = this->panic("Unable to create memmory stream.", TRUE);
 		}
-		delete out; out = NULL;
-		::GlobalUnlock(hBuffer);
-		::GlobalFree(hBuffer);
+		out->clear(); delete out; out = NULL;
 		return ret;
 	}
 	__forceinline int create_canvas(const INT width, const INT height) {
-		this->dispose();
+		this->release_all();
 		int ret = this->gd_init();
 		if (is_error_code(ret) == TRUE)return ret;
 		_bit_map = new Gdiplus::Bitmap(width, height, PixelFormat32bppRGB);
@@ -473,10 +465,10 @@ public:
 			::DeleteObject(_bitmap_data); _bitmap_data = NULL;
 		}
 		if (_internal_error != NULL) {
-			delete[]_internal_error; _internal_error = NULL; _errc = FALSE;
+			delete[]_internal_error; _internal_error = NULL;
 		}
 		if (_pixels != NULL) {
-			::DeleteObject(_pixels);
+			::DeleteObject(_pixels); _pixels = NULL;
 		}
 		if (_bit_map != NULL) {
 			delete _bit_map; _bit_map = NULL;
@@ -530,7 +522,7 @@ void image_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx){
 	prototype->Set(isolate, "release", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		image* img = sow_web_jsx::unwrap<image>(args);
 		if (img == NULL)return;
-		img->dispose();
+		img->release_all();
 		delete img; img = NULL;
 		args.Holder()->SetAlignedPointerInInternalField(0, nullptr);
 	}));
@@ -553,7 +545,7 @@ void image_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx){
 			throw_js_error(args.GetIsolate(), "Image object disposed...");
 			return;
 		}
-		img->dispose();
+		img->release_all();
 		args.GetReturnValue().Set(args.Holder());
 	}));
 	prototype->Set(isolate, "to_base64", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -855,5 +847,6 @@ void image_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx){
 	}));
 	ctx->Set(isolate, "Image", image_tpl);
 }
+
 #endif//!_WIN32||_WIN64
 //End 3:56 PM 1/18/2020
