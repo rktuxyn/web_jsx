@@ -228,8 +228,8 @@ function resize_to( source, dest ) {
     let scale_width = width / swidth, scale_height = height / sheight;
     for ( let y = 0; y < height; y++ ) {
         for ( let x = 0; x < width; x++ ) {
-            let tmp_pixel = source.get_pixel( parseInt( x / scale_width ), parseInt( y / scale_height ) );
-            dest.set_pixel( tmp_pixel, x, y );
+            let pixel_color = source.get_pixel( parseInt( x / scale_width ), parseInt( y / scale_height ) );
+            dest.set_pixel( pixel_color, x, y );
         }
     }
     source.unlock_bits(); dest.unlock_bits();
