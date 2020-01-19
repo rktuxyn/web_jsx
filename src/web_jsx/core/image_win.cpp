@@ -7,25 +7,14 @@
 //1:57 PM 1/16/2020
 #if (defined(_WIN32)||defined(_WIN64))
 #include "image_win.h"
-#if !defined(_v8_util_h)
 #include "v8_util.h"
-#endif//!v8_util
-#if !defined(_XSTRING_)
+#include "base64.h"
 #include <string>
-#endif // !_XSTRING_
-#if !defined(_ALGORITHM_)
 #include <algorithm>
-#endif//!_ALGORITHM_
 #include <stdio.h>
-#if !defined(_WINDOWS_)
 #include <windows.h>
-#endif//!_WINDOWS_
-#if !defined(_WINBASE_)
 #include <winbase.h>
-#endif//!_WINBASE_
-#if !defined(_GDIPLUS_H)
 #include <gdiplus.h>
-#endif//!_GDIPLUS_H
 #pragma comment(lib,"gdiplus.lib")
 #if !defined(GMEM_MOVEABLE)
 #define GMEM_MOVEABLE       0x0002
@@ -39,9 +28,6 @@
 #ifndef TRUE
 #define TRUE                1
 #endif
-#if !defined(_base64_h)
-#include "base64.h"
-#endif//!_base64_h
 #pragma warning(disable:4996)
 enum image_format {
 	BMP = 0,
@@ -62,12 +48,6 @@ enum _mood {
 	READ = 1,
 	WRITE = 2
 };
-//wchar_t* ccr2ws(const char* s) {
-//	size_t len = strlen(s);
-//	wchar_t* buf = new wchar_t[len + sizeof(wchar_t)]();
-//	mbsrtowcs(buf, &s, len, NULL);
-//	return buf;
-//}
 void to_lower(std::string& str) {
 	std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) {
 		return std::tolower(c);
@@ -230,7 +210,7 @@ public:
 		std::string* out = new std::string();
 		if (sow_web_jsx::base64::to_encode_str(data, *out) == false) {
 			delete out; out = NULL;
-			return this->panic("Unablet to convert base64 data. Please try again.", TRUE);
+			return this->panic("Unable to convert base64 data. Please try again.", TRUE);
 		}
 		int ret = this->gd_init();
 		if (is_error_code(ret) == TRUE) {
