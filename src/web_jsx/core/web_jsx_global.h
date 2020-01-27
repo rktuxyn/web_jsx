@@ -9,83 +9,43 @@
 #pragma once
 #endif//!_MSC_VER
 #if !defined(_web_jsx_global_h)
-#define _web_jsx_global_h
-#if !defined(_IOSTREAM_)
-#include <iostream>
-#endif // !_IOSTREAM_
-#if !defined(_INC_STDLIB)
-#include <stdlib.h>
-#endif // !_INC_STDLIB
-#if !defined(_SSTREAM_)
-#include <sstream>
-#endif//_SSTREAM_
-#if !defined(_FUTURE_)
-#include <future>
-#endif//!_FUTURE_
-#if !defined(_XSTRING_)
-#include <string>
-#endif // !_XSTRING_
-#if !defined(_REGEX_)
-#include <regex>
-#endif// !_REGEX_
-#if !defined(_LIST_)
-#include <list>
-#endif // !_LIST_
-#if !defined(_MAP_)
-#include <map>
-#endif // !_MAP_
-#if !defined(_VECTOR_)
-#include <vector>
-#endif//!_VECTOR_
-#if !defined(_std_wrapper_h)
-#include "std_wrapper.hpp"
-#endif // !STD_EXTEND_REGEX
+#	define _web_jsx_global_h
+#	include <iostream>
+#	include <stdlib.h>
+#	include <sstream>
+#	include <future>
+#	include <string>
+#	include <regex>
+#	include <list>
+#	include <map>
+#	include <vector>
+#	include "std_wrapper.hpp"
 #if defined(_STR_FRMT)
 #if !defined(_INC_STDARG)
-#include<stdarg.h>
+#	include	<stdarg.h>
 #endif // !_INC_STDARG
 #endif // _STR_FRMT
-#if !defined(UV_H)
-#include <uv.h>
-#endif//!UV_H
+#	include <uv.h>
 #if !(defined(_WIN32)||defined(_WIN64)) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
-#include <sys/stat.h>
-#define __file_exists(fname)\
+#	include <sys/stat.h>
+#	define __file_exists(fname)\
 access(fname, 0)!=-1
-#if !defined(_INC_IO)
 #  include <io.h>
-#endif//!_INC_IO
 #if !defined(SET_BINARY_MODE)
 #  define SET_BINARY_MODE(file) setmode(fileno(file), O_BINARY)
 #endif//!SET_BINARY_MODE
 #else
-#include <assert.h>
-#if !defined(DIRENT_H)
-#include <dirent.h>
-#endif//!DIRENT_H
-#if !defined(_INC_DIRECT)
-#include <direct.h>
-#endif//!_INC_DIRECT
-#if !defined(_WINDOWS_)
-#include <windows.h>
-#endif//!_WINDOWS_
-#if !defined(_INC_TCHAR)
-#include <tchar.h>
-#endif//!_INC_TCHAR
-#if !defined(_INC_IO)
-#include  <io.h> 
-#endif//_INC_IO
-#if !defined(_WINBASE_)
-#include <winbase.h>
-#endif//!_WINBASE_
-#if !defined(_INC_TOOLHELP32)
-#include <tlhelp32.h>
-#endif//!_INC_TOOLHELP32
-#define __file_exists(fname)\
+#	include <assert.h>
+#	include <dirent.h>
+#	include <direct.h>
+#	include <windows.h>
+#	include <tchar.h>
+#	include <io.h> 
+#	include <winbase.h>
+#	include <tlhelp32.h>
+#	define __file_exists(fname)\
 _access(fname, 0)!=-1
-#if !defined(_INC_FCNTL)
 #  include <fcntl.h>
-#endif//_INC_FCNTL
 #if !defined(SET_BINARY_MODE)
 #if defined(__CYGWIN__)
 #define SET_BINARY_MODE(file) setmode(fileno(my_stdio_stream), O_BINARY)
@@ -96,17 +56,11 @@ _access(fname, 0)!=-1
 #endif//!__CYGWIN__
 #endif//!SET_BINARY_MODE
 #endif//_WIN32||__unix__
-#if !defined(directory__h)
 #include "directory_.h"
-#endif//!directory__h
-#if !defined(_glb_r_h)
 #include "glb_r.h"
-#endif//!_glb_r_h
 #if !defined(READ_CHUNK)
 #define READ_CHUNK		16384
 #endif//!READ_CHUNK
-//#define __WIN_API
-//#define __EXPORT
 #if defined(FAST_CGI_APP)
 #if !defined(H_N_L)
 #define H_N_L "\r\n"
@@ -128,8 +82,6 @@ _access(fname, 0)!=-1
 #define __client_build
 //#undef __client_build
 #define FORCE_EXIT_PROCESS	9
-//#define _fgets	 fgets
-//#define _stdin stdin
 #pragma warning (disable : 4996)
 #define _CRT_SECURE_NO_WARNINGS
 typedef struct {
@@ -177,6 +129,10 @@ namespace sow_web_jsx {
 		const std::string& separator1,
 		const std::string& separator2
 	);
+	template<class _input>
+	inline int is_error_code(_input ret) {
+		return (ret == FALSE || ret == std::string::npos || ret < 0) ? TRUE : FALSE;
+	}
 #if defined(_WINDOWS_)
 	wchar_t* ccr2ws(const char* s);
 	const char* get_error_desc(int error_code);

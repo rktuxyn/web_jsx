@@ -4,15 +4,18 @@
 * Copyrights licensed under the New BSD License.
 * See the accompanying LICENSE file for terms.
 */
-#include "v8_engine.h"
+#	include "v8_engine.h"
+#	include <libplatform/libplatform.h>
+#	include "native_wrapper.h"
+#	include <uv.h>
 void set_v8_flag() {
-	const char* arg[4] = {
+	const char* arg[3] = {
 		"--sim_stack_size=20480",
 		"--expose_async_hooks",
-		"--trace_turbo_jt",
+		//"--trace_turbo_jt",
 		"--expose_gc"
 	};
-	int* argc = new int(4);
+	int* argc = new int(3);
 	v8::V8::SetFlagsFromCommandLine(argc, (char**)arg, true);
 	delete argc;
 	//v8::V8::SetFlagsFromString(v8Flags, (int)strlen(v8Flags));

@@ -6,29 +6,19 @@
 */
 //12:42 AM 1/11/2020
 #if !defined(_bitmap_h)
-#define _bitmap_h
+#	define _bitmap_h
 #pragma warning (disable : 4231)
 #pragma warning(disable : 4996)
-#if !defined(_IOSTREAM_)
-#include <iostream>
-#endif//!_IOSTREAM_
-#if !defined(_FSTREAM_)
-#include <fstream>// std::ifstream
-#endif//!_FSTREAM_
-#if !defined(_SSTREAM_)
-#include <sstream> // std::stringstream
-#endif//_SSTREAM_
-#if !defined(_XSTRING_)
-#include <string>// !_XSTRING_// memcpy, memset
-#endif //!_XSTRING_
-#if !defined(_VECTOR_)
-#include <vector>
-#endif//!_VECTOR_
+#	include <iostream>
+#	include <fstream>// std::ifstream
+#	include <sstream> // std::stringstream
+#	include <string>// !_XSTRING_// memcpy, memset
+#	include <vector>
 #if !defined(FALSE)
-#define FALSE               0
+#	define FALSE               0
 #endif//!FALSE
 #if !defined(TRUE)
-#define TRUE                1
+#	define TRUE                1
 #endif//!TRUE
 typedef struct {
 	uint8_t r, g, b, a;
@@ -69,7 +59,10 @@ enum image_format {
 	BMP = 0,
 	PNG = 1,
 	JPEG = 2,
-	JPG = 3
+	JPG = 3,
+	GIF = 4,
+	TIFF = 5,
+	TIF = 5
 };
 class bitmap {
 private:
@@ -88,13 +81,13 @@ private:
 	int save_to_vector(std::vector<char>& dest, image_format format);
 	//int set_pixel(uint8_t* _pixels, rgb32* pixel, uint32_t x, uint32_t y);
 public:
-	bitmap();
-	bitmap(const char* path);
+	bitmap(image_format format);
+	bitmap(const char* path, image_format format);
 	~bitmap();
 	int load(const char* path);
 	int from_base64(const char* data);
 	int to_base64(std::string& out);
-	int save(const char* path);
+	int save(const char* path, image_format format);
 	rgb32* get_pixel(uint32_t x, uint32_t y) const;
 	int set_pixel(rgb32* pixel, uint32_t x, uint32_t y);
 	int resize(bitmap& dest);
@@ -102,6 +95,7 @@ public:
 	int create_canvas(const uint32_t width, const uint32_t heigh);
 	uint32_t get_width() const;
 	uint32_t get_height() const;
+	image_format get_format() const;
 	int has_error();
 	int is_loaded() const;
 	const char* get_last_error();

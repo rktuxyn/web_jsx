@@ -1,34 +1,49 @@
-#include "bitmap.h"
-#if !defined(_base64_h)
-#include "base64.h"
-#endif//!_base64_h
+/**
+* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
+* @author {SOW}
+* Copyrights licensed under the New BSD License.
+* See the accompanying LICENSE file for terms.
+*/
+#	include "bitmap.h"
+#	include "base64.h"
 #if !defined(READ_CHUNK)
-#define READ_CHUNK		16384
+#	define READ_CHUNK		16384
 #endif//!READ_CHUNK
 //12:43 AM 1/11/2020
 template<class _input>
 inline int is_error_code(_input ret) {
 	return (ret == FALSE || ret == std::string::npos || ret < 0) ? TRUE : FALSE;
 }
+
 void insert_vct(std::vector<char>& dest, char* data, size_t len) {
 	dest.insert(dest.end(), data, len + data);
 }
-bitmap::bitmap() {
+bitmap::bitmap(image_format format) {
 	_internal_error = new char; _is_error = FALSE; _is_loaded = FALSE;
 	_header = new bitmap_header; _pixels = NULL; _input_file_path = NULL;
-	_format = image_format::BMP;
+	_format = format;
+	if (_format != image_format::BMP) {
+		this->panic("Unsupported Image format.", TRUE);
+	}
 }
-bitmap::bitmap(const char* path){
+bitmap::bitmap(const char* path, image_format format){
 	_internal_error = new char; _is_error = FALSE; _is_loaded = FALSE;
 	_header = new bitmap_header; _pixels = NULL; _input_file_path = new std::string(path);
-	_format = image_format::BMP;
+	_format = format;
+	if (_format != image_format::BMP) {
+		this->panic("Unsupported Image format.", TRUE);
+	}
+	return;
 }
 int bitmap::load(const char* path) {
 	this->free_memory();
-	std::ifstream* file;
 	if (path == NULL && _input_file_path == NULL) {
 		return this->panic("No input file path found...", TRUE);
 	}
+	if (_format != image_format::BMP) {
+		return this->panic("Unsupported Image format.", TRUE);
+	}
+	std::ifstream* file;
 	if (path != NULL) {
 		file = new std::ifstream(path, std::ios::in | std::ios::binary);
 	}
@@ -87,6 +102,7 @@ int load_file_to_vct(std::ifstream& file_stream, std::vector<char>& dest) {
 	return TRUE;
 }
 int bitmap::save_to_vector(std::vector<char>& dest, image_format format) {
+	dest.reserve(_header->fHeader.bfSize);
 	insert_vct(dest, reinterpret_cast<char*>(&_header->fHeader), sizeof(_header->fHeader));
 	insert_vct(dest, reinterpret_cast<char*>(&_header->iHeader), sizeof(_header->iHeader));
 	uint8_t* temp = new uint8_t[_header->fHeader.bfSize - _header->fHeader.bfOffBits];
@@ -137,7 +153,10 @@ int bitmap::to_base64(std::string& out) {
 bitmap::~bitmap() {
 	this->free_memory();
 }
-int bitmap::save(const char* path) {
+int bitmap::save(const char* path, image_format format) {
+	if (_format != image_format::BMP) {
+		return this->panic("Unsupported Image format.", TRUE);
+	}
 	if (_is_loaded == FALSE) {
 		return this->panic("Please Load an Image than try again.", TRUE);
 	}
@@ -150,15 +169,24 @@ int bitmap::save(const char* path) {
 	return TRUE;
 }
 rgb32* bitmap::get_pixel(uint32_t x, uint32_t y) const {
+	if (_format != image_format::BMP) {
+		return NULL;
+	}
 	rgb32* temp = reinterpret_cast<rgb32*>(_pixels);
 	return &temp[(_header->iHeader.biHeight - 1 - y) * _header->iHeader.biWidth + x];
 }
 int bitmap::set_pixel(rgb32* pixel, uint32_t x, uint32_t y) {
+	if (_format != image_format::BMP) {
+		return this->panic("Unsupported Image format.", TRUE);
+	}
 	rgb32* temp = reinterpret_cast<rgb32*>(_pixels);
 	memcpy(&temp[(_header->iHeader.biHeight - 1 - y) * _header->iHeader.biWidth + x], pixel, sizeof(rgb32));
 	return TRUE;
 }
 void bitmap::dump_data() {
+	if (_format != image_format::BMP) {
+		return;
+	}
 	std::cout << "Bitmap data:" << std::endl;
 	std::cout << "============" << std::endl;
 	std::cout << "Width:  " << _header->iHeader.biWidth << std::endl;
@@ -174,6 +202,12 @@ void bitmap::dump_data() {
 	std::cout << "_________________________________________________________" << std::endl;
 }
 int bitmap::resize(bitmap& dest) {
+	if (_format != image_format::BMP) {
+		return this->panic("Unsupported Image format.", TRUE);
+	}
+	if (dest.get_format() != image_format::BMP) {
+		return this->panic("Unsupported Image format.", TRUE);
+	}
 	if (_is_loaded == FALSE)return FALSE;
 	if (_pixels == NULL) return FALSE;
 	uint32_t new_width = dest.get_width(), new_height = dest.get_height();
@@ -197,7 +231,10 @@ bitmap_header* bitmap::header()const {
 	return _header;
 }
 int bitmap::resize(const uint32_t new_width, const uint32_t new_height){
-	bitmap* bmp = new bitmap();
+	if (_format != image_format::BMP) {
+		return this->panic("Unsupported Image format.", TRUE);
+	}
+	bitmap* bmp = new bitmap(image_format::BMP);
 	int ret = bmp->create_canvas(new_width, new_height);
 	if (is_error_code(ret) == TRUE)return ret;
 	ret = this->resize(*bmp);
@@ -241,10 +278,12 @@ int bitmap::create_canvas(const uint32_t width, const uint32_t height){
 }
 void bitmap::reset_rgb() {
 	if (_is_loaded == FALSE)return;
+	if (_format != image_format::BMP)return;
 	rgb32* in = new rgb32();
 	in->r = (uint8_t)(0xff);
 	in->g = (uint8_t)(0xff);
 	in->b = (uint8_t)(0xff);
+	in->a = (uint8_t)(0xff);
 	if (_pixels != NULL) {
 		delete[]_pixels; _pixels = NULL;
 	}
@@ -255,7 +294,7 @@ void bitmap::reset_rgb() {
 			out->b = in->b;
 			out->g = in->g;
 			out->r = in->r;
-			out->a = 0xFF;
+			out->a = in->a;
 			++out;
 		}
 	}
@@ -266,6 +305,9 @@ uint32_t bitmap::get_width() const {
 }
 uint32_t bitmap::get_height() const {
 	return _header->iHeader.biHeight;
+}
+image_format bitmap::get_format() const{
+	return _format;
 }
 int bitmap::has_error(){
 	return _is_error == TRUE || _is_error < 0 ? TRUE : FALSE;

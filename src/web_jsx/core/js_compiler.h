@@ -8,22 +8,12 @@
 #pragma once
 #endif//!_MSC_VER
 #if !defined( _js_compiler_h)
-#define _js_compiler_h
-#if !defined(_v8_engine_h)
-#include "v8_engine.h"
-#endif//!_v8_engine_h
-#if !defined( _runtime_compiler_h)
-#include "runtime_compiler.h"
-#endif //!_runtime_compiler_h
-#if !defined(V8_LIBPLATFORM_LIBPLATFORM_H_)
-#include <libplatform/libplatform.h>
-#endif//!V8_LIBPLATFORM_LIBPLATFORM_H_
-#if !defined(_native_wrapper_h)
-#include "native_wrapper.h"
-#endif//!_native_wrapper_h
-#if !defined(UV_H)
-#include <uv.h>
-#endif//!UV_H
+#	define _js_compiler_h
+#	include "v8_engine.h"
+#	include "runtime_compiler.h"
+#	include <libplatform/libplatform.h>
+#	include "native_wrapper.h"
+#	include <uv.h>
 namespace sow_web_jsx {
 	namespace js_compiler {
 		int run_script(std::map<std::string, std::map<std::string, std::string>>& ctx, template_result&tr);

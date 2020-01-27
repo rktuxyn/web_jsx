@@ -9,10 +9,8 @@
 #pragma once
 #endif//!_MSC_VER
 #if !defined(_template_reader_h)
-#define template_reader_h
-#if !defined(_web_jsx_global_h)
-#include "web_jsx_global.h"
-#endif //!_web_jsx_global_h
+#	define template_reader_h
+#	include "web_jsx_global.h"
 namespace sow_web_jsx {
 	namespace template_reader {
 		int read_template(template_result&tr, 

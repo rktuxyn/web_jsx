@@ -9,28 +9,20 @@
 #pragma once
 #endif//!_MSC_VER
 #if !defined(_util_h)
-#define _util_h
-#if !defined(_web_jsx_app_global_h)
-#include "web_jsx_app_global.h"
-#endif//!_web_jsx_app_global_h
-/*#if !defined(_XLOCALE_)
-#include <locale>
-#endif//!_XLOCALE_
-#if !defined(_INC_LOCALE)
-#include <clocale>
-#endif//!_INC_LOCALE*/
+#	define _util_h
+#	include "web_jsx_app_global.h"
 #if !defined(_WIN32) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
-#include <unistd.h>
+#	include <unistd.h>
 #define get_current_dir getcwd
 bool is_user_interactive();
 void print_info();
 #else
 #if !defined(_INC_DIRECT)
-#include <direct.h>
+#	include <direct.h>
 #endif//!_INC_DIRECT
 #define get_current_dir _getcwd
 #if !defined(_WINCON_)
-#include <Wincon.h>
+#	include <Wincon.h>
 #endif//_WINCON_
 #define FOREGROUND_BLACK			0x0000 // text color contains black.
 #define FOREGROUND_YELLOW			0x0006 // text color contains Yellow.

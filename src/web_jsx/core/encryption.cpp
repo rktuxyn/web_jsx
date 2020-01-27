@@ -1,4 +1,4 @@
-#include "encryption.h"
+#	include "encryption.h"
 #if defined(__client_build)
 Cipher::Cipher(int n)
 	: map{ make_map(n) } {

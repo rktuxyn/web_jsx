@@ -1,4 +1,16 @@
-#include "runtime_compiler.h"
+/**
+* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
+* @author {SOW}
+* Copyrights licensed under the New BSD License.
+* See the accompanying LICENSE file for terms.
+*/
+#	include "web_jsx_global.h"
+#	include "runtime_compiler.h"
+#	include <libplatform/libplatform.h>
+#	include "native_wrapper.h"
+#	include <uv.h>
+#	include "web_jsx_exp.h"
+#	include "../util.h"
 //7:34 PM 12/8/2019
 typedef struct {
 	v8::Persistent<v8::String>source;
@@ -30,7 +42,7 @@ void compile(v8::Isolate* isolate, compaile_arg* wlf) noexcept {
 		}
 		else {
 			isolate->ThrowException(v8::Exception::Error(
-				sow_web_jsx::v8_str(isolate, "Unable to compile script. Check your script than try again.")));
+				v8_str(isolate, "Unable to compile script. Check your script than try again.")));
 		}
 	}
 	else {
@@ -40,7 +52,7 @@ void compile(v8::Isolate* isolate, compaile_arg* wlf) noexcept {
 		if (!param->IsNullOrUndefined() && param->IsObject()) {
 			v8::Local<v8::Object> jsGlobal =
 				context->Global()->GetPrototype().As<v8::Object>();
-			v8::Local<v8::Function> invoke = v8::Handle<v8::Function>::Cast(jsGlobal->Get(context, sow_web_jsx::v8_str(isolate, "create_context")).ToLocalChecked());
+			v8::Local<v8::Function> invoke = v8::Handle<v8::Function>::Cast(jsGlobal->Get(context, v8_str(isolate, "create_context")).ToLocalChecked());
 			//v8::Persistent<v8::Local<v8::Function>> func;
 			//func.Reset(isolate, invoke);
 			//v8::FunctionTemplate::New(isolate, func);
@@ -88,33 +100,33 @@ void compile_async(v8::Isolate* isolate, compaile_arg* wlf) {
 void sow_web_jsx::runtime_compiler(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (args[0]->IsNullOrUndefined() || !args[0]->IsObject()) {
-		isolate->ThrowException(v8::Exception::TypeError(sow_web_jsx::v8_str(isolate, "Config required....")));
+		isolate->ThrowException(v8::Exception::TypeError(v8_str(isolate, "Config required....")));
 		return;
 	}
 	v8::Local<v8::Object> config = v8::Handle<v8::Object>::Cast(args[0]);
 	v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
-	int task_type = (int)config->Get(ctx, sow_web_jsx::v8_str(isolate, "task_type")).ToLocalChecked()->ToNumber(isolate)->Value();
+	int task_type = (int)config->Get(ctx, v8_str(isolate, "task_type")).ToLocalChecked()->ToNumber(isolate)->Value();
 	compaile_arg* awlf = new compaile_arg();
-	awlf->is_async = to_boolean(isolate, config->Get(ctx, sow_web_jsx::v8_str(isolate, "is_async")).ToLocalChecked());
+	awlf->is_async = to_boolean(isolate, config->Get(ctx, v8_str(isolate, "is_async")).ToLocalChecked());
 	v8::Local<v8::Promise::Resolver> resolver;
 	if (awlf->is_async == true) {
 		resolver = v8::Promise::Resolver::New(ctx).ToLocalChecked();
 		args.GetReturnValue().Set(resolver->GetPromise());
 	}
 	if (task_type == 0) {
-		web_extension ext = (web_extension)(int)config->Get(ctx, sow_web_jsx::v8_str(isolate, "extension")).ToLocalChecked()->ToNumber(isolate)->Value();
+		web_extension ext = (web_extension)(int)config->Get(ctx, v8_str(isolate, "extension")).ToLocalChecked()->ToNumber(isolate)->Value();
 		if ( ext == web_extension::JS
 			|| ext == web_extension::JSXH
 			|| ext == web_extension::WJSXH
 		) {
-			native_string path(isolate, config->Get(ctx, sow_web_jsx::v8_str(isolate, "full_path")).ToLocalChecked());
+			native_string path(isolate, config->Get(ctx, v8_str(isolate, "full_path")).ToLocalChecked());
 			if (path.is_empty()) {
 				if (awlf->is_async == true) {
 					//args.GetReturnValue().Set(resolver->GetPromise());
 					resolver->Reject(ctx, v8::String::NewFromUtf8(isolate, "Full path should not left blank...."));
 				}
 				else {
-					isolate->ThrowException(v8::Exception::TypeError(sow_web_jsx::v8_str(isolate, "Full path should not left blank....")));
+					isolate->ThrowException(v8::Exception::TypeError(v8_str(isolate, "Full path should not left blank....")));
 				}
 				delete awlf; config.Clear();
 				return;
@@ -128,22 +140,22 @@ void sow_web_jsx::runtime_compiler(const v8::FunctionCallbackInfo<v8::Value>& ar
 					resolver->Reject(ctx, v8::String::NewFromUtf8(isolate, source_str.c_str()));
 				}
 				else {
-					isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, source_str.c_str())));
+					isolate->ThrowException(v8::Exception::Error(v8_str(isolate, source_str.c_str())));
 				}
 				source_str.clear(); std::string().swap(source_str);
 				delete awlf; config.Clear();
 				return;
 			}
 			source_str = "function create_context( context ) {\n" + source_str + "\n};";
-			awlf->source.Reset(isolate, sow_web_jsx::v8_str(isolate, source_str.c_str()));
+			awlf->source.Reset(isolate, v8_str(isolate, source_str.c_str()));
 			source_str.clear(); std::string().swap(source_str);
 		}
 		else if (ext == web_extension::JSX
 			|| ext == web_extension::WJSX) {
 			parser_settings* ps = new parser_settings();
 			template_result* tr = new template_result();
-			native_string root_dir(isolate, config->Get(ctx, sow_web_jsx::v8_str(isolate, "root_dir")).ToLocalChecked());
-			native_string page_path(isolate, config->Get(ctx, sow_web_jsx::v8_str(isolate, "page_path")).ToLocalChecked());
+			native_string root_dir(isolate, config->Get(ctx, v8_str(isolate, "root_dir")).ToLocalChecked());
+			native_string page_path(isolate, config->Get(ctx, v8_str(isolate, "page_path")).ToLocalChecked());
 			ps->dir = root_dir.get_string().data();
 			ps->page_path = page_path.get_string().data();
 			::ntemplate_parse_x(*ps, *tr);
@@ -153,7 +165,7 @@ void sow_web_jsx::runtime_compiler(const v8::FunctionCallbackInfo<v8::Value>& ar
 					resolver->Reject(ctx, v8::String::NewFromUtf8(isolate, tr->err_msg.c_str()));
 				}
 				else {
-					isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, tr->err_msg.c_str())));
+					isolate->ThrowException(v8::Exception::Error(v8_str(isolate, tr->err_msg.c_str())));
 				}
 				delete ps; delete tr; delete awlf; config.Clear();
 				return;
@@ -164,14 +176,14 @@ void sow_web_jsx::runtime_compiler(const v8::FunctionCallbackInfo<v8::Value>& ar
 					resolver->Resolve(ctx, v8::String::NewFromUtf8(isolate, tr->t_source.c_str()));
 				}
 				else {
-					args.GetReturnValue().Set(sow_web_jsx::v8_str(isolate, tr->t_source.c_str()));
+					args.GetReturnValue().Set(v8_str(isolate, tr->t_source.c_str()));
 				}
 				tr->t_source.clear();
 				delete ps; delete tr; delete awlf; config.Clear();
 				return;
 			}
 			tr->t_source = "function create_context( context ) {\n" + tr->t_source + "\n};";
-			awlf->source.Reset(isolate, sow_web_jsx::v8_str(isolate, tr->t_source.c_str()));
+			awlf->source.Reset(isolate, v8_str(isolate, tr->t_source.c_str()));
 			tr->t_source.clear();
 			delete ps; delete tr;
 		}
@@ -181,16 +193,16 @@ void sow_web_jsx::runtime_compiler(const v8::FunctionCallbackInfo<v8::Value>& ar
 				resolver->Reject(ctx, v8::String::NewFromUtf8(isolate, "Unsupported extesion defined...."));
 			}
 			else {
-				isolate->ThrowException(v8::Exception::TypeError(sow_web_jsx::v8_str(isolate, "Unsupported extesion defined....")));
+				isolate->ThrowException(v8::Exception::TypeError(v8_str(isolate, "Unsupported extesion defined....")));
 			}
 			delete awlf; config.Clear();
 			return;
 		}
 	}
 	else {
-		awlf->source.Reset(isolate, config->Get(ctx, sow_web_jsx::v8_str(isolate, "source")).ToLocalChecked()->ToString(isolate));
+		awlf->source.Reset(isolate, config->Get(ctx, v8_str(isolate, "source")).ToLocalChecked()->ToString(isolate));
 	}
-	awlf->param.Reset(isolate, config->Get(ctx, sow_web_jsx::v8_str(isolate, "context")).ToLocalChecked());
+	awlf->param.Reset(isolate, config->Get(ctx, v8_str(isolate, "context")).ToLocalChecked());
 	
 	if (awlf->is_async) {
 		///args.GetReturnValue().Set(resolver->GetPromise());

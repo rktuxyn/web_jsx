@@ -5,10 +5,8 @@
 * See the accompanying LICENSE file for terms.
 */
 //6:24 PM 1/22/2019
-#include "v8_util.h"
-#if !defined(_CSTRING_)
-#include <cstring>
-#endif//!_CSTRING_
+#	include "v8_util.h"
+#	include <cstring>
 namespace sow_web_jsx {
 	bool sow_web_jsx::to_boolean(v8::Isolate* isolate, v8::Local<v8::Value> value) {
 #if V8_MAJOR_VERSION < 7 || (V8_MAJOR_VERSION == 7 && V8_MINOR_VERSION == 0)
@@ -31,6 +29,9 @@ namespace sow_web_jsx {
 		v8::String::Utf8Value str(isolate, x);
 		return _toCharStr(str);
 	}
+
+//_toCharStr(str)
+
 	v8::Handle<v8::String> read_line() {
 		const int kBufferSize = 1024 + 1;
 		char* buffer = new char[kBufferSize];
@@ -60,9 +61,6 @@ namespace sow_web_jsx {
 			return;
 		}
 		args.GetReturnValue().Set(read_line());
-	}
-	v8::Local<v8::String> sow_web_jsx::v8_str(v8::Isolate* isolate, const char* x) {
-		return v8::String::NewFromUtf8(isolate, x, v8::NewStringType::kNormal).ToLocalChecked();
 	}
 	void add_stack_trace(v8::Isolate* isolate, v8::MaybeLocal<v8::Value> trace, std::string&error_str) {
 		if (trace.IsEmpty()) {
@@ -113,11 +111,25 @@ namespace sow_web_jsx {
 		output = std::regex_replace(output, std::regex("(?:/)"), "\\");
 	}
 	const char* get_prop_value(v8::Isolate* isolate, v8::Local<v8::Context> ctx, v8::Local<v8::Object> v8_obj, const char* prop){
-		v8::Local<v8::Value> v8_str = v8_obj->Get(ctx, sow_web_jsx::v8_str(isolate, prop)).ToLocalChecked();
+		v8::Local<v8::Value> v8_str = v8_obj->Get(ctx, v8_str(isolate, prop)).ToLocalChecked();
 		if (v8_str->IsNullOrUndefined()) return "null";
 		v8::String::Utf8Value str(isolate, v8_str);
 		std::string* val = new std::string(*str);
 		return val->data();
+	}
+	int v8_object_get_number(v8::Isolate* isolate, v8::Local<v8::Context> ctx, v8::Local<v8::Object> obj, const char* prop){
+		v8::MaybeLocal<v8::Value> mval;
+		mval = obj->Get(ctx, v8_str(isolate, prop));
+		if (mval.IsEmpty()) {
+			throw_js_error(isolate, "Value should be number...");
+			return -500;
+		}
+		v8::Local<v8::Value> val = mval.ToLocalChecked();
+		if (!val->IsNumber()) {
+			throw_js_error(isolate, "Value should be number...");
+			return -500;
+		}
+		return val->Int32Value(ctx).FromMaybe(0);
 	}
 	v8::Local<v8::String> sow_web_jsx::concat_msg(v8::Isolate* isolate, const char* a, const char* b) {
 		//char* msg = (char*)malloc(strlen(a) + strlen(b));
@@ -126,7 +138,7 @@ namespace sow_web_jsx {
 		msg[length] = '\0';
 		sprintf(msg, "%s%s", a, b);
 		v8::Local<v8::String> val = v8::String::NewFromUtf8(isolate, *&msg, v8::NewStringType::kNormal, (int)length).ToLocalChecked();
-		//v8::Local<v8::String> val = sow_web_jsx::v8_str(isolate, const_cast<const char*>(msg));
+		//v8::Local<v8::String> val = v8_str(isolate, const_cast<const char*>(msg));
 		delete[] msg;
 		return val;
 	}
@@ -139,12 +151,12 @@ namespace sow_web_jsx {
 		if (err != 0 || fstream == NULL) {
 			v8_result->Set(
 				ctx,
-				sow_web_jsx::v8_str(isolate, "staus_code"),
+				v8_str(isolate, "staus_code"),
 				v8::Number::New(isolate, -1)
 			);
 			v8_result->Set(
 				ctx,
-				sow_web_jsx::v8_str(isolate, "message"),
+				v8_str(isolate, "message"),
 				sow_web_jsx::concat_msg(isolate, "Unable to create file!!! Server absolute path==>", abs_path.c_str())
 			);
 			return v8_result;
@@ -155,12 +167,12 @@ namespace sow_web_jsx {
 			fstream = NULL;
 			v8_result->Set(
 				ctx,
-				sow_web_jsx::v8_str(isolate, "staus_code"),
+				v8_str(isolate, "staus_code"),
 				v8::Number::New(isolate, -1)
 			);
 			v8_result->Set(
 				ctx,
-				sow_web_jsx::v8_str(isolate, "message"),
+				v8_str(isolate, "message"),
 				sow_web_jsx::concat_msg(isolate, "Unable to create file!!! Server absolute path==>", abs_path.c_str())
 			);
 			return v8_result;
@@ -169,13 +181,13 @@ namespace sow_web_jsx {
 		fstream = NULL;
 		v8_result->Set(
 			ctx,
-			sow_web_jsx::v8_str(isolate, "staus_code"),
+			v8_str(isolate, "staus_code"),
 			v8::Number::New(isolate, static_cast<double>(len))
 		);
 		v8_result->Set(
 			ctx,
-			sow_web_jsx::v8_str(isolate, "message"),
-			sow_web_jsx::v8_str(isolate, "Success...")
+			v8_str(isolate, "message"),
+			v8_str(isolate, "Success...")
 		);
 		return v8_result;
 	}
@@ -221,17 +233,18 @@ namespace sow_web_jsx {
 			_data = nullptr;
 			_length = 0;
 			/*isolate->ThrowException(v8::Exception::TypeError(
-				sow_web_jsx::v8_str(isolate, "form_data required!!!")));*/
+				v8_str(isolate, "form_data required!!!")));*/
 		}
 	}
 	bool native_string::is_invalid(v8::Isolate* isolate) {
 		if ( _invalid ) {
 			isolate->ThrowException(v8::Exception::TypeError(
-				sow_web_jsx::v8_str(isolate, "form_data required!!!")));
+				v8_str(isolate, "form_data required!!!")));
 		}
 		return _invalid;
 	}
 	std::string_view native_string::get_string(){
+		//std::string(_data, _length);
 		return { _data, _length };
 	}
 	const char* native_string::c_str() {

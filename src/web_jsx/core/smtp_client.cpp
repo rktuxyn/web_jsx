@@ -1,4 +1,10 @@
-#include "smtp_client.h"
+/**
+* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
+* @author {SOW}
+* Copyrights licensed under the New BSD License.
+* See the accompanying LICENSE file for terms.
+*/
+#	include "smtp_client.h"
 namespace smtp_client {
 #pragma region Help
 	bool _sr = false;

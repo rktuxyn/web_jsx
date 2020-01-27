@@ -9,24 +9,12 @@
 #pragma once
 #endif//!_MSC_VER
 #if !defined(_glb_r_h)
-#define _glb_r_h
-#if !defined(_VECTOR_)
-#include <vector>
-#endif//!_VECTOR_
-#if defined(jsx_shared)
-#if !defined(jsx_export)
-#define jsx_export __declspec(dllexport)
-#endif//!jsx_export
-#else
-#if !defined(jsx_export)
-#define jsx_export
-#endif//!jsx_export
-#endif//jsx_shared
+#	define _glb_r_h
 namespace sow_web_jsx {
 	/*[function pointers]*/
 	typedef void (*add_resource_func)();
 	/*[/function pointers]*/
-	jsx_export void free_resource();
-	jsx_export void register_resource(add_resource_func func);
+	void free_resource();
+	void register_resource(add_resource_func func);
 };
 #endif//_glb_r_h

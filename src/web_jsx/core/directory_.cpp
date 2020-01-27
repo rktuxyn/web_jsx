@@ -4,7 +4,15 @@
 * Copyrights licensed under the New BSD License.
 * See the accompanying LICENSE file for terms.
 */
-#include "directory_.h"
+#include	"directory_.h"
+#include	<regex>
+#if !(defined(_WIN32)||defined(_WIN64)) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
+#error Not Implemented
+#else
+#include	<windows.h>
+#include	<dirent.h>
+#include	<direct.h>
+#endif//_WIN32||_WIN64
 //3:21 PM 12/24/2018
 bool __is_match_extension_x (const std::string& path_str, const std::regex & pattern) {
 	return std::regex__ismatch(path_str, pattern);

@@ -10,9 +10,7 @@
 #endif//!_MSC_VER
 #if !defined(_web_jsx_cgi_h)
 #define _web_jsx_cgi_h
-#if !defined(_web_jsx_app_core_h)
-#include "web_jsx_app_core.h"
-#endif//!_web_jsx_app_core_h
+#	include "web_jsx_app_core.h"
 namespace web_jsx_cgi {
 	namespace cgi_request {
 		int request_handler(const char*execute_path);

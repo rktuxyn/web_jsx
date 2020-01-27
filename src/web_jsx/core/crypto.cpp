@@ -5,34 +5,27 @@
 * Copyrights licensed under the New BSD License.
 * See the accompanying LICENSE file for terms.
 */
-#include "crypto.h"
-#if !defined(HEADER_CONF_H)
-#include <openssl/conf.h>
-#endif//!HEADER_CONF_H
-#if !defined(HEADER_ENVELOPE_H)
-#include <openssl/evp.h>
-#endif//!HEADER_ENVELOPE_H
-#if !defined(HEADER_ERR_H)
-#include <openssl/err.h>
-#endif//!HEADER_ERR_H
-#if !defined(HEADER_CONF_H)
-#include <openssl/applink.c>
-#endif//!HEADER_CONF_H
-#include <algorithm>
-#include <stdexcept>
-#include <openssl/rand.h>
+#pragma warning (disable : 4996)
+#	include "crypto.h"
+#	include <openssl/conf.h>
+#	include <openssl/evp.h>
+#	include <openssl/err.h>
+#	include <openssl/applink.c>
+#	include <algorithm>
+#	include <stdexcept>
+#	include <openssl/rand.h>
 #if !defined(_base64_h)
-#include "base64.h"
+#	include "base64.h"
 #endif//!_base64_h
 #if !defined(TRUE)
-#define TRUE 1
+#	define TRUE 1
 #endif//!TRUE
 #if !defined(FALSE)
-#define FALSE 0
+#	define FALSE 0
 #endif//!FALSE
-#define AES_256_KEY_SIZE 32
-#define AES_BLOCK_SIZE 16
-#define BUFSIZE 1024
+#	define AES_256_KEY_SIZE 32
+#	define AES_BLOCK_SIZE 16
+#	define BUFSIZE 1024
 #pragma warning (disable : 4231)
 #pragma warning(disable : 4996)
 struct evp_cipher_ctx_st {

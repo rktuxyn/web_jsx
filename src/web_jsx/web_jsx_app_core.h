@@ -9,17 +9,12 @@
 #pragma once
 #endif//!_MSC_VER
 #if !defined(_web_jsx_app_core_h)
-#define _web_jsx_app_core_h
-#if !defined(_util_h)
-#include "util.h"
-#endif//!_util_h
-#if !defined(_fcreqh_h)
-#include "fcreqh.h"
-#endif//_fcreqh_h
-#if !defined(_creqh_h)
-#include "creqh.h"
-#endif//_creqh_h
+#	define _web_jsx_app_core_h
+#	include "util.h"
+#	include "fcreqh.h"
+#	include "creqh.h"
 typedef struct {
+	//std::string* ex_dir_c;
 	std::string* ex_dir;
 	std::string* ex_name;
 	const char*execute_path;

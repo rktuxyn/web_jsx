@@ -10,40 +10,19 @@
 #endif//!_MSC_VER
 #pragma warning(disable : 4996)
 #if !defined(_smtp_client_h)
-#define _smtp_client_h
-#if !defined(_INC_STDIO)
-#include <stdio.h>  /* defines FILENAME_MAX, printf, sprintf */
-#endif//!_INC_STDIO
-#if !defined(_INC_STDLIB)
-#include <stdlib.h>// exit, atoi, malloc, free
-#endif // !_INC_STDLIB
-#if !defined(_XSTRING_)
-#include <string>// !_XSTRING_// memcpy, memset
-#endif //!_XSTRING_
-#if !defined(_IOSTREAM_)
-#include <iostream>
-#endif//!_IOSTREAM_
-#if !defined(__CURL_CURL_H)
-#include <curl/curl.h>
-#endif//!__CURL_CURL_H
-#if !defined(_CTIME_)
-#include <ctime>
-#endif//!_CTIME_
-#if !defined(_CSTRING_)
-#include <cstring>
-#endif//!_CSTRING_
-#if !defined(_glb_r_h)
-#include "glb_r.h"
-#endif//!_glb_r_h
-#if !defined(_SSTREAM_)
-#include <sstream>
-#endif//_SSTREAM_
-#if !defined(_REGEX_)
-#include <regex>
-#endif// !_REGEX_
-#if !defined(_curl_util_h)
-#include "curl_util.h"
-#endif//!_curl_util_h
+#	define _smtp_client_h
+#	include <stdio.h>  /* defines FILENAME_MAX, printf, sprintf */
+#	include <stdlib.h>// exit, atoi, malloc, free
+#	include <string>// !_XSTRING_// memcpy, memset
+#	include <iostream>
+#	include <curl/curl.h>
+#	include <ctime>
+#	include <cstring>
+#	include "glb_r.h"
+#	include <sstream>
+#	include <regex>
+#	include <vector>
+#	include "curl_util.h"
 //https://curl.haxx.se/libcurl/c/smtp-mail.html
 //https://codereview.stackexchange.com/questions/139784/sending-email-using-libcurl
 //https://curl.haxx.se/libcurl/c/smtp-mime.html

@@ -5,72 +5,35 @@
 * See the accompanying LICENSE file for terms.
 */
 //2:46 AM 11/21/2018
-#include "native_wrapper.h"
-#if !defined(_http_request_h)
-#include "http_request.h"
-#endif//_http_request_h
-#if !defined(_smtp_client_h)
-#include "smtp_client.h"
-#endif//_smtp_client_h
-#if !defined(_pdf_generator_h)
-#include "pdf_generator.h"
-#endif//_npgsql_tools_h
-#if !defined(directory__h)
-#include "directory_.h"
-#endif//!directory__h
-#if !defined(_zgzip_h)
-#include "zgzip.h"
-#endif//!_zgzip_h
-#if !defined(_crypto_h)
-#include "crypto.h"
-#endif//!_crypto_h
-#if !defined(_base64_h)
-#include "base64.h"
-#endif//!_base64_h
-#if !defined(_npgsql_wrapper_h)
-#include "npgsql_wrapper.h"
-#endif//_npgsql_wrapper_h
-#if !defined(_npgsql_tools_h)
-#include <npgsql_tools.h>
-#endif//_npgsql_tools_h
-#if !defined(_n_help_h)
-#include "n_help.h"
-#endif//_n_help_h
-#if !defined(_jsx_file_h)
-#include "jsx_file.h"
-#endif//_n_help_h
-#if !defined(_uws_app_h)
-#include "uws/uws_app.h"
-#endif//!_uws_app_h
-#if !defined(_mysql_wrapper_h)
-#include "mysql_wrapper.h"
-#endif//!_mysql_wrapper_h
-#if !defined(_http_payload_h)
-#include "http_payload.h"
-#endif//!_http_payload_h
+#	include "native_wrapper.h"
+#	include "http_request.h"
+#	include "smtp_client.h"
+#	include "pdf_generator.h"
+#	include "directory_.h"
+#	include "zgzip.h"
+#	include "crypto.h"
+#	include "base64.h"
+#	include "npgsql_wrapper.h"
+#	include <npgsql_tools.h>
+#	include "n_help.h"
+#	include "jsx_file.h"
+#	include "uws/uws_app.h"
+#	include "mysql_wrapper.h"
+#	include "http_payload.h"
 #if defined(__client_build)
-#if !defined(_encryption_h)
-#include "encryption.h"
-#endif//!_encryption_h
+#	include "encryption.h"
 #endif//__client_build
-#if !defined(_bitmap_h)
-#include "bitmap.h"
-#endif//!_bitmap_h
-#if !defined(_native_module_h)
-#include "native_module.h"
-#endif//_load_native_h
+#	include "bitmap.h"
+#	include "native_module.h"
 #if (defined(_WIN32)||defined(_WIN64))
-#if !defined(_image_win_h)
-#include "image_win.h"
-#endif//!_image_win_h
+#	include "image_win.h"
 #else
-#if !defined(_image_unix_h)
-#include "image_unix.h"
-#endif//!_image_unix_h
+#	include "image_unix.h"
 #endif//!_WIN32||_WIN64
 using namespace sow_web_jsx;
 /*[Help]*/
 std::string* _root_dir = NULL;
+std::string* _app_dir = NULL;
 bool _is_interactive = false;
 bool _is_cli = false;
 bool _is_flush = false;
@@ -1887,6 +1850,9 @@ void __clear_cache(int clean_body = 0, int clean_root=1) {
 		if (_root_dir != NULL) {
 			_root_dir->clear(); delete _root_dir; _root_dir = NULL;
 		}
+		if (_app_dir != NULL) {
+			_app_dir->clear(); delete _app_dir; _app_dir = NULL;
+		}
 	}
 	if (clean_body == TRUE) {
 		if (get_content_length() > 0) {
@@ -3283,7 +3249,8 @@ void require(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	abs_path->append(_root_dir->c_str());
 	sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
 	if (ext == typeof_module::NATIVE) {
-		require_native(args, *abs_path, utf_abs_path_str.c_str());
+		//_app_dir
+		require_native(args, *abs_path, *_app_dir, utf_abs_path_str.c_str());
 		abs_path->clear(); delete abs_path; utf_abs_path_str.clear();
 		return;
 	}
@@ -3376,6 +3343,9 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_context(v8::Isolate* iso
 			}
 			//if (_root_dir == NULL)
 			_root_dir = new std::string(obj["root_dir"]);
+			_app_dir = new std::string(obj["app_dir"]);
+			//std::cout << "app_dir:" << _app_dir->c_str() << std::endl;
+			//
 			continue;
 		}
 		v8::Local<v8::ObjectTemplate> object = v8::ObjectTemplate::New(isolate);
@@ -3553,6 +3523,9 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_console_context(v8::Isol
 			_is_interactive = itr->second == "1";
 			ctx_object->Set(isolate, "is_interactive", v8::Boolean::New(isolate, _is_interactive));
 			continue;
+		}
+		else if (itr->first == "app_dir") {
+			_app_dir = new std::string(itr->second);
 		}
 		ctx_object->Set(isolate, itr->first.c_str(), v8_str(isolate, itr->second.c_str()));
 	}

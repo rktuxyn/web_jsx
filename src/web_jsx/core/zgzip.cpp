@@ -1,7 +1,10 @@
-#include "zgzip.h"
-#if !defined(_FSTREAM_)
-#include <fstream>// std::ifstream
-#endif//!_FSTREAM_
+/**
+* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
+* @author {SOW}
+* Copyrights licensed under the New BSD License.
+* See the accompanying LICENSE file for terms.
+*/
+#	include "zgzip.h"
 void gzip::free_zstream(z_stream* strm) {
 	if (strm == NULL)return;
 	delete strm; strm = NULL;

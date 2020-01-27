@@ -1,7 +1,11 @@
-#include "creqh.h"
-#if !defined(_npgsql_tools_h)
-#include <npgsql_tools.h>
-#endif//_npgsql_tools_h
+/**
+* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
+* @author {SOW}
+* Copyrights licensed under the New BSD License.
+* See the accompanying LICENSE file for terms.
+*/
+#	include "creqh.h"
+#	include <npgsql_tools.h>
 void web_jsx_cgi::cgi_request::get_global_obj(std::map<std::string, std::string>& global, std::string&root_dir, const char*app_path) {
 	replace_back_slash(root_dir);
 	global["root_dir"] = root_dir;

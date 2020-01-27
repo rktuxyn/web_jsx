@@ -10,9 +10,7 @@
 #if !(defined(_WIN32)||defined(_WIN64)) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
 #error Not Implemented for UNIX-style OS.
 #else
-#if !defined(_template_core_h)
-#include "template_core.h"
-#endif//!_template_core_h
+#	include "template_core.h"
 #ifdef __cplusplus 
 extern "C" {
 #endif

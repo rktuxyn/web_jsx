@@ -11,19 +11,11 @@
 #pragma warning(disable : 4996)
 #if !defined(_web_jsx_fcgi_h)
 #define _web_jsx_fcgi_h
-#if !defined(_web_jsx_app_core_h)
-#include "web_jsx_app_core.h"
-#endif//!_web_jsx_app_core_h
+#	include "web_jsx_app_core.h"
 #if defined(FAST_CGI_APP)
-#if !defined(_glb_r_h)
-#include "glb_r.h"
-#endif//!_glb_r_h
-#if !defined(_FASTCGI_H)
-#include <fastcgi.h>
-#endif//!_FASTCGI_H
-#if !defined(_web_jsx_cgi_h)
-#include "web_jsx_cgi.h"
-#endif//!_web_jsx_cgi_h
+#	include "core/glb_r.h"
+#	include <fastcgi.h>
+#	include "web_jsx_cgi.h"
 #pragma warning(disable: _STL_DISABLED_WARNINGS)
 _STL_DISABLE_CLANG_WARNINGS
 #pragma push_macro("new")

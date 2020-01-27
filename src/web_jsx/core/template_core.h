@@ -9,19 +9,11 @@
 #pragma once
 #endif//!_MSC_VER
 #if !defined(_template_core_h)
-#define _template_core_h
-#if !defined(_web_jsx_global_h)
-#include "web_jsx_global.h"
-#endif //!_web_jsx_global_h
-#if !defined(_template_marger_h)
-#include "template_marger.h"
-#endif//_template_marger_h
-#if !defined(_template_reader_h)
-#include "template_reader.h"
-#endif//_template_reader_h
-#if !defined(_script_tag_parser_h)
-#include "script_tag_parser.h"
-#endif//_script_tag_parser_h
+#	define _template_core_h
+#	include "web_jsx_global.h"
+#	include "template_marger.h"
+#	include "template_reader.h"
+#	include "script_tag_parser.h"
 namespace sow_web_jsx {
 	namespace template_core {
 		int process_template(

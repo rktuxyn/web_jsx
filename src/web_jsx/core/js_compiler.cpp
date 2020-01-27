@@ -4,7 +4,7 @@
 * Copyrights licensed under the New BSD License.
 * See the accompanying LICENSE file for terms.
 */
-#include "js_compiler.h"
+#	include "js_compiler.h"
 using namespace sow_web_jsx;
 using namespace sow_web_jsx::wrapper;
 using namespace sow_web_jsx::js_compiler;
@@ -52,7 +52,7 @@ int sow_web_jsx::js_compiler::run_script(std::map<std::string, std::map<std::str
 	ctx_object->Set(isolate, "runtime_compiler", v8::FunctionTemplate::New(isolate, sow_web_jsx::runtime_compiler));
 	v8::Local<v8::Context> v8_ctx = v8::Context::New(isolate, nullptr, ctx_object);
 	v8::Context::Scope					context_scope(v8_ctx);
-	v8::Local<v8::String>source		=	sow_web_jsx::v8_str(isolate, tr.t_source.c_str());
+	v8::Local<v8::String>source		=	v8_str(isolate, tr.t_source.c_str());
 	if (source->IsUndefined() || source->IsNull()) {
 		tr.t_source.clear();
 		std::string().swap(tr.t_source);
@@ -102,7 +102,7 @@ int sow_web_jsx::js_compiler::run_script_x(const char*script_source, std::map<st
 	ctx_object->Set(isolate, "runtime_compiler", v8::FunctionTemplate::New(isolate, sow_web_jsx::runtime_compiler));
 	v8::Local<v8::Context> v8_ctx = v8::Context::New(isolate, nullptr, ctx_object/*v8::MaybeLocal<v8::ObjectTemplate>()*/);
 	v8::Context::Scope					context_scope(v8_ctx);
-	v8::Local<v8::String>source		=	sow_web_jsx::v8_str(isolate, script_source);
+	v8::Local<v8::String>source		=	v8_str(isolate, script_source);
 	if (source->IsUndefined() || source->IsNull()) {
 		std::cout << "String Required!!! (Script)\r\n";
 		v8_ctx->DetachGlobal();

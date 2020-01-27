@@ -9,16 +9,10 @@
 #pragma once
 #endif//!_MSC_VER
 #if !defined(_jsx_file_h)
-#define _jsx_file_h
-#if !defined(_web_jsx_global_h)
-#include "web_jsx_global.h"
-#endif//!_web_jsx_global_h
-#if !defined(_v8_util_h)
-#include "v8_util.h"
-#endif//_v8_util_h
-#if !defined(INCLUDE_V8_H_)
-#include <v8.h>
-#endif // !INCLUDE_V8_H_
+#	define _jsx_file_h
+#	include "web_jsx_global.h"
+#	include "v8_util.h"
+#	include <v8.h>
 namespace sow_web_jsx {
 	class jsx_file {
 	private:

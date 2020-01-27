@@ -8,10 +8,8 @@
 #pragma once
 #endif//!_MSC_VER
 #if !defined(_template_marger_h)
-#define _template_marger_h
-#if !defined(_web_jsx_global_h)
-#include "web_jsx_global.h"
-#endif //!_web_jsx_global_h
+#	define _template_marger_h
+#	include "web_jsx_global.h"
 namespace sow_web_jsx {
 	namespace template_marger {
 		int marge_template(

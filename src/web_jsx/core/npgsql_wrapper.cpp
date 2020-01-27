@@ -4,7 +4,7 @@
 * Copyrights licensed under the New BSD License.
 * See the accompanying LICENSE file for terms.
 */
-#include "npgsql_wrapper.h"
+#	include "npgsql_wrapper.h"
 //11:33 PM 12/13/2019
 using namespace sow_web_jsx;
 
@@ -13,7 +13,7 @@ int create_pgsql_connection(v8::Isolate* isolate, _pg_connection* pgsql, const c
 	int rec = pgsql->connect(conn);
 	if (rec < 0) {
 		isolate->ThrowException(v8::Exception::Error(
-			sow_web_jsx::v8_str(isolate, pgsql->get_last_error())));
+			v8_str(isolate, pgsql->get_last_error())));
 		return rec;
 	}
 	return rec;
@@ -40,7 +40,7 @@ int _npgsql_execute_io(
 	int rec = pgsql->execute_io(sp, user_ctx, form_data, *result);
 	if (rec < 0) {
 		isolate->ThrowException(v8::Exception::Error(
-			sow_web_jsx::v8_str(isolate, pgsql->get_last_error())));
+			v8_str(isolate, pgsql->get_last_error())));
 		result->clear(); delete result;
 		return rec;
 	}
@@ -48,8 +48,8 @@ int _npgsql_execute_io(
 	for (auto itr = result->begin(); itr != result->end(); ++itr) {
 		v8_result->Set(
 			ctx,
-			sow_web_jsx::v8_str(isolate, itr->first.c_str()),
-			sow_web_jsx::v8_str(isolate, const_cast<const char*>(itr->second))
+			v8_str(isolate, itr->first.c_str()),
+			v8_str(isolate, const_cast<const char*>(itr->second))
 		);
 	}
 	result->clear(); delete result;
@@ -70,17 +70,17 @@ int _npgsql_execute_scalar(
 		if (obj_val->IsNullOrUndefined() || !obj_val->IsObject())continue;
 		//{"name":"login_id","value":"rajibs","db_type":22}
 		v8::Local<v8::Object>v8_obj = v8::Handle<v8::Object>::Cast(obj_val);
-		v8::Local<v8::Value> db_type_val = v8_obj->Get(ctx, sow_web_jsx::v8_str(isolate, "npgsql_db_type")).ToLocalChecked();
+		v8::Local<v8::Value> db_type_val = v8_obj->Get(ctx, v8_str(isolate, "npgsql_db_type")).ToLocalChecked();
 		if (db_type_val->IsNullOrUndefined() || !db_type_val->IsNumber()) {
 			isolate->ThrowException(v8::Exception::Error(
-				sow_web_jsx::v8_str(isolate, "Param npgsql_db_type required!!!")));
+				v8_str(isolate, "Param npgsql_db_type required!!!")));
 			return -1;
 		}
 		int db_type = static_cast<int>(db_type_val->ToNumber(ctx).ToLocalChecked()->Value());
-		v8::Local<v8::Value> v8_val = v8_obj->Get(ctx, sow_web_jsx::v8_str(isolate, "parameter_direction")).ToLocalChecked();
+		v8::Local<v8::Value> v8_val = v8_obj->Get(ctx, v8_str(isolate, "parameter_direction")).ToLocalChecked();
 		if (v8_val->IsNullOrUndefined() || !v8_val->IsNumber()) {
 			isolate->ThrowException(v8::Exception::Error(
-				sow_web_jsx::v8_str(isolate, "Param parameter_direction required!!!")));
+				v8_str(isolate, "Param parameter_direction required!!!")));
 			return -1;
 		}
 		int p_direction = static_cast<int>(v8_val->ToNumber(ctx).ToLocalChecked()->Value());
@@ -109,15 +109,15 @@ int _npgsql_execute_scalar(
 	sql_param->clear(); delete sql_param;
 	if (rec < 0) {
 		isolate->ThrowException(v8::Exception::Error(
-			sow_web_jsx::v8_str(isolate, pgsql->get_last_error())));
+			v8_str(isolate, pgsql->get_last_error())));
 		result->clear(); delete result;
 		return rec;
 	}
 	for (auto itr = result->begin(); itr != result->end(); ++itr) {
 		v8_result->Set(
 			ctx,
-			sow_web_jsx::v8_str(isolate, itr->first.c_str()),
-			sow_web_jsx::v8_str(isolate, const_cast<const char*>(itr->second))
+			v8_str(isolate, itr->first.c_str()),
+			v8_str(isolate, const_cast<const char*>(itr->second))
 		);
 	}
 	result->clear(); delete result;
@@ -145,7 +145,7 @@ int _npgsql_data_reader(
 		json_array_stringify_s(rows, *row_str);
 		v8::Handle<v8::Value> arg[2] = {
 			v8::Number::New(isolate, i),
-			sow_web_jsx::v8_str(isolate, row_str->c_str())
+			v8_str(isolate, row_str->c_str())
 		};
 		callback->Call(ctx, global, 2, arg);
 		delete row_str;
@@ -154,7 +154,7 @@ int _npgsql_data_reader(
 	delete _sql_param;
 	if (rec < 0) {
 		isolate->ThrowException(v8::Exception::Error(
-			sow_web_jsx::v8_str(isolate, pgsql->get_last_error())));
+			v8_str(isolate, pgsql->get_last_error())));
 	}
 	return rec;
 }
@@ -171,22 +171,22 @@ void sow_web_jsx::npgsql_execute_io(const v8::FunctionCallbackInfo<v8::Value>& a
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
-			sow_web_jsx::v8_str(isolate, "Connection string required!!!")));
+			v8_str(isolate, "Connection string required!!!")));
 		return;
 	}
 	if (!args[1]->IsString() || args[1]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
-			sow_web_jsx::v8_str(isolate, "Stored procedure required!!!")));
+			v8_str(isolate, "Stored procedure required!!!")));
 		return;
 	}
 	if (!args[2]->IsString() || args[2]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
-			sow_web_jsx::v8_str(isolate, "Authentication context required!!!")));
+			v8_str(isolate, "Authentication context required!!!")));
 		return;
 	}
 	if (!args[3]->IsString() || args[3]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
-			sow_web_jsx::v8_str(isolate, "form_data required!!!")));
+			v8_str(isolate, "form_data required!!!")));
 		return;
 	}
 	npgsql* pgsql = new npgsql();
@@ -219,17 +219,17 @@ void sow_web_jsx::npgsql_execute_scalar(const v8::FunctionCallbackInfo<v8::Value
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
-			sow_web_jsx::v8_str(isolate, "Connection string required!!!")));
+			v8_str(isolate, "Connection string required!!!")));
 		return;
 	}
 	if (!args[1]->IsString() || args[1]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
-			sow_web_jsx::v8_str(isolate, "Stored procedure required!!!")));
+			v8_str(isolate, "Stored procedure required!!!")));
 		return;
 	}
 	if (!args[2]->IsArray() || args[2]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
-			sow_web_jsx::v8_str(isolate, "Param Array required!!!")));
+			v8_str(isolate, "Param Array required!!!")));
 		return;
 	}
 	npgsql* pgsql = new npgsql();
@@ -240,7 +240,7 @@ void sow_web_jsx::npgsql_execute_scalar(const v8::FunctionCallbackInfo<v8::Value
 	vcon.clear();
 	if (rec < 0) {
 		isolate->ThrowException(v8::Exception::Error(
-			sow_web_jsx::v8_str(isolate, pgsql->get_last_error())));
+			v8_str(isolate, pgsql->get_last_error())));
 		pgsql->close(); delete pgsql;
 		return;
 	}
@@ -260,12 +260,12 @@ void sow_web_jsx::npgsql_execute_query(const v8::FunctionCallbackInfo<v8::Value>
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
-			sow_web_jsx::v8_str(isolate, "Connection string required!!!")));
+			v8_str(isolate, "Connection string required!!!")));
 		return;
 	}
 	if (!args[1]->IsString() || args[1]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
-			sow_web_jsx::v8_str(isolate, "Query string required!!!")));
+			v8_str(isolate, "Query string required!!!")));
 		return;
 	}
 	npgsql* pgsql = new npgsql();
@@ -276,7 +276,7 @@ void sow_web_jsx::npgsql_execute_query(const v8::FunctionCallbackInfo<v8::Value>
 	vcon.clear();
 	if (rec < 0) {
 		isolate->ThrowException(v8::Exception::Error(
-			sow_web_jsx::v8_str(isolate, pgsql->get_last_error())));
+			v8_str(isolate, pgsql->get_last_error())));
 		pgsql->close(); delete pgsql;
 		return;
 	}
@@ -285,7 +285,7 @@ void sow_web_jsx::npgsql_execute_query(const v8::FunctionCallbackInfo<v8::Value>
 	query.clear();
 	if (rec < 0) {
 		isolate->ThrowException(v8::Exception::Error(
-			sow_web_jsx::v8_str(isolate, pgsql->get_last_error())));
+			v8_str(isolate, pgsql->get_last_error())));
 		pgsql->close();
 		delete pgsql;
 		return;
@@ -296,7 +296,7 @@ void sow_web_jsx::npgsql_execute_query(const v8::FunctionCallbackInfo<v8::Value>
 		args.GetReturnValue().Set(v8::Number::New(isolate, 1));
 		return;
 	}
-	args.GetReturnValue().Set(sow_web_jsx::v8_str(isolate, result));
+	args.GetReturnValue().Set(v8_str(isolate, result));
 	return;
 }
 //
@@ -310,17 +310,17 @@ void sow_web_jsx::npgsql_data_reader(const v8::FunctionCallbackInfo<v8::Value>& 
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
-			sow_web_jsx::v8_str(isolate, "Connection string required!!!")));
+			v8_str(isolate, "Connection string required!!!")));
 		return;
 	}
 	if (!args[1]->IsString() || args[1]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
-			sow_web_jsx::v8_str(isolate, "Query string required!!!")));
+			v8_str(isolate, "Query string required!!!")));
 		return;
 	}
 	if (!args[2]->IsFunction()) {
 		isolate->ThrowException(v8::Exception::TypeError(
-			sow_web_jsx::v8_str(isolate, "Callback required!!!")));
+			v8_str(isolate, "Callback required!!!")));
 		return;
 	}
 	npgsql* pgsql = new npgsql();
@@ -350,13 +350,13 @@ void sow_web_jsx::npgsql_data_reader(const v8::FunctionCallbackInfo<v8::Value>& 
 npgsql_query* _create_query(v8::Isolate* isolate, npgsql_connection* pg_con) {
 	if (pg_con->conn_state() != connection_state::OPEN) {
 		isolate->ThrowException(v8::Exception::Error(
-			sow_web_jsx::v8_str(isolate, "No active connection state found...")));
+			v8_str(isolate, "No active connection state found...")));
 		return NULL;
 	}
 	pg_connection_pool* cpool = pg_con->create_connection_pool();
 	if (cpool->error_code < 0) {
 		isolate->ThrowException(v8::Exception::Error(
-			sow_web_jsx::v8_str(isolate, cpool->error_msg)));
+			v8_str(isolate, cpool->error_msg)));
 		pg_con->exit_nicely(cpool);
 		return NULL;
 	}
@@ -367,7 +367,7 @@ void sow_web_jsx::npgsql_bind(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate
 		v8::Isolate* iso = args.GetIsolate();
 		if (!args.IsConstructCall()) {
 			iso->ThrowException(v8::Exception::TypeError(
-				sow_web_jsx::v8_str(iso, "Cannot call constructor as function!!!")));
+				v8_str(iso, "Cannot call constructor as function!!!")));
 			return;
 		}
 		v8::Local<v8::Object> obj = args.This();
@@ -378,7 +378,7 @@ void sow_web_jsx::npgsql_bind(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate
 			delete[] data.GetParameter();
 		}, v8::WeakCallbackType::kParameter);
 	});
-	tpl->SetClassName(sow_web_jsx::v8_str(isolate, "PgSql"));
+	tpl->SetClassName(v8_str(isolate, "PgSql"));
 	tpl->InstanceTemplate()->SetInternalFieldCount(1);
 	v8::Local<v8::ObjectTemplate> prototype = tpl->PrototypeTemplate();
 	prototype->Set(isolate, "connect", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -402,7 +402,7 @@ void sow_web_jsx::npgsql_bind(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate
 		int rec = pg_conn->connect();
 		if (rec < 0) {
 			isolate->ThrowException(v8::Exception::Error(
-				sow_web_jsx::v8_str(isolate, pg_conn->get_last_error())));
+				v8_str(isolate, pg_conn->get_last_error())));
 			return;
 		}
 		args.GetReturnValue().Set(args.Holder());
@@ -411,12 +411,12 @@ void sow_web_jsx::npgsql_bind(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate
 		v8::Isolate* isolate = args.GetIsolate();
 		if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 			isolate->ThrowException(v8::Exception::TypeError(
-				sow_web_jsx::v8_str(isolate, "Stored procedure required!!!")));
+				v8_str(isolate, "Stored procedure required!!!")));
 			return;
 		}
 		if (!args[1]->IsArray() || args[1]->IsNullOrUndefined()) {
 			isolate->ThrowException(v8::Exception::TypeError(
-				sow_web_jsx::v8_str(isolate, "Param Array required!!!")));
+				v8_str(isolate, "Param Array required!!!")));
 			return;
 		}
 		npgsql_connection* pg_con = sow_web_jsx::unwrap<npgsql_connection>(args);
@@ -439,7 +439,7 @@ void sow_web_jsx::npgsql_bind(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate
 		v8::Isolate* isolate = args.GetIsolate();
 		if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 			isolate->ThrowException(v8::Exception::TypeError(
-				sow_web_jsx::v8_str(isolate, "Query string required!!!")));
+				v8_str(isolate, "Query string required!!!")));
 			return;
 		}
 		npgsql_connection* pg_con = sow_web_jsx::unwrap<npgsql_connection>(args);
@@ -451,7 +451,7 @@ void sow_web_jsx::npgsql_bind(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate
 		query.clear(); pg_query->free_connection();
 		if (rec < 0) {
 			isolate->ThrowException(v8::Exception::Error(
-				sow_web_jsx::v8_str(isolate, pg_query->get_last_error())));
+				v8_str(isolate, pg_query->get_last_error())));
 			delete pg_query;
 			return;
 		};
@@ -460,7 +460,7 @@ void sow_web_jsx::npgsql_bind(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate
 			delete pg_query;
 			return;
 		}
-		args.GetReturnValue().Set(sow_web_jsx::v8_str(isolate, result));
+		args.GetReturnValue().Set(v8_str(isolate, result));
 		delete pg_query;
 		return;
 	}));
@@ -469,12 +469,12 @@ void sow_web_jsx::npgsql_bind(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate
 		
 		if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 			isolate->ThrowException(v8::Exception::TypeError(
-				sow_web_jsx::v8_str(isolate, "Query string required!!!")));
+				v8_str(isolate, "Query string required!!!")));
 			return;
 		}
 		if (!args[1]->IsFunction()) {
 			isolate->ThrowException(v8::Exception::TypeError(
-				sow_web_jsx::v8_str(isolate, "Callback required!!!")));
+				v8_str(isolate, "Callback required!!!")));
 			return;
 		}
 		npgsql_connection* pg_con = sow_web_jsx::unwrap<npgsql_connection>(args);
@@ -499,17 +499,17 @@ void sow_web_jsx::npgsql_bind(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate
 		v8::Isolate* isolate = args.GetIsolate();
 		if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 			isolate->ThrowException(v8::Exception::TypeError(
-				sow_web_jsx::v8_str(isolate, "Stored procedure required!!!")));
+				v8_str(isolate, "Stored procedure required!!!")));
 			return;
 		}
 		if (!args[1]->IsString() || args[1]->IsNullOrUndefined()) {
 			isolate->ThrowException(v8::Exception::TypeError(
-				sow_web_jsx::v8_str(isolate, "Authentication context required!!!")));
+				v8_str(isolate, "Authentication context required!!!")));
 			return;
 		}
 		if (!args[2]->IsString() || args[2]->IsNullOrUndefined()) {
 			isolate->ThrowException(v8::Exception::TypeError(
-				sow_web_jsx::v8_str(isolate, "form_data required!!!")));
+				v8_str(isolate, "form_data required!!!")));
 			return;
 		}
 		npgsql_connection* pg_con = sow_web_jsx::unwrap<npgsql_connection>(args);

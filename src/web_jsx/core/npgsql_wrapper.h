@@ -9,19 +9,11 @@
 #pragma once
 #endif//!_MSC_VER
 #if !defined(_npgsql_wrapper_h)
-#define _npgsql_wrapper_h
-#if !defined(_v8_util_h)
-#include "v8_util.h"
-#endif//!v8_util_h
-#if !defined(_npgsql_h)
-#include <npgsql.h>
-#endif//!_npgsql_h
-#if !defined(_npgsql_pool_h)
-#include <npgsql_pool.h>
-#endif//!_npgsql_pool_h
-#if !defined(_npgsql_tools_h)
-#include <npgsql_tools.h>
-#endif//_npgsql_tools_h
+#	define _npgsql_wrapper_h
+#	include "v8_util.h"
+#	include <npgsql.h>
+#	include <npgsql_pool.h>
+#	include <npgsql_tools.h>
 namespace sow_web_jsx {
 	//
 	// Summary:

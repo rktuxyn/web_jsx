@@ -5,17 +5,11 @@
 * See the accompanying LICENSE file for terms.
 */
 //2:00 PM 12/24/2019
-#include "http_payload.h"
-#if !defined(_web_jsx_global_h)
-#include "web_jsx_global.h"
-#endif//_web_jsx_global_h
-#if !defined(_INC_STDLIB)
-#include <stdlib.h>/* srand, rand */
-#endif // !_INC_STDLIB
-#if !defined(_CSTDLIB_)
-#include <cstdlib>
-#endif// !_CSTDLIB_
-#include <ctime>
+#	include "http_payload.h"
+#	include "web_jsx_global.h"
+#	include <stdlib.h>/* srand, rand */
+#	include <cstdlib>
+#	include <ctime>
 #pragma warning(disable : 4996)//Disable strcpy warning
 using namespace sow_web_jsx;
 /*[Help]*/
@@ -606,7 +600,7 @@ v8::Local<v8::Object> get_file_obj(v8::Isolate* isolate, http_posted_file* pf) {
 		v8::Isolate* isolate = args.GetIsolate();
 		if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 			isolate->ThrowException(v8::Exception::TypeError(
-				sow_web_jsx::v8_str(isolate, "Absolute path required!!!")));
+				v8_str(isolate, "Absolute path required!!!")));
 			return;
 		}
 		native_string absolute_v8_str(isolate, args[0]);
@@ -633,29 +627,29 @@ v8::Local<v8::Object> get_file_obj(v8::Isolate* isolate, http_posted_file* pf) {
 			std_str.append(strerror(errno));
 		}
 		absolute_v8_str.clear();
-		isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, std_str.c_str())));
+		isolate->ThrowException(v8::Exception::Error(v8_str(isolate, std_str.c_str())));
 		return;
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "get_data", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* isolate = args.GetIsolate();
 		http_posted_file* app = (http_posted_file*)args.Holder()->GetAlignedPointerFromInternalField(0);
 		if (app->is_text_content()) {
-			isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, "Readable chracter not avilable for this content type.")));
+			isolate->ThrowException(v8::Exception::Error(v8_str(isolate, "Readable chracter not avilable for this content type.")));
 			return;
 		}
 		const char* data = app->get_data();
 		if (data == NULL || (data != NULL && data == '\0')) {
-			isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, "No data found in current file object.")));
+			isolate->ThrowException(v8::Exception::Error(v8_str(isolate, "No data found in current file object.")));
 			return;
 		}
-		args.GetReturnValue().Set(sow_web_jsx::v8_str(isolate, data));
+		args.GetReturnValue().Set(v8_str(isolate, data));
 		return;
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "get_content_disposition", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* isolate = args.GetIsolate();
 		http_posted_file* app = (http_posted_file*)args.Holder()->GetAlignedPointerFromInternalField(0);
 		const char* data = app->get_content_disposition();
-		args.GetReturnValue().Set(sow_web_jsx::v8_str(isolate, data));
+		args.GetReturnValue().Set(v8_str(isolate, data));
 		return;
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "get_file_size", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -669,21 +663,21 @@ v8::Local<v8::Object> get_file_obj(v8::Isolate* isolate, http_posted_file* pf) {
 		v8::Isolate* isolate = args.GetIsolate();
 		http_posted_file* app = (http_posted_file*)args.Holder()->GetAlignedPointerFromInternalField(0);
 		const char* data = app->get_name();
-		args.GetReturnValue().Set(sow_web_jsx::v8_str(isolate, data));
+		args.GetReturnValue().Set(v8_str(isolate, data));
 		return;
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "get_file_name", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* isolate = args.GetIsolate();
 		http_posted_file* app = (http_posted_file*)args.Holder()->GetAlignedPointerFromInternalField(0);
 		const char* data = app->get_file_name();
-		args.GetReturnValue().Set(sow_web_jsx::v8_str(isolate, data));
+		args.GetReturnValue().Set(v8_str(isolate, data));
 		return;
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "get_content_type", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* isolate = args.GetIsolate();
 		http_posted_file* app = (http_posted_file*)args.Holder()->GetAlignedPointerFromInternalField(0);
 		const char* data = app->get_content_type();
-		args.GetReturnValue().Set(sow_web_jsx::v8_str(isolate, data));
+		args.GetReturnValue().Set(v8_str(isolate, data));
 		return;
 	}, global));
 
@@ -699,12 +693,12 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsNumber() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
-			sow_web_jsx::v8_str(isolate, "Contenent length required!!!")));
+			v8_str(isolate, "Contenent length required!!!")));
 		return;
 	}
 	if (!args[1]->IsString() || args[1]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
-			sow_web_jsx::v8_str(isolate, "ContentType required!!!")));
+			v8_str(isolate, "ContentType required!!!")));
 		return;
 	}
 	v8::Local<v8::FunctionTemplate> appTemplate = v8::FunctionTemplate::New(isolate);
@@ -714,7 +708,7 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 		v8::Isolate* isolate = args.GetIsolate();
 		if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 			isolate->ThrowException(v8::Exception::TypeError(
-				sow_web_jsx::v8_str(isolate, "Directory required!!!")));
+				v8_str(isolate, "Directory required!!!")));
 			return;
 		}
 		native_string save_dir(isolate, args[0]);
@@ -727,7 +721,7 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 		v8::Isolate* isolate = args.GetIsolate();
 		if (!args[0]->IsFunction() || args[0]->IsNullOrUndefined()) {
 			isolate->ThrowException(v8::Exception::TypeError(
-				sow_web_jsx::v8_str(isolate, "Callback should be a Function instance!!!")));
+				v8_str(isolate, "Callback should be a Function instance!!!")));
 			return;
 		}
 		http_payload* app = (http_payload*)args.Holder()->GetAlignedPointerFromInternalField(0);
@@ -745,7 +739,7 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 		callback.Clear();
 		if (ret < 0) {
 			isolate->ThrowException(v8::Exception::TypeError(
-				sow_web_jsx::v8_str(isolate, app->get_last_error())));
+				v8_str(isolate, app->get_last_error())));
 			return;
 		}
 		args.GetReturnValue().Set(v8::Number::New(isolate, ret));
@@ -763,7 +757,7 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 		}
 		if (ret < 0) {
 			isolate->ThrowException(v8::Exception::TypeError(
-				sow_web_jsx::v8_str(isolate, app->get_last_error())));
+				v8_str(isolate, app->get_last_error())));
 			return;
 		}
 		args.GetReturnValue().Set(v8::Number::New(isolate, ret));
@@ -778,19 +772,19 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 		v8::Isolate* isolate = args.GetIsolate();
 		http_payload* app = (http_payload*)args.Holder()->GetAlignedPointerFromInternalField(0);
 		if (app->is_multipart()) {
-			isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, "Multipart posted file not allowed.")));
+			isolate->ThrowException(v8::Exception::Error(v8_str(isolate, "Multipart posted file not allowed.")));
 			return;
 		}
 		if (app->is_read_end() == false) {
-			isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, "No posted data read yet from current context. Please use before read_all...")));
+			isolate->ThrowException(v8::Exception::Error(v8_str(isolate, "No posted data read yet from current context. Please use before read_all...")));
 			return;
 		}
 		const char* data = app->get_body();
 		if (data == NULL || (data != NULL && data == '\0')) {
-			isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, "No data found in current context.")));
+			isolate->ThrowException(v8::Exception::Error(v8_str(isolate, "No data found in current context.")));
 			return;
 		}
-		args.GetReturnValue().Set(sow_web_jsx::v8_str(isolate, data));
+		args.GetReturnValue().Set(v8_str(isolate, data));
 		return;
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "has_error", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -809,7 +803,7 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 		v8::Isolate* isolate = args.GetIsolate();
 		if (!args[0]->IsFunction() || args[0]->IsNullOrUndefined()) {
 			isolate->ThrowException(v8::Exception::TypeError(
-				sow_web_jsx::v8_str(isolate, "Callback should be a Function instance!!!")));
+				v8_str(isolate, "Callback should be a Function instance!!!")));
 			return;
 		}
 		http_payload* app = (http_payload*)args.Holder()->GetAlignedPointerFromInternalField(0);
@@ -833,7 +827,7 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 		if (app == NULL ) {
 			v8::Isolate* isolate = args.GetIsolate();
 			isolate->ThrowException(v8::Exception::Error(
-				sow_web_jsx::v8_str(isolate, "`http_payload` Object already released!!!")));
+				v8_str(isolate, "`http_payload` Object already released!!!")));
 			return;
 		}
 		app->clear();
@@ -860,15 +854,15 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 void sow_web_jsx::write_file_from_payload(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsNumber() || args[0]->IsNullOrUndefined()) {
-		isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, "Contenent length required!!!")));
+		isolate->ThrowException(v8::Exception::Error(v8_str(isolate, "Contenent length required!!!")));
 		return;
 	}
 	if (!args[1]->IsString() || args[1]->IsNullOrUndefined()) {
-		isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, "ContentType required!!!")));
+		isolate->ThrowException(v8::Exception::Error(v8_str(isolate, "ContentType required!!!")));
 		return;
 	}
 	if (!args[2]->IsString() || args[2]->IsNullOrUndefined()) {
-		isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, "Upload directory required!!!")));
+		isolate->ThrowException(v8::Exception::Error(v8_str(isolate, "Upload directory required!!!")));
 		return;
 	}
 	v8::Local<v8::Context> ctx = isolate->GetCurrentContext();
@@ -879,12 +873,12 @@ void sow_web_jsx::write_file_from_payload(const v8::FunctionCallbackInfo<v8::Val
 	http_payload* app = new http_payload(ctype.c_str(), content_length);
 	int rec = app->read_all(upload_dir.c_str());
 	if (rec < 0) {
-		isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, app->get_last_error())));
+		isolate->ThrowException(v8::Exception::Error(v8_str(isolate, app->get_last_error())));
 	}
 	else {
 		rec = app->save_to_file(upload_dir.c_str());
 		if (rec < 0) {
-			isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, app->get_last_error())));
+			isolate->ThrowException(v8::Exception::Error(v8_str(isolate, app->get_last_error())));
 		}
 	}
 	if (rec >= 0) {
@@ -895,15 +889,15 @@ void sow_web_jsx::write_file_from_payload(const v8::FunctionCallbackInfo<v8::Val
 void sow_web_jsx::read_payload(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsNumber() || args[0]->IsNullOrUndefined()) {
-		isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, "Contenent length required!!!")));
+		isolate->ThrowException(v8::Exception::Error(v8_str(isolate, "Contenent length required!!!")));
 		return;
 	}
 	if (!args[1]->IsString() || args[1]->IsNullOrUndefined()) {
-		isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, "ContentType required!!!")));
+		isolate->ThrowException(v8::Exception::Error(v8_str(isolate, "ContentType required!!!")));
 		return;
 	}
 	if (!args[2]->IsFunction() || args[2]->IsNullOrUndefined()) {
-		isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, "Callback required!!!")));
+		isolate->ThrowException(v8::Exception::Error(v8_str(isolate, "Callback required!!!")));
 		return;
 	}
 	v8::Local<v8::Context> ctx = isolate->GetCurrentContext();
@@ -922,7 +916,7 @@ void sow_web_jsx::read_payload(const v8::FunctionCallbackInfo<v8::Value>& args) 
 	});
 	callback.Clear();
 	if (ret < 0) {
-		isolate->ThrowException(v8::Exception::Error(sow_web_jsx::v8_str(isolate, app->get_last_error())));
+		isolate->ThrowException(v8::Exception::Error(v8_str(isolate, app->get_last_error())));
 	}
 	else {
 		args.GetReturnValue().Set(v8::Number::New(isolate, ret));

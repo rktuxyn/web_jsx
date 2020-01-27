@@ -6,28 +6,28 @@
 */
 //1:57 PM 1/16/2020
 #if (defined(_WIN32)||defined(_WIN64))
-#include "image_win.h"
-#include "v8_util.h"
-#include "base64.h"
-#include <iostream>
-#include <string>
-#include <algorithm>
-#include <stdio.h>
-#include <windows.h>
-#include <winbase.h>
-#include <gdiplus.h>
+#	include "image_win.h"
+#	include "v8_util.h"
+#	include "base64.h"
+#	include <iostream>
+#	include <string>
+#	include <algorithm>
+#	include <stdio.h>
+#	include <windows.h>
+#	include <winbase.h>
+#	include <gdiplus.h>
 #pragma comment(lib,"gdiplus.lib")
 #if !defined(GMEM_MOVEABLE)
-#define GMEM_MOVEABLE       0x0002
+#	define GMEM_MOVEABLE       0x0002
 #endif//!GMEM_MOVEABLE
 #if !defined(PixelFormat32bppRGB)
-#define    PixelFormat32bppRGB        (9 | (32 << 8) | PixelFormatGDI)
+#	define    PixelFormat32bppRGB        (9 | (32 << 8) | PixelFormatGDI)
 #endif//!GMEM_MOVEABLE
 #ifndef FALSE
-#define FALSE               0
+#	define FALSE               0
 #endif
 #ifndef TRUE
-#define TRUE                1
+#	define TRUE                1
 #endif
 #pragma warning(disable:4996)
 enum image_format {
@@ -86,12 +86,15 @@ INT get_encoder_clsid(const WCHAR* format, CLSID* pClsid) {
 	UINT num, size;
 	Gdiplus::GetImageEncodersSize(&num, &size);
 	Gdiplus::ImageCodecInfo* pImageCodecInfo = (Gdiplus::ImageCodecInfo*)(malloc(size));
-	Gdiplus::GetImageEncoders(num, size, pImageCodecInfo);
-	for (UINT ix = 0; ix < num; ++ix) {
-		if (0 == _wcsicmp(pImageCodecInfo[ix].MimeType, format) == 0) {
-			*pClsid = pImageCodecInfo[ix].Clsid;
-			free(pImageCodecInfo);
-			return ix;
+	if (pImageCodecInfo == NULL) return -1;
+	Gdiplus::Status st = Gdiplus::GetImageEncoders(num, size, pImageCodecInfo);
+	if (st == Gdiplus::Ok) {
+		for (UINT ix = 0; ix < num; ++ix) {
+			if (0 == _wcsicmp(pImageCodecInfo[ix].MimeType, format) == 0) {
+				*pClsid = pImageCodecInfo[ix].Clsid;
+				free(pImageCodecInfo);
+				return ix;
+			}
 		}
 	}
 	free(pImageCodecInfo);
@@ -138,6 +141,7 @@ private:
 	ULONG_PTR _gdiplus_token;
 	int _is_loaded;
 	int _errc;
+	int _is_copy;
 	char* _internal_error;
 	__forceinline int panic(const char* error, int code) {
 		if (_internal_error != NULL)
@@ -168,12 +172,15 @@ public:
 		_height = 0; _width = 0; _bitmap_data = NULL;
 		_task_mood = _mood::UNKNOWN_; _gd_is_init = FALSE;
 		_format = image_format::UNKNOWN; _gdiplus_token = NULL;
+		_is_copy = FALSE;
 	}
 	__forceinline ~image() {
 		this->release_all();
 	}
 	__forceinline void release_all() {
-		this->free_memory(); this->gdiplus_shutdown();
+		this->free_memory();
+		if (_is_copy == TRUE)return;
+		this->gdiplus_shutdown();
 	}
 	__forceinline void gdiplus_shutdown() {
 		if (_gdiplus_token != NULL) {
@@ -200,13 +207,14 @@ public:
 		_width = _bit_map->GetWidth(); _is_loaded = TRUE;
 		return TRUE;
 	}
+	//10:25 AM 1/19/2020
 	__forceinline int load_from_buff(char* buffer, ULONG size, image_format format = image_format::BMP) {
 		this->release_all();
 		int ret = this->gd_init();
 		if (is_error_code(ret) == TRUE)return ret;
 		IStream* pStream = NULL;
 		if (::CreateStreamOnHGlobal(NULL, TRUE, (LPSTREAM*)&pStream) == S_OK) {
-			ULONG ulBytesWrite;
+			//ULONG ulBytesWrite;
 			if (pStream->Write(buffer, size, NULL) == S_OK) {
 				_bit_map = Gdiplus::Bitmap::FromStream(pStream);
 				if (_bit_map != NULL) {
@@ -366,6 +374,9 @@ public:
 	}
 	__forceinline int resize(INT width, INT height) {
 		if (_is_loaded == FALSE)return this->panic("Please Load an Image than try again.", TRUE);
+		if (width % 4 != 0) {
+			return panic("There is a windows-imposed requirement on BMP that the width be a multiple of 4", TRUE);
+		}
 		image* img = new image();
 		int ret = img->create_canvas(width, height);
 		if (is_error_code(ret) == TRUE) {
@@ -377,7 +388,7 @@ public:
 		if (is_error_code(ret) != TRUE) {
 			*this = *img;
 		}
-		img->free_memory(); delete img;
+		img->free_memory(TRUE); delete img;
 		return ret;
 	}
 	__forceinline int save(const char* path) {
@@ -411,9 +422,55 @@ public:
 		if (stat == Gdiplus::Status::Ok)return TRUE;
 		std::string err("Failed to save image. Error reason:");
 		err.append(get_gdiplus_error_reason(stat));
-		this->panic(err.c_str(), TRUE);
+		this->panic(err.c_str(), TRUE); err.clear(); std::string().swap(err);
 		return _errc;
 	}
+	//10:44 AM 1/20/2020
+	template<class _func>
+	__forceinline int get_image_buff(_func cb, image_format format = image_format::BMP) {
+		if (_is_loaded == FALSE) return this->panic("Please Load an Image than try again.", TRUE);
+		if (_bit_map == NULL) return this->panic("Please Load an Image than try again.", TRUE);
+		const char* cmime_type = get_mime_type(format);
+		if (cmime_type == NULL) return this->panic("Unsupported Image format.\nSupported .bmp, .png, .jpeg, .jpg, .gif, .tiff, .tif", TRUE);
+		IStream* oStream = NULL;
+		if (::CreateStreamOnHGlobal(NULL, TRUE, (LPSTREAM*)& oStream) != S_OK)return this->panic("Unable to create memmory stream.", TRUE);
+		this->unlock_bits();
+		CLSID encoder_clsid;
+		wchar_t* mime_type = ccr2ws(cmime_type);
+		int ret = get_encoder_clsid(const_cast<const wchar_t*>(mime_type), &encoder_clsid);
+		delete[]mime_type;
+		if (ret < 0)return this->panic("Unable to create mime type.", TRUE);
+		_bit_map->Save(oStream, &encoder_clsid);
+		ULARGE_INTEGER ulnSize; LARGE_INTEGER lnOffset;
+		lnOffset.QuadPart = 0;
+		oStream->Seek(lnOffset, STREAM_SEEK_END, &ulnSize);
+		oStream->Seek(lnOffset, STREAM_SEEK_SET, NULL);
+		if (ulnSize.QuadPart <= 0) {
+			oStream->Release();
+			return this->panic("No data found in Image Stream.", TRUE);
+		}
+		int eof = FALSE; ULONG ulBytesRead; unsigned int total_len = (unsigned int)ulnSize.QuadPart;
+		const int chunk = 1024 * 2; unsigned read_len = 0;
+		do {
+			char* pBuff;
+			if (total_len > chunk) {
+				read_len = chunk;
+			}
+			else {
+				read_len = total_len;
+			}
+			pBuff = new char[read_len];
+			oStream->Read(pBuff, (ULONG)read_len, &ulBytesRead);
+			total_len -= ulBytesRead;
+			if (total_len <= 0)eof = TRUE;
+			cb(const_cast<const char*>(pBuff), static_cast<int>(ulBytesRead));
+			//cb(pBuff, ulBytesRead);
+			delete[]pBuff;
+		} while (eof == FALSE);
+		oStream->Release();
+		return TRUE;
+	}
+	//04:13 PM 1/19/2020
 	__forceinline int get_image_buff(std::string&out, image_format format = image_format::BMP) {
 		if (_is_loaded == FALSE) return this->panic("Please Load an Image than try again.", TRUE);
 		if (_bit_map == NULL) return this->panic("Please Load an Image than try again.", TRUE);
@@ -432,6 +489,10 @@ public:
 		lnOffset.QuadPart = 0;
 		oStream->Seek(lnOffset, STREAM_SEEK_END, &ulnSize);
 		oStream->Seek(lnOffset, STREAM_SEEK_SET, NULL);
+		if (ulnSize.QuadPart <= 0) {
+			oStream->Release();
+			return this->panic("No data found in Image Stream.", TRUE);
+		}
 		char* pBuff = new char[(unsigned int)ulnSize.QuadPart];
 		ULONG ulBytesRead;
 		oStream->Read(pBuff, (ULONG)ulnSize.QuadPart, &ulBytesRead);
@@ -465,7 +526,8 @@ public:
 	__forceinline int is_loaded() const {
 		return _is_loaded;
 	}
-	__forceinline void free_memory() {
+	__forceinline void free_memory(int is_copy = FALSE) {
+		_is_copy = is_copy;
 		if (_bitmap_data != NULL) {
 			::DeleteObject(_bitmap_data); _bitmap_data = NULL;
 		}
@@ -499,7 +561,7 @@ void image_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx){
 			delete[] data.GetParameter();
 		}, v8::WeakCallbackType::kParameter);
 	});
-	image_tpl->SetClassName(v8_str(isolate, "image"));
+	image_tpl->SetClassName(v8_str(isolate, "Image"));
 	image_tpl->InstanceTemplate()->SetInternalFieldCount(1);
 	v8::Local<v8::ObjectTemplate> prototype = image_tpl->PrototypeTemplate();
 	prototype->Set(v8::String::NewFromUtf8(isolate, "load", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -563,8 +625,15 @@ void image_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx){
 			throw_js_error(args.GetIsolate(), "Image does not loaded yet...");
 			return;
 		}
+		image_format format = image_format::BMP;//get_image_format(*abspath);
+		if (args.Length() > 0) {
+			if (args[0]->IsNumber()) {
+				v8::Local<v8::Context>ctx = args.GetIsolate()->GetCurrentContext();
+				format = (image_format)args[0]->Int32Value(ctx).FromMaybe(0);
+			}
+		}
 		std::string* out = new std::string();
-		int ret = img->get_image_buff(*out);
+		int ret = img->get_image_buff(*out, format);
 		if (is_error_code(ret) == TRUE) {
 			throw_js_error(args.GetIsolate(), img->get_last_error());
 		}
@@ -572,6 +641,48 @@ void image_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx){
 			args.GetReturnValue().Set(v8_str(args.GetIsolate(), out->c_str()));
 		}
 		out->clear(); delete out;
+	}));
+	prototype->Set(isolate, "get_datac", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		if (!args[0]->IsFunction()) {
+			throw_js_error(args.GetIsolate(), "Callback required...");
+			return;
+		}
+		image* img = sow_web_jsx::unwrap<image>(args);
+		if (img == NULL) {
+			throw_js_error(args.GetIsolate(), "Image object disposed...");
+			return;
+		}
+		if (img->is_loaded() == FALSE) {
+			throw_js_error(args.GetIsolate(), "Image does not loaded yet...");
+			return;
+		}
+		v8::Isolate* isolate = args.GetIsolate();
+		image_format format = image_format::BMP;//get_image_format(*abspath);
+		if (args.Length() > 1) {
+			if (args[1]->IsNumber()) {
+				v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
+				format = (image_format)args[1]->Int32Value(ctx).FromMaybe(0);
+			}
+		}
+		v8::Persistent<v8::Function> cb;
+		cb.Reset(isolate, v8::Local<v8::Function>::Cast(args[0]));
+		v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate, cb);
+		int ret = img->get_image_buff([&isolate, &callback](const char* buff, int len) {
+			//v8_str(isolate, buff);
+			v8::Local<v8::Value> argv[2] = {
+				v8::String::NewFromUtf8(isolate, buff,v8::NewStringType::kNormal, len).ToLocalChecked(),
+				v8::Integer::New(isolate, len)
+			};
+			callback->Call(isolate->GetCurrentContext(), isolate->GetCurrentContext()->Global(), 2, argv);
+			argv->Clear();
+		}, format);
+		callback.Clear();
+		if (is_error_code(ret) == TRUE) {
+			throw_js_error(args.GetIsolate(), img->get_last_error());
+		}
+		else {
+			args.GetReturnValue().Set(args.Holder());
+		}
 	}));
 	prototype->Set(isolate, "to_base64", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		image* img = sow_web_jsx::unwrap<image>(args);
@@ -583,8 +694,15 @@ void image_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx){
 			throw_js_error(args.GetIsolate(), "Image does not loaded yet...");
 			return;
 		}
+		image_format format = image_format::BMP;//get_image_format(*abspath);
+		if (args.Length() > 0) {
+			if (args[0]->IsNumber()) {
+				v8::Local<v8::Context>ctx = args.GetIsolate()->GetCurrentContext();
+				format = (image_format)args[0]->Int32Value(ctx).FromMaybe(0);
+			}
+		}
 		std::string* out = new std::string();
-		int ret = img->to_base64(*out);
+		int ret = img->to_base64(*out, format);
 		if (is_error_code(ret) == TRUE) {
 			throw_js_error(args.GetIsolate(), img->get_last_error());
 		}
@@ -605,9 +723,16 @@ void image_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx){
 			throw_js_error(args.GetIsolate(), "Image object disposed...");
 			return;
 		}
+		image_format format = image_format::BMP;
+		if (args.Length() > 1) {
+			if (args[1]->IsNumber()) {
+				v8::Local<v8::Context>ctx = args.GetIsolate()->GetCurrentContext();
+				format = (image_format)args[1]->Int32Value(ctx).FromMaybe(0);
+			}
+		}
 		native_string utf_base64(isolate, args[0]);
 		std::string* img_data = new std::string(utf_base64.c_str(), utf_base64.size());
-		int ret = img->load_from_buff(img_data->data(), static_cast<ULONG>(img_data->size()));
+		int ret = img->load_from_buff(img_data->data(), static_cast<ULONG>(img_data->size()), format);
 		utf_base64.clear(); img_data->clear(); delete img_data;
 		if (is_error_code(ret) == TRUE) {
 			throw_js_error(isolate, img->get_last_error());
@@ -626,8 +751,15 @@ void image_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx){
 			throw_js_error(args.GetIsolate(), "Image object disposed...");
 			return;
 		}
+		image_format format = image_format::BMP;//get_image_format(*abspath);
+		if (args.Length() > 1) {
+			if (args[1]->IsNumber()) {
+				v8::Local<v8::Context>ctx = args.GetIsolate()->GetCurrentContext();
+				format = (image_format)args[1]->Int32Value(ctx).FromMaybe(0);
+			}
+		}
 		native_string utf_base64(isolate, args[0]);
-		int ret = img->load_from_base64(utf_base64.c_str());
+		int ret = img->load_from_base64(utf_base64.c_str(), format);
 		utf_base64.clear();
 		if (is_error_code(ret) == TRUE) {
 			throw_js_error(isolate, img->get_last_error());
@@ -891,6 +1023,21 @@ void image_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx){
 		img->dump_data();
 		args.GetReturnValue().Set(args.Holder());
 	}));
+	{
+		v8::Local<v8::ObjectTemplate>image_format_object = v8::ObjectTemplate::New(isolate);
+		image_format_object->Set(isolate, "BMP", v8::Integer::New(isolate, (int)image_format::BMP));
+		image_format_object->Set(isolate, "PNG", v8::Integer::New(isolate, (int)image_format::PNG));
+		image_format_object->Set(isolate, "JPEG", v8::Integer::New(isolate, (int)image_format::JPEG));
+		image_format_object->Set(isolate, "JPG", v8::Integer::New(isolate, (int)image_format::JPG));
+		image_format_object->Set(isolate, "GIF", v8::Integer::New(isolate, (int)image_format::GIF));
+		image_format_object->Set(isolate, "TIFF", v8::Integer::New(isolate, (int)image_format::TIFF));
+		image_format_object->Set(isolate, "TIF", v8::Integer::New(isolate, (int)image_format::TIF));
+		ctx->Set(isolate, "image_format", image_format_object);
+		v8::Local<v8::ObjectTemplate>image_mood = v8::ObjectTemplate::New(isolate);
+		image_mood->Set(isolate, "READ", v8::Integer::New(isolate, (int)_mood::READ));
+		image_mood->Set(isolate, "WRITE", v8::Integer::New(isolate, (int)_mood::WRITE));
+		ctx->Set(isolate, "image_mood", image_mood);
+	}
 	ctx->Set(isolate, "Image", image_tpl);
 }
 

@@ -5,7 +5,7 @@
 * See the accompanying LICENSE file for terms.
 */
 //1:23 AM 1/23/2019
-#include "web_jsx_global.h"
+#	include "web_jsx_global.h"
 void sow_web_jsx::format__path(std::string&str) {
 	str = std::regex_replace(str, std::regex("(?:/)"), "\\");
 }
@@ -90,51 +90,42 @@ std::string sow_web_jsx::extract_between(
 
 	return result;
 }
-
+#if !defined(_FSTREAM_)
+#include <fstream>// std::ifstream
+#endif//!_FSTREAM_
+size_t sow_web_jsx::read_file(const char* absolute_path, std::stringstream& ssstream, bool check_file_exists) {
+	size_t r_length = -1;
+	std::ifstream* file_stream = new std::ifstream(absolute_path, std::ifstream::binary);
+	//std::ifstream file_stream(absolute_path, std::ifstream::binary);
+	if (!file_stream->is_open()) {
+		delete file_stream;
+		ssstream << "File not found in#" << absolute_path;
+		return r_length;
+	}
+	file_stream->seekg(0, std::ios::end);//Go to end of stream
+	std::streamoff totalSize = file_stream->tellg();
+	size_t total_len = (size_t)totalSize;
+	file_stream->seekg(0, std::ios::beg);//Back to begain of stream
+	if (total_len == std::string::npos || total_len == 0)return total_len;
+	size_t read_len = 0;
+	do {
+		if (!file_stream->good())break;
+		char* in;
+		read_len = totalSize > READ_CHUNK ? READ_CHUNK : totalSize;
+		in = new char[read_len];
+		file_stream->read(in, read_len);
+		totalSize -= read_len;
+		ssstream.write(in, read_len);
+		/* Free memory */
+		delete[]in;
+		if (totalSize <= 0) break;
+	} while (true);
+	file_stream->close(); delete file_stream;
+	return total_len;
+}
 #if !(defined(_WIN32)||defined(_WIN64)) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
 #error Not Implemented
 #else
-size_t sow_web_jsx::read_file(const char* absolute_path, std::stringstream& ssstream, bool check_file_exists) {
-	size_t r_length = -1;
-	if (check_file_exists == true) {
-		if (__file_exists(absolute_path) == false) {
-			ssstream << "File not found in#" << absolute_path;
-			return r_length;
-		}
-	}
-	FILE* fs;
-	errno_t err = fopen_s(&fs, absolute_path, "rb");
-	if (fs == NULL || err != 0) {
-		ssstream << get_error_desc(err) << " FILE:"<< absolute_path;
-		return r_length;
-	}
-	fseek(fs, 0, SEEK_END);//go to end
-	size_t t_length = ftell(fs);//get length of stream
-	rewind(fs);//Back to begain of stream
-	size_t read_length = 0;
-	r_length = 0;
-	size_t rlen = 0;
-	while (true) {
-		rlen = t_length > READ_CHUNK ? READ_CHUNK : t_length;
-		char* buff = new char[rlen + 1];
-		buff[rlen] = '\0';
-		read_length = fread(buff, 1, rlen, fs);
-		if (ferror(fs)) {
-			delete[]buff;
-			fclose(fs);
-			std::stringstream().swap(ssstream);
-			ssstream << "ERROR OCCURED WHILE READING FILE#" << absolute_path;
-			return -2;
-		}
-		r_length += read_length;
-		ssstream.write(buff, read_length);
-		delete[]buff;
-		t_length -= read_length;
-		if (t_length <= 0)break;
-	}
-	fclose(fs);
-	return r_length;
-}
 wchar_t* sow_web_jsx::ccr2ws(const char* s) {
 	size_t len = strlen(s);
 	wchar_t * buf = new wchar_t[len + sizeof(wchar_t)]();
@@ -142,6 +133,11 @@ wchar_t* sow_web_jsx::ccr2ws(const char* s) {
 	mbsrtowcs(buf, &s, len, NULL);
 	return buf;
 }
+//wchar_t* ccr2ws(const char* s) {
+//	size_t len = strlen(s);
+//	std::unique_ptr<wchar_t[]> tmp(new wchar_t[len + 1]);
+//	return tmp.release();
+//}
 int sow_web_jsx::open_process(const char*process_path, const char*arg) {
 	if (__file_exists(process_path) == false)
 		return -1;
@@ -150,7 +146,7 @@ int sow_web_jsx::open_process(const char*process_path, const char*arg) {
 	str += " ";
 	str += arg;
 	system(str.c_str());
-	std::string().swap(str);
+	str.clear(); std::string().swap(str);
 	return 1;
 }
 int sow_web_jsx::process_is_running(DWORD dwPid) {
@@ -345,9 +341,6 @@ const char* sow_web_jsx::get_error_desc(int error_code) {
 	default:return "Unknown error code";
 	}
 }
-size_t read_binary() {
-	return -1;
-}
 size_t sow_web_jsx::read_file(const char*absolute_path, std::string&str, bool check_file_exists) {
 	std::stringstream ssstream(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
 	size_t ret = sow_web_jsx::read_file(absolute_path, ssstream, check_file_exists);
@@ -355,7 +348,6 @@ size_t sow_web_jsx::read_file(const char*absolute_path, std::string&str, bool ch
 	std::stringstream().swap(ssstream);
 	return ret;
 }
-
 char* sow_web_jsx::read_file(const char* absolute_path, bool check_file_exists = true) {
 	if (check_file_exists) {
 		if (__file_exists(absolute_path) == false) {
@@ -368,9 +360,9 @@ char* sow_web_jsx::read_file(const char* absolute_path, bool check_file_exists =
 		err = fopen_s(&stream, absolute_path, "rb");
 		if (stream == NULL) return new char[8]{ "INVALID" };
 		if (err != 0)return new char[8]{ "INVALID" };
-		fseek(stream, 0, SEEK_END);
+		fseek(stream, 0, SEEK_END);//Go to end of stream
 		size_t size = ftell(stream);
-		rewind(stream);
+		rewind(stream);//Back to begain of stream
 		char *chars = new char[size + 1];
 		chars[size] = '\0';
 		for (size_t i = 0; i < size;) {

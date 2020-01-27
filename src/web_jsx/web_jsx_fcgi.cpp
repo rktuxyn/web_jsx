@@ -5,7 +5,7 @@
 * See the accompanying LICENSE file for terms.
 */
 //3:46 PM 2/3/2019
-#include "web_jsx_fcgi.h"
+#	include "web_jsx_fcgi.h"
 #if defined(FAST_CGI_APP)
 int web_jsx_cgi::fcgi_request::request_process(const app_ex_info aei, const char*env_path, char **envp) {
 	const char* content_type = "text/html";// FCGX_GetParam("CONTENT_TYPE", envp);
@@ -63,8 +63,8 @@ int web_jsx_cgi::fcgi_request::request_handler(const char*execute_path) {
 			aei->ex_dir = new std::string();
 			aei->ex_name = new std::string();
 			aei->execute_path = execute_path;
-			request_file_info(aei->execute_path, *aei->ex_dir, *aei->ex_name);
-			write_internal_server_error("text/html", aei->ex_dir->c_str(), 500, "Unable to initialize FastCGI module!!!");
+			::request_file_info(aei->execute_path, *aei->ex_dir, *aei->ex_name);
+			::write_internal_server_error("text/html", aei->ex_dir->c_str(), 500, "Unable to initialize FastCGI module!!!");
 			web_jsx_cgi::app_core::free_app_info(aei);
 			//write_header("text/html");
 			////write_internal_server_error("text/html",)
@@ -87,6 +87,8 @@ int web_jsx_cgi::fcgi_request::request_handler(const char*execute_path) {
 	aei->execute_path = execute_path;
 	request_file_info(aei->execute_path, *aei->ex_dir, *aei->ex_name);
 	aei->ex_dir->append("\\");
+	//aei->ex_dir_c = new std::string(aei->ex_dir->c_str());
+	//::replace_back_slash(*aei->ex_dir_c);
 	sow_web_jsx::js_compiler::create_engine(aei->ex_dir->c_str());
 	//count = 0;
 	const char* env_path = get_env_c("path");

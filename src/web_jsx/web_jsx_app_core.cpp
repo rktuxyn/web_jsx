@@ -5,10 +5,8 @@
 * See the accompanying LICENSE file for terms.
 */
 //4:02 PM 2/3/2019
-#include "web_jsx_app_core.h"
-#if !defined(_npgsql_tools_h)
-#include <npgsql_tools.h>
-#endif//_npgsql_tools_h
+#	include "web_jsx_app_core.h"
+#	include <npgsql_tools.h>
 void web_jsx_cgi::app_core::run__js_scrip(const char * content_type, std::string & root_dir, const app_ex_info aei, req_method & method, template_result & tr) {
 	std::map<std::string, std::map<std::string, std::string>>* ctx = new std::map<std::string, std::map<std::string, std::string>>();
 	std::map<std::string, std::string>* req_obj = new std::map<std::string, std::string>();
@@ -17,6 +15,7 @@ void web_jsx_cgi::app_core::run__js_scrip(const char * content_type, std::string
 	web_jsx_cgi::cgi_request::get_global_obj(*global_obj, root_dir, aei.execute_path);
 	::read_query_string(*query_string, get_env_c("QUERY_STRING"));
 	web_jsx_cgi::cgi_request::get_request_object(*req_obj, *query_string, method);
+	(*global_obj)["app_dir"] = aei.ex_dir->c_str();
 	::obj_insert(*req_obj, "request", *ctx);
 	::obj_insert(*global_obj, "global", *ctx);
 	try {
@@ -162,6 +161,7 @@ void web_jsx_cgi::app_core::run__js_scrip(const char* content_type, std::string&
 	web_jsx_cgi::fcgi_request::get_global_obj(*global_obj, root_dir, aei.execute_path, env_path, envp);
 	read_query_string(*query_string, req_query_string);
 	web_jsx_cgi::fcgi_request::get_request_object(*req_obj, *query_string, method, content_type, envp);
+	(*global_obj)["app_dir"] = aei.ex_dir->c_str();
 	::obj_insert(*req_obj, "request", *ctx);
 	::obj_insert(*global_obj, "global", *ctx);
 	try {
@@ -397,9 +397,11 @@ void web_jsx_cgi::app_core::prepare_console_response(int argc, char *argv[], boo
 void web_jsx_cgi::app_core::free_app_info(app_ex_info * aei) {
 	aei->ex_dir->clear();
 	aei->ex_name->clear();
+	//aei->ex_dir_c->clear();
 	delete aei->ex_dir;
 	delete aei->ex_name;
+	//delete aei->ex_dir_c;
 	aei->execute_path = NULL;
-	aei->ex_dir = NULL; aei->ex_name = NULL;
-	delete aei; aei = NULL;
+	aei->ex_dir = NULL;//aei->ex_dir_c = NULL; 
+	aei->ex_name = NULL; delete aei; aei = NULL;
 }

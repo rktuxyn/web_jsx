@@ -8,28 +8,14 @@
 #pragma once
 #endif//!_MSC_VER
 #if !defined(_std_wrapper_h)
-#define _std_wrapper_h
-#if !defined(_IOSTREAM_)
-#include <iostream>
-#endif // !_IOSTREAM_
-#if !defined(_SSTREAM_)
-#include <sstream> // std::stringstream
-#endif//_SSTREAM_
-#if !defined(_REGEX_)
-#include <regex>
-#endif// !_REGEX_
-#if !defined(_CSTDLIB_)
-#include <cstdlib>
-#endif// !_CSTDLIB_
-#if !defined(_XSTRING_)
-#include <string>
-#endif // !_XSTRING_
-#if !defined(_LIST_)
-#include <list>
-#endif // !_LIST_
-#if !defined(_MAP_)
-#include <map>
-#endif // !_MAP_
+#	define _std_wrapper_h
+#	include <iostream>
+#	include <sstream> // std::stringstream
+#	include <regex>
+#	include <cstdlib>
+#	include <string>
+#	include <list>
+#	include <map>
 //December 01, 2017, 01:48 AM
 namespace std {
 	template<class BidirIt,

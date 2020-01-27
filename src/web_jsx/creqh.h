@@ -9,13 +9,9 @@
 #pragma once
 #endif//!_MSC_VER
 #if !defined(_creqh_h)
-#define _creqh_h
-#if !defined(_web_jsx_app_global_h)
-#include "web_jsx_app_global.h"
-#endif//!_web_jsx_app_global_h
-#if !defined(_util_h)
-#include "util.h"
-#endif//!_util_h
+#	define _creqh_h
+#	include "web_jsx_app_global.h"
+#	include "util.h"
 //#if !defined(FAST_CGI_APP)
 namespace web_jsx_cgi {
 	namespace cgi_request {

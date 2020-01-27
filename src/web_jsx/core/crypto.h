@@ -9,13 +9,9 @@
 #pragma once
 #endif//!_MSC_VER
 #if !defined(_crypto_h)
-#define _crypto_h
-#if !defined(_XSTRING_)
-#include <string>
-#endif // !_XSTRING_
-#if !defined(_SSTREAM_)
-#include <sstream> // std::stringstream
-#endif//_SSTREAM_
+#	define _crypto_h
+#	include <string>
+#	include <sstream> // std::stringstream
 //https://wiki.openssl.org/index.php/EVP_Symmetric_Encryption_and_Decryption
 namespace crypto {
 	void string_to_hex(const std::string& input, std::string&output);

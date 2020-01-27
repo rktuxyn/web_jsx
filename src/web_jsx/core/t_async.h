@@ -9,19 +9,11 @@
 #pragma once
 #endif//!_MSC_VER
 #if !defined(_t_async_h)
-#define _t_async_h
-#if !defined(UV_H)
-#include <uv.h>
-#endif//!UV_H
-#if !defined(INCLUDE_V8_H_)
-#include <v8.h>
-#endif // !INCLUDE_V8_H_
-#if !defined(_VECTOR_)
-#include <vector>
-#endif//!_VECTOR_
-#if !defined(_IOSTREAM_)
-#include <iostream>
-#endif // !_IOSTREAM_
+#	define _t_async_h
+#	include <uv.h>
+#	include <v8.h>
+#	include <vector>
+#	include <iostream>
 #pragma comment(lib,"ws2_32")
 
 namespace sow_web_jsx {

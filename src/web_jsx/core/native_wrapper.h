@@ -9,20 +9,14 @@
 #pragma once
 #endif//!_MSC_VER
 #if !defined(_native_wrapper_h)
-#define _native_wrapper_h
-#if !defined(_v8_util_h)
-#include "v8_util.h"
-#endif//!v8_util_h
+#	define _native_wrapper_h
+#	include "v8_util.h"
 #if defined(FAST_CGI_APP)
-#if !defined(_FCGI_STDIO)
-#include <fcgi_stdio.h>
-#endif//!_FCGI_STDIO
-#if !defined(FCGIO_H)
-#include "fcgio.h"
-#endif//!FCGIO_H
+#	include <fcgi_stdio.h>
+#	include "fcgio.h"
 #else
 #if !defined(DATA_READ_CHUNK)
-#define DATA_READ_CHUNK 16384
+#	define DATA_READ_CHUNK 16384
 #endif//!DATA_READ_CHUNK
 #endif//!FAST_CGI_APP
 #pragma warning (disable : 4231)

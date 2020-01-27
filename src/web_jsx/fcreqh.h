@@ -9,21 +9,17 @@
 #pragma once
 #endif//!_MSC_VER
 #if !defined(_fcreqh_h)
-#define _fcreqh_h
-#if !defined(_web_jsx_app_global_h)
-#include "web_jsx_app_global.h"
-#endif//!_web_jsx_app_global_h
+#	define _fcreqh_h
+#	include "web_jsx_app_global.h"
 #if defined(FAST_CGI_APP)
-#if !defined(_util_h)
-#include "util.h"
-#endif//!_util_h
+#	include "util.h"
 #if !defined(_FCGI_STDIO)
-#include <fcgi_stdio.h>
+#	include <fcgi_stdio.h>
 #endif//!_FCGI_STDIO
 #if !defined(FCGIO_H)
-#include "fcgio.h"
+#	include "fcgio.h"
 #endif//!FCGIO_H
-#include "fcgi_config.h"  // HAVE_IOSTREAM_WITHASSIGN_STREAMBUF
+#	include "fcgi_config.h"  // HAVE_IOSTREAM_WITHASSIGN_STREAMBUF
 namespace web_jsx_cgi {
 	namespace fcgi_request {
 		const char * freq_env_c(const char* var_name, char **envp);

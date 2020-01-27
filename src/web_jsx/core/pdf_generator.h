@@ -9,13 +9,11 @@
 #pragma once
 #endif//!_MSC_VER
 #if !defined(_pdf_generator_h)
-#define _pdf_generator_h
-#if !defined(_web_jsx_global_h)
-#include "web_jsx_global.h"
-#endif//!web_jsx_global_h
-#if !defined(__PDF_H__)
-#include <wkhtmltox/pdf.h>
-#endif//!__PDF_H__
+#	define _pdf_generator_h
+#	include "web_jsx_global.h"
+#	include <wkhtmltox/pdf.h>
+#	include <vector>
+#	include <map>
 #pragma warning (disable : 4231)
 #pragma warning(disable : 4996)
 

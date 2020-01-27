@@ -4,13 +4,9 @@
 * Copyrights licensed under the New BSD License.
 * See the accompanying LICENSE file for terms.
 */
-#include "t_async.h"
-#if !defined(_THREAD_)
-#include <thread> 
-#endif//!_THREAD_
-#if !defined(_SSTREAM_)
-#include <sstream>
-#endif//_SSTREAM_
+#	include "t_async.h"
+#	include <thread> 
+#	include <sstream>
 void sow_web_jsx::async_callback(async_func_arg* arg) {
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
 	v8::HandleScope			handleScope(isolate);

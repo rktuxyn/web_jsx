@@ -12,25 +12,13 @@
 #pragma warning (disable : 4231)
 #pragma warning(disable : 4996)
 //3:45 PM 11/24/2018
-#if !defined(_IOSTREAM_)
-#include <iostream>
-#endif//!_IOSTREAM_
-#if !defined(_INC_STDIO)
-#include <stdio.h>  /* defines FILENAME_MAX, printf, sprintf */
-#endif//!_INC_STDIO
-#if !defined(_XSTRING_)
-#include <string>// !_XSTRING_// memcpy, memset
-#endif //!_XSTRING_
+#include	<iostream>
+#include	<stdio.h>  /* defines FILENAME_MAX, printf, sprintf */
+#include	<string>// !_XSTRING_// memcpy, memset
 #if defined(MSDOS) || defined(OS2) || defined(WIN32) || defined(_WIN64) || defined(__CYGWIN__)
-#if !defined(_WINDOWS_)
-#include <windows.h>
-#endif//!_WINDOWS_
-#if !defined(_INC_FCNTL)
-#  include <fcntl.h>
-#endif//_INC_FCNTL
-#if !defined(_INC_IO)
-#  include <io.h>
-#endif//!_INC_IO
+#include	<windows.h>
+#include	<fcntl.h>
+#include	<io.h>
 #if !defined(OS_CODE)
 #  define OS_CODE  0x00
 #endif//!OS_CODE
@@ -42,9 +30,7 @@
 #endif//!__CYGWIN__
 #endif//!SET_BINARY_MODE
 #else
-#if !defined(_INC_IO)
-#  include <io.h>
-#endif//!_INC_IO
+#include	<io.h>
 #if !defined(SET_BINARY_MODE)
 #  define SET_BINARY_MODE(file) setmode(fileno(file), O_BINARY)
 #endif//!SET_BINARY_MODE
@@ -52,12 +38,9 @@
 #  define OS_CODE  0x03 /*Assume Unix*/
 #endif//!OS_CODE
 #endif//WIN32
-#if !defined(_SSTREAM_)
-#include <sstream> // std::stringstream
-#endif//_SSTREAM_
-#if !defined(ZLIB_H)
-#include <zlib.h>
-#endif//!ZLIB_H
+#include	<sstream> // std::stringstream
+#include	<fstream>// std::ifstream
+#include	<zlib.h>
 #if !defined(CHUNK)
 #define CHUNK 16384
 #endif//!CHUNK
@@ -87,8 +70,8 @@
 #define assert(expression) ((void)0)
 #endif//!assert
 //Read more http://www.zlib.net/zpipe.c
-#define	GZIP_MAGIC     "\037\213"	/* Magic header for gzip files, 1F 8B */
 namespace gzip {
+#define	GZIP_MAGIC     "\037\213"	/* Magic header for gzip files, 1F 8B */
 	//Success run on 2:05 AM 1/19/2019
 	//https://stackoverflow.com/questions/54256829/zlib-gzip-invalid-response-defined-in-web-browser-c
 	//static int gz_magic[2] = { 0x1f, 0x8b }; /* gzip magic header */
@@ -541,5 +524,6 @@ namespace gzip {
 		return this->write(*this->_fs, source, FALSE);
 	}
 	//[/Inflate==>Decompress]
+	//End 12:39 AM 1/11/2020 Inflate And Deflate
 }; // namespace gzip
 #endif//_zgzip_h

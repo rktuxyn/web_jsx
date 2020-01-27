@@ -8,10 +8,8 @@
 #pragma once
 #endif//!_MSC_VER
 #if !defined(_n_help_h)
-#define _n_help_h
-#if !defined(_v8_util_h)
-#include "v8_util.h"
-#endif//_v8_util_h
+#	define _n_help_h
+#	include "v8_util.h"
 namespace sow_web_jsx {
 	enum response_status {
 		OK = 200,
