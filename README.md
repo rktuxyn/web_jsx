@@ -220,7 +220,7 @@ context.response.write( JSON.stringify( rs ) );
 Work with Image in #web_jsx (Supported: .bmp, .png, .jpeg, .jpg, .gif, .tiff, .tif)
 ```javascript
 function resize_to( source, dest ) {
-    source.lock_bits(); dest.lock_bits( 2 );
+    source.lock_bits( image_mood.READ ); dest.lock_bits( image_mood.WRITE );
     let swidth = source.get_width();
     let sheight = source.get_height();
     let width = dest.get_width();
@@ -244,13 +244,13 @@ thumb_img.create_canvas( width / 2, height / 2 );
 //resize to another Image object
 resize_to( full_img, thumb_img );
 //read base64 image data
-let base64_data = thumb_img.to_base64();
+let base64_data = thumb_img.to_base64( image_format.JPEG );
 //Create image from base64 encoded image
-thumb_img.load_from_base64( base64_encoded_character );
+thumb_img.load_from_base64( base64_encoded_character, image_format.JPEG );
 //resize same Image object
 full_img.resize( width / 2, height / 2 );
-thumb_img.save( `${env.root_dir}test_thumb_t.png` );
-full_img.save( `${env.root_dir}test_thumb.jpg` );
+thumb_img.save( `${env.root_dir}test_thumb_t.png` );//will be convert png image object
+full_img.save( `${env.root_dir}test_thumb.jpg` );//will be convert jpg image object
 //Release all resource of thumb_img
 thumb_img.release();
 //Release all resource of full_img
