@@ -21,7 +21,7 @@ http_request::http_request(const char * full_url, bool follow_location = false) 
 	_header_chunk = NULL;
 	_full_url = full_url;
 	_follow_location = follow_location;
-	_internal_error = new char[1]{ 's' };
+	_internal_error = NULL;
 #if defined(FAST_CGI_APP)
 	if (_sr == false) {
 		_sr = true;
@@ -30,7 +30,10 @@ http_request::http_request(const char * full_url, bool follow_location = false) 
 #endif//FAST_CGI_APP
 }
 void http_request::set_error(const char * error) {
-	free(_internal_error);
+	if (_internal_error != NULL) {
+		delete[] _internal_error;
+		_internal_error = NULL;
+	}
 	_internal_error = new char[strlen(error) + 1];
 	strcpy(_internal_error, error);
 }
@@ -104,8 +107,13 @@ int http_request::send_request(std::string & response_header, std::string &respo
 	return rec;
 }
 http_request::~http_request() {
-	delete _header_chunk;
-	delete _internal_error;
+	if (_header_chunk != NULL) {
+		delete _header_chunk; _header_chunk = NULL;
+	}
+	if (_internal_error != NULL) {
+		delete[] _internal_error;
+		_internal_error = NULL;
+	}
 }
 const char * http_request::get_last_error() {
 	return const_cast<const char*>(_internal_error);

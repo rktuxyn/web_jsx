@@ -21,6 +21,8 @@ void set_v8_flag() {
 	//v8::V8::SetFlagsFromString(v8Flags, (int)strlen(v8Flags));
 }
 void sow_web_jsx::js_compiler::v8_engine::create_engine(const char* exec_path) {
+	/*std::string app_dir(exec_path);
+	app_dir.append("\\");*/
 	v8::V8::InitializeICUDefaultLocation(exec_path);
 	v8::V8::InitializeExternalStartupData(exec_path);
 	_platform = v8::platform::NewDefaultPlatform();

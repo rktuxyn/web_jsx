@@ -8,24 +8,16 @@
 #	include "web_jsx_fcgi.h"
 #endif//FAST_CGI_APP
 #	include "web_jsx_cgi.h"
-//#if !defined(_bitmap_h)
-//#include "core/bitmap.h"
-//#endif//!_bitmap_h
-//void resize_image() {
-//	bitmap* bmp = new bitmap();
-//	//bmp->load("C:\\Users\\Administrator\\Desktop\\ksl\\white.bmp");
-//	bmp->create_canvas(500, 236);
-//	//bmp->dump_data();
-//	bmp->save("C:\\Users\\Administrator\\Desktop\\ksl\\test_thumb.bmp");
-//	/*auto pixel = bmp->get_pixel(10, 10);
-//	pixel->a;*/
-//	bmp->free_memory();
-//	delete bmp;
-//}
+
+#if defined(FAST_CGI_APP)
+#	define handle_request web_jsx_cgi::fcgi_request::request_handler
+#else
+#	define handle_request web_jsx_cgi::cgi_request::request_handler
+#endif//!FAST_CGI_APP
+
 int main(int argc, char *argv[], char*envp[]) {
 	std::ios::sync_with_stdio(false);
 	if (is_user_interactive() == TRUE) {
-		//resize_image();
 		if (argc > 1) {
 			try {
 				web_jsx_cgi::app_core::prepare_console_response(argc, argv, false);
@@ -45,10 +37,5 @@ int main(int argc, char *argv[], char*envp[]) {
 			return EXIT_SUCCESS;
 		}
 	}
-	//12:28 AM 1/28/2019
-#if defined(FAST_CGI_APP)
-	return web_jsx_cgi::fcgi_request::request_handler(const_cast<const char*>(argv[0]));
-#else
-	return web_jsx_cgi::cgi_request::request_handler(const_cast<const char*>(argv[0]));
-#endif//!FAST_CGI_APP
+	return handle_request(const_cast<const char*>(argv[0]));
 }

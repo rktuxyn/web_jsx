@@ -214,8 +214,7 @@ void obj_insert(
 	to_obj[prop] = from_obj;
 }
 web_extension get_request_extension (const std::string& path_str) {
-	if (path_str.size() > MAX_PATH)
-		return web_extension::RAW_SCRIPT;
+	if (path_str.size() > MAX_PATH)return web_extension::RAW_SCRIPT;
 	//LOCALE_NAME_MAX_LENGTH
 	size_t found = path_str.find_last_of(".");
 	if (found == std::string::npos) return web_extension::RAW_SCRIPT;
@@ -238,8 +237,7 @@ void server_physical_path(const std::string& path_str, const std::string& path_i
 	p_i.clear();
 }
 req_method determine_req_method(const char* request_method) {
-	if (((request_method != NULL) && (request_method[0] == '\0')) || request_method == NULL)
-		return req_method::UNSUPPORTED;
+	if (((request_method != NULL) && (request_method[0] == '\0')) || request_method == NULL) return req_method::UNSUPPORTED;
 	if (strcmp(request_method, "GET") == 0) return req_method::GET;
 	if (strcmp(request_method, "POST") == 0) return req_method::POST;
 	if (strcmp(request_method, "HEAD") == 0) return req_method::HEAD;
@@ -319,5 +317,38 @@ void read_query_string(std::map<std::string, std::string>&data, const char*query
 		data["\"" + (*i)[1].str() + "\""] = "\"" + (*i)[2].str() + "\"";
 	}
 	delete query; delete pattern;
+	return;
+}
+void json_obj_stringify(std::map<std::string, std::string>& json_obj, std::string& json_str) {
+	json_str += "{";
+	bool is_first = true;
+	for (auto itr = json_obj.begin(); itr != json_obj.end(); ++itr) {
+		if (is_first) {
+			is_first = false;
+			json_str += itr->first;
+		}
+		else {
+			json_str += ",";
+			json_str += itr->first;
+		}
+		json_str += ":";
+		json_str.append(itr->second);
+	}
+	json_str += "}";
+	return;
+}
+#	include <sstream>
+void json_array_stringify_s(std::vector<char*>& json_array_obj, std::string& json_str) {
+	std::stringstream* ss = new std::stringstream();
+	std::stringstream& copy = *ss;
+	copy << "[";
+	for (size_t i = 0, l = json_array_obj.size(); i < l; ++i) {
+		if (i != 0)
+			copy << ",";
+		copy << "\"" << json_array_obj[i] << "\"";
+	}
+	copy << "]";
+	json_str = ss->str();
+	ss->clear(); delete ss;
 	return;
 }

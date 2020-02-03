@@ -64,6 +64,7 @@ int sow_web_jsx::read_directory_files(const char* name, std::vector<char*>&direc
 		snprintf(path, sizeof(path), "%s/%s", name, entry->d_name);
 		directory.push_back(path);
 	}
+	delete entry; entry = NULL;
 	closedir (dir);
 	return EXIT_SUCCESS;
 }
@@ -122,6 +123,7 @@ int sow_web_jsx::read_directory_sub_directory(const char* name, std::vector<std:
 		directory.push_back(path);
 		std::string().swap(path);
 	}
+	delete entry; entry = NULL;
 	closedir (dir);
 	return EXIT_SUCCESS;
 }
@@ -172,7 +174,8 @@ int sow_web_jsx::delete_dir(const char * name) {
 		error = sow_web_jsx::delete_dir(d_path.c_str());
 		std::string().swap(d_path);
 		if (error == EXIT_FAILURE)break;
-	};
+	}
+	delete entry; entry = NULL;
 	closedir (dir);
 	if (error == EXIT_FAILURE)return EXIT_FAILURE;
 	if (_rmdir(name) == 0)
@@ -202,13 +205,14 @@ int sow_web_jsx::read_directory_sub_directory_x(const char * name, std::vector<s
 			read_directory_sub_directory_x(path.c_str(), directory, pattern);
 			std::string().swap(path);
 			continue;
-		};
+		}
 		if (__is_match_extension_x(d_name, pattern) == false)continue;
 		std::string path(name);
 		path.append(d_name);
 		directory.push_back(path);
 		std::string().swap(path);
 	}
+	delete entry; entry = NULL;
 	closedir (dir);
 	return EXIT_SUCCESS;
 }

@@ -6,7 +6,6 @@
 */
 //4:02 PM 2/3/2019
 #	include "web_jsx_app_core.h"
-#	include <npgsql_tools.h>
 void web_jsx_cgi::app_core::run__js_scrip(const char * content_type, std::string & root_dir, const app_ex_info aei, req_method & method, template_result & tr) {
 	std::map<std::string, std::map<std::string, std::string>>* ctx = new std::map<std::string, std::map<std::string, std::string>>();
 	std::map<std::string, std::string>* req_obj = new std::map<std::string, std::string>();
@@ -310,7 +309,9 @@ void web_jsx_cgi::app_core::prepare_console_response(int argc, char *argv[], boo
 #else
 	exec_path->append(get_env_c("web_jsx_cgi"));
 #endif
-	exec_path->append("\\");
+	if (exec_path->find_last_of("\\") == std::string::npos) {
+		exec_path->append("\\");
+	}
 	int param_start = 1;
 	if (ireq == true) {
 		param_start = 2;

@@ -20,7 +20,7 @@
 #include	<fcntl.h>
 #include	<io.h>
 #if !defined(OS_CODE)
-#  define OS_CODE  0x00
+#	define OS_CODE  0x00
 #endif//!OS_CODE
 #if !defined(SET_BINARY_MODE)
 #if defined(__CYGWIN__)
@@ -32,17 +32,17 @@
 #else
 #include	<io.h>
 #if !defined(SET_BINARY_MODE)
-#  define SET_BINARY_MODE(file) setmode(fileno(file), O_BINARY)
+#	define SET_BINARY_MODE(file) setmode(fileno(file), O_BINARY)
 #endif//!SET_BINARY_MODE
 #if !defined(OS_CODE)
-#  define OS_CODE  0x03 /*Assume Unix*/
+#	define OS_CODE  0x03 /*Assume Unix*/
 #endif//!OS_CODE
 #endif//WIN32
 #include	<sstream> // std::stringstream
 #include	<fstream>// std::ifstream
 #include	<zlib.h>
 #if !defined(CHUNK)
-#define CHUNK 16384
+#	define CHUNK 16384
 #endif//!CHUNK
 /*
 0x00	FAT filesystem (MS-DOS, OS/2, NT/Win32)
@@ -62,16 +62,16 @@
 0xff	unknown
 */
 #if MAX_MEM_LEVEL >= 8
-#  define DEF_MEM_LEVEL 8
+#	define DEF_MEM_LEVEL 8
 #else
-#  define DEF_MEM_LEVEL  MAX_MEM_LEVEL
+#	define DEF_MEM_LEVEL  MAX_MEM_LEVEL
 #endif//!MAX_MEM_LEVEL
 #if !defined(assert)
-#define assert(expression) ((void)0)
+#	define assert(expression) ((void)0)
 #endif//!assert
 //Read more http://www.zlib.net/zpipe.c
 namespace gzip {
-#define	GZIP_MAGIC     "\037\213"	/* Magic header for gzip files, 1F 8B */
+#	define	GZIP_MAGIC     "\037\213"	/* Magic header for gzip files, 1F 8B */
 	//Success run on 2:05 AM 1/19/2019
 	//https://stackoverflow.com/questions/54256829/zlib-gzip-invalid-response-defined-in-web-browser-c
 	//static int gz_magic[2] = { 0x1f, 0x8b }; /* gzip magic header */
@@ -95,7 +95,8 @@ namespace gzip {
 		_strm.seekg(0, std::ios::end);//Go to end of stream
 		std::streamoff length = _strm.tellg();
 		_strm.seekg(0, std::ios::beg);//Back to begain of stream
-		return (size_t)length;
+		return static_cast<size_t>(length);
+		//return (size_t)length;
 	}
 	int deflate_file(const std::string input_path, const std::string output_path, int level, std::string&error);
 	int inflate_file(const std::string input_path, const std::string output_path, std::string& error);

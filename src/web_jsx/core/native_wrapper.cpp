@@ -13,23 +13,15 @@
 #	include "zgzip.h"
 #	include "crypto.h"
 #	include "base64.h"
-#	include "npgsql_wrapper.h"
-#	include <npgsql_tools.h>
 #	include "n_help.h"
 #	include "jsx_file.h"
-#	include "uws/uws_app.h"
-#	include "mysql_wrapper.h"
 #	include "http_payload.h"
 #if defined(__client_build)
 #	include "encryption.h"
 #endif//__client_build
 #	include "bitmap.h"
 #	include "native_module.h"
-#if (defined(_WIN32)||defined(_WIN64))
-#	include "image_win.h"
-#else
-#	include "image_unix.h"
-#endif//!_WIN32||_WIN64
+#	include "module_store.h"
 using namespace sow_web_jsx;
 /*[Help]*/
 std::string* _root_dir = NULL;
@@ -1174,6 +1166,7 @@ void smtp_request(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8_val = config->Get(ctx, v8_str(isolate, "attachments")).ToLocalChecked();
 		if (!v8_val->IsNullOrUndefined() && v8_val->IsArray()) {
 			v8::Local<v8::Array> harr = v8::Local<v8::Array>::Cast(v8_val);
+			harr->Set(0, v8_str(isolate, ""));
 			for (uint32_t i = 0, l = harr->Length(); i < l; i++) {
 				v8::Local<v8::Value>v_val = harr->Get(ctx, i).ToLocalChecked();
 				if (v_val->IsNullOrUndefined() || !v_val->IsObject())continue;
@@ -1836,7 +1829,8 @@ size_t get_content_length() {
 	_body_stream.seekg(0, std::ios::beg);//Back to begain of stream
 	return (size_t)totalSize;
 }
-void __clear_cache(int clean_body = 0, int clean_root=1) {
+void __clear_cache(int clean_body = 0, int clean_root = 1 ) {
+	sow_web_jsx::free_working_module();
 	if (_http_status != NULL) {
 		_http_status->clear(); delete _http_status; _http_status = NULL;
 	}
@@ -1860,7 +1854,6 @@ void __clear_cache(int clean_body = 0, int clean_root=1) {
 			std::stringstream().swap(_body_stream);
 		}
 	}
-	
 }
 void sow_web_jsx::wrapper::clear_cache() {
 	if (!_is_cli)return;
@@ -3240,20 +3233,32 @@ void require(const v8::FunctionCallbackInfo<v8::Value>& args) {
 #endif//!__client_build
 	native_string utf_abs_path_str(isolate, args[0]);
 	typeof_module ext = get_module_type(utf_abs_path_str.c_str());
-	if (ext == typeof_module::UNKNOWN) {
+	if (ext == typeof_module::_UNKNOWN) {
 		throw_js_error(isolate, "Unsupported module...");
 		utf_abs_path_str.clear();
 		return;
 	}
 	std::string* abs_path = new std::string();
-	abs_path->append(_root_dir->c_str());
-	sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
 	if (ext == typeof_module::NATIVE) {
-		//_app_dir
+		bool is_full_path = false;
+		if (args.Length() > 1) {
+			if (args[1]->IsBoolean()) {
+				is_full_path = to_boolean(isolate, args[1]);
+			}
+		}
+		if (is_full_path == false) {
+			abs_path->append(_root_dir->c_str());
+			sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
+		}
+		else {
+			sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
+		}
 		require_native(args, *abs_path, *_app_dir, utf_abs_path_str.c_str());
 		abs_path->clear(); delete abs_path; utf_abs_path_str.clear();
 		return;
 	}
+	abs_path->append(_root_dir->c_str());
+	sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
 	if (ext == typeof_module::NO_EXT) {
 		abs_path->append(".js");
 	}
@@ -3284,8 +3289,6 @@ void require(const v8::FunctionCallbackInfo<v8::Value>& args) {
 			isolate->ThrowException(v8::Exception::Error(v8_str(isolate, source_str.c_str())));
 			return;
 		}
-		//isolate->ThrowException(v8::Exception::Error(v8::String::NewFromUtf8(isolate, std::to_string(ret).c_str())));
-		//return;
 	}
 #else
 	size_t ret = sow_web_jsx::read_file(abs_path->c_str(), source_str, true);
@@ -3304,6 +3307,7 @@ void require(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8_global->Set(isolate, "exports", v8::ObjectTemplate::New(isolate));
 	v8::Local<v8::Context> context = v8::Context::New(isolate, nullptr, v8_global);
 	v8::Context::Scope context_scope(context);
+	swjsx_module::scope_to_js_global(isolate, context);
 	// Compile the source code.
 	v8::MaybeLocal<v8::Script> script = v8::Script::Compile(context, v8_str(isolate, source_str.c_str()));
 	if (script.IsEmpty()) {
@@ -3326,6 +3330,10 @@ void require(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	jsGlobal.Clear(); context.Clear();
 	v8_global.Clear();
 	return;
+}
+void implimant_native_module(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	if (_is_flush == true)return;
+	swjsx_module::implimant_native_module(args, *_app_dir, *_root_dir);
 }
 v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_context(v8::Isolate* isolate, std::map<std::string, std::map<std::string, std::string>>& ctx) {
 #if defined(FAST_CGI_APP)
@@ -3415,23 +3423,9 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_context(v8::Isolate* iso
 	sys_object->Set(isolate, "kill_process_by_name", v8::FunctionTemplate::New(isolate, native_kill_process_by_name));
 	sys_object->Set(isolate, "gc", v8::FunctionTemplate::New(isolate, v8_gc));
 	sys_object->Set(isolate, "async_thread", v8::FunctionTemplate::New(isolate, _async_thread));
+	sys_object->Set(isolate, "load_native_module", v8::FunctionTemplate::New(isolate, implimant_native_module));
 	_v8_global->Set(isolate, "sys", sys_object);
 	/*[/Sys Object]*/
-	/*[uWsocket]*/
-	_v8_global->Set(isolate, "uws_export", v8::FunctionTemplate::New(isolate, uws_export));
-	/*[/uWsocket]*/
-	/*[NpgSql....]*/
-	v8::Local<v8::ObjectTemplate> npgsql_object = v8::ObjectTemplate::New(isolate);
-	npgsql_object->Set(isolate, "execute_io", v8::FunctionTemplate::New(isolate, npgsql_execute_io));
-	npgsql_object->Set(isolate, "execute_scalar", v8::FunctionTemplate::New(isolate, npgsql_execute_scalar));
-	npgsql_object->Set(isolate, "execute_query", v8::FunctionTemplate::New(isolate, npgsql_execute_query));
-	npgsql_object->Set(isolate, "data_reader", v8::FunctionTemplate::New(isolate, npgsql_data_reader));
-	_v8_global->Set(isolate, "npgsql", npgsql_object);
-	npgsql_bind(isolate, _v8_global);
-	/*[/NpgSql....]*/
-	/*[MySQL....]*/
-	mysql_bind(isolate, _v8_global);
-	/*[/MySQL....]*/
 	/*[pdf_generator....]*/
 	v8::Local<v8::ObjectTemplate> pdf_object = v8::ObjectTemplate::New(isolate);
 	pdf_object->Set(isolate, "generate_pdf", v8::FunctionTemplate::New(isolate, generate_pdf));
@@ -3469,6 +3463,7 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_context(v8::Isolate* iso
 	_v8_global->Set(isolate, "__async", v8::FunctionTemplate::New(isolate, async_func));
 	_v8_global->Set(isolate, "setTimeout", v8::FunctionTemplate::New(isolate, set_time_out_func));
 	//
+	//
 	_v8_global->Set(isolate, "__sleep", v8::FunctionTemplate::New(isolate, sleep_func));
 	/*[gzip_compressor]*/
 	gzip_compressor_export(isolate, _v8_global);
@@ -3479,9 +3474,6 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_context(v8::Isolate* iso
 	/*[bitmap]*/
 	bitmap_export(isolate, _v8_global);
 	/*[/bitmap]*/
-	/*[image]*/
-	image_export(isolate, _v8_global);
-	/*[/image]*/
 	SetEngineInformation(isolate, _v8_global);
 	_headers = new std::map<std::string, std::string>();
 	_cookies = new std::vector<std::string>();
@@ -3533,18 +3525,6 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_console_context(v8::Isol
 	ctx_object->Set(isolate, "server_map_path", v8::FunctionTemplate::New(isolate, server_map_path));
 	/*[/server_map_path]*/
 	v8_global->Set(isolate, "env", ctx_object);
-	/*[NpgSql....]*/
-	v8::Local<v8::ObjectTemplate> npgsql_object = v8::ObjectTemplate::New(isolate);
-	npgsql_object->Set(isolate, "execute_io", v8::FunctionTemplate::New(isolate, npgsql_execute_io));
-	npgsql_object->Set(isolate, "execute_scalar", v8::FunctionTemplate::New(isolate, npgsql_execute_scalar));
-	npgsql_object->Set(isolate, "execute_query", v8::FunctionTemplate::New(isolate, npgsql_execute_query));
-	npgsql_object->Set(isolate, "data_reader", v8::FunctionTemplate::New(isolate, npgsql_data_reader));
-	v8_global->Set(isolate, "npgsql", npgsql_object);
-	npgsql_bind(isolate, v8_global);
-	/*[/NpgSql....]*/
-	/*[MySQL....]*/
-	mysql_bind(isolate, v8_global);
-	/*[/MySQL....]*/
 	/*[pdf_generator....]*/
 	v8::Local<v8::ObjectTemplate> pdf_object = v8::ObjectTemplate::New(isolate);
 	pdf_object->Set(isolate, "generate_pdf", v8::FunctionTemplate::New(isolate, generate_pdf));
@@ -3609,10 +3589,8 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_console_context(v8::Isol
 	sys_object->Set(isolate, "gc", v8::FunctionTemplate::New(isolate, v8_gc));
 	sys_object->Set(isolate, "async_thread", v8::FunctionTemplate::New(isolate, _async_thread));
 	sys_object->Set(isolate, "read_line", v8::FunctionTemplate::New(isolate, sow_web_jsx::read_line));
+	sys_object->Set(isolate, "load_native_module", v8::FunctionTemplate::New(isolate, implimant_native_module));
 	v8_global->Set(isolate, "sys", sys_object);
-	/*[uWsocket]*/
-	v8_global->Set(isolate, "uws_export", v8::FunctionTemplate::New(isolate, uws_export));
-	/*[/uWsocket]*/
 	/*[/Sys Object]*/
 	v8_global->Set(isolate, "__clear", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		delete _root_dir; _root_dir = NULL;
@@ -3643,9 +3621,6 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_console_context(v8::Isol
 	/*[bitmap]*/
 	bitmap_export(isolate, v8_global);
 	/*[/bitmap]*/
-	/*[image]*/
-	image_export(isolate, v8_global);
-	/*[/image]*/
 	SetEngineInformation(isolate, v8_global);
 	return v8_global;
 }
@@ -3678,21 +3653,6 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::create_v8_context_object(v8:
 	sys_object->Set(isolate, "async_thread", v8::FunctionTemplate::New(isolate, _async_thread));
 	v8_global->Set(isolate, "sys", sys_object);
 	/*[/Sys Object]*/
-	/*[uWsocket]*/
-	v8_global->Set(isolate, "uws_export", v8::FunctionTemplate::New(isolate, uws_export));
-	/*[/uWsocket]*/
-	/*[NpgSql....]*/
-	v8::Local<v8::ObjectTemplate> npgsql_object = v8::ObjectTemplate::New(isolate);
-	npgsql_object->Set(isolate, "execute_io", v8::FunctionTemplate::New(isolate, npgsql_execute_io));
-	npgsql_object->Set(isolate, "execute_scalar", v8::FunctionTemplate::New(isolate, npgsql_execute_scalar));
-	npgsql_object->Set(isolate, "execute_query", v8::FunctionTemplate::New(isolate, npgsql_execute_query));
-	npgsql_object->Set(isolate, "data_reader", v8::FunctionTemplate::New(isolate, npgsql_data_reader));
-	v8_global->Set(isolate, "npgsql", npgsql_object);
-	npgsql_bind(isolate, v8_global);
-	/*[/NpgSql....]*/
-	/*[MySQL....]*/
-	mysql_bind(isolate, v8_global);
-	/*[/MySQL....]*/
 	/*[crypto]*/
 	v8::Local<v8::ObjectTemplate> crypto_object = v8::ObjectTemplate::New(isolate);
 	crypto_object->Set(isolate, "encrypt", v8::FunctionTemplate::New(isolate, encrypt_str));
@@ -3734,9 +3694,6 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::create_v8_context_object(v8:
 	/*[bitmap]*/
 	bitmap_export(isolate, v8_global);
 	/*[/bitmap]*/
-	/*[image]*/
-	image_export(isolate, v8_global);
-	/*[/image]*/
 	SetEngineInformation(isolate, v8_global);
 	return v8_global;
 }

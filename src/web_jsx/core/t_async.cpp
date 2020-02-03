@@ -25,7 +25,7 @@ void sow_web_jsx::async_callback(async_func_arg* arg) {
 	}
 	v8::Handle<v8::Value> carg[1] = {
 		//v8::String::NewFromUtf8(isolate, "START")
-		v8::Number::New(isolate, id)
+		v8::Integer::New(isolate, (int32_t)id)
 	};
 	callback->Call(context, context->Global(), 1, carg);
 	context.Clear();

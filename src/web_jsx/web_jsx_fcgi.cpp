@@ -7,6 +7,16 @@
 //3:46 PM 2/3/2019
 #	include "web_jsx_fcgi.h"
 #if defined(FAST_CGI_APP)
+#	include "core/glb_r.h"
+#	include <fastcgi.h>
+#	include <fcgi_stdio.h>
+#	include <fcgio.h>
+#	include "web_jsx_cgi.h"
+#pragma warning(disable: _STL_DISABLED_WARNINGS)
+_STL_DISABLE_CLANG_WARNINGS
+#pragma push_macro("new")
+#undef new
+using namespace std;
 int web_jsx_cgi::fcgi_request::request_process(const app_ex_info aei, const char*env_path, char **envp) {
 	const char* content_type = "text/html";// FCGX_GetParam("CONTENT_TYPE", envp);
 	try {
@@ -86,6 +96,9 @@ int web_jsx_cgi::fcgi_request::request_handler(const char*execute_path) {
 	aei->ex_name = new std::string();
 	aei->execute_path = execute_path;
 	request_file_info(aei->execute_path, *aei->ex_dir, *aei->ex_name);
+	/*if (aei->ex_dir->find_last_of("\\") == std::string::npos) {
+		aei->ex_dir->append("\\");
+	}*/
 	aei->ex_dir->append("\\");
 	//aei->ex_dir_c = new std::string(aei->ex_dir->c_str());
 	//::replace_back_slash(*aei->ex_dir_c);
@@ -115,6 +128,7 @@ int web_jsx_cgi::fcgi_request::request_handler(const char*execute_path) {
 			if (request.out->isClosed) {
 				sow_web_jsx::wrapper::clear_cache();
 			}
+			//::write_internal_server_error("text/html", aei->ex_dir->c_str(), 500, "Unable to initialize FastCGI module!!!");
 		}
 		catch (...) {
 			sow_web_jsx::wrapper::clear_cache();
@@ -133,4 +147,6 @@ int web_jsx_cgi::fcgi_request::request_handler(const char*execute_path) {
 	sow_web_jsx::free_resource();
 	return EXIT_SUCCESS;
 }
+#pragma pop_macro("new")
+_STL_RESTORE_CLANG_WARNINGS
 #endif//FAST_CGI_APP

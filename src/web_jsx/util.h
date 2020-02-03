@@ -11,6 +11,9 @@
 #if !defined(_util_h)
 #	define _util_h
 #	include "web_jsx_app_global.h"
+#	include <string>
+#	include <map>
+#	include <vector>
 #if !defined(_WIN32) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
 #	include <unistd.h>
 #define get_current_dir getcwd
@@ -96,5 +99,13 @@ void write_internal_server_error(
 	const char* ex_dir,
 	int error_code,
 	const std::string error_msg
+);
+void json_obj_stringify(
+	std::map<std::string, std::string>& json_obj,
+	std::string& json_str
+);
+void json_array_stringify_s(
+	std::vector<char*>& json_array_obj, 
+	std::string& json_str
 );
 #endif//!_util_h

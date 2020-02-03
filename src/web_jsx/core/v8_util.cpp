@@ -247,6 +247,9 @@ namespace sow_web_jsx {
 		//std::string(_data, _length);
 		return { _data, _length };
 	}
+	/*std::string native_string::get_string() {
+		return std::string(_data, _length);
+	}*/
 	const char* native_string::c_str() {
 		return _length == 0 ? "" : get_string().data();
 	}

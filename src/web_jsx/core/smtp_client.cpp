@@ -271,7 +271,7 @@ namespace smtp_client {
 		* self-signed) and add it to the set of certificates that are known to
 		* libcurl using CURLOPT_CAINFO and/or CURLOPT_CAPATH. See docs/SSLCERTS
 		* for more information. */
-		curl_easy_setopt(_curl, CURLOPT_CAINFO, path);
+		curl_easy_setopt(_curl, CURLOPT_CAINFO, path.c_str());
 		log("CERT: %s", path.c_str());
 	}
 	void smtp_request::enable_tls_connection() {

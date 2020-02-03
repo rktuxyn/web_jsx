@@ -80,6 +80,7 @@ namespace sow_web_jsx {
 		native_string(v8::Isolate* isolate, const v8::Local<v8::Value>& value);
 		bool is_invalid(v8::Isolate* isolate);
 		std::string_view get_string();
+		//std::string get_string();
 		const char* c_str();
 		bool is_empty();
 		size_t size();

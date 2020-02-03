@@ -5,7 +5,6 @@
 * See the accompanying LICENSE file for terms.
 */
 #	include "creqh.h"
-#	include <npgsql_tools.h>
 void web_jsx_cgi::cgi_request::get_global_obj(std::map<std::string, std::string>& global, std::string&root_dir, const char*app_path) {
 	replace_back_slash(root_dir);
 	global["root_dir"] = root_dir;

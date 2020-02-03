@@ -429,8 +429,9 @@ int http_payload::read_all(const char* temp_dir) {
 				//_posted_files->file->set_file_size(static_cast<size_t>(file.tellp()));
 				_posted_files->file->set_file_size(file_total_size);
 				file.flush(); file.close();
-				is_saved = true; start = false; break;
+				is_saved = true; start = false;
 				file_total_size = 0; block_size = 0;
+				break;
 			}
 			else {
 				if (block_size >= max_block_size) {
@@ -475,9 +476,7 @@ int http_payload::read_all(const char* temp_dir) {
 		}
 		if (!file_name.empty())file_name.clear();
 		file_name = std::string(temp_dir_str.c_str());
-		//file_name.append(std::to_string(std::rand() * file_count));
 		file_name.append(random_string(15)).append(std::to_string(file_count));
-		//std::cout << "file_name_" << file_count << ":" << file_name << std::endl;
 		file.open(file_name, std::ofstream::out | std::ofstream::binary);
 		if (file.is_open() == false) {
 			std::string err("Unable to open file to ->");
@@ -585,11 +584,11 @@ int http_payload::get_total_file() {
 	
 }
 const char* http_payload::get_body() {
-	if (_is_disposed)return '\0';
-	if (_is_read_end <= 0)return '\0';
-	if (is_multipart())return '\0';
+	if (_is_disposed)return NULL;
+	if (_is_read_end <= 0)return NULL;
+	if (is_multipart())return NULL;
 	size_t size = get_stream_size();
-	if (size == 0 || size == std::string::npos)return '\0';
+	if (size == 0 || size == std::string::npos)return NULL;
 	return _stream.str().c_str();
 }
 v8::Local<v8::Object> get_file_obj(v8::Isolate* isolate, http_posted_file* pf) {
@@ -638,7 +637,7 @@ v8::Local<v8::Object> get_file_obj(v8::Isolate* isolate, http_posted_file* pf) {
 			return;
 		}
 		const char* data = app->get_data();
-		if (data == NULL || (data != NULL && data == '\0')) {
+		if (strlen(data) == 0) {
 			isolate->ThrowException(v8::Exception::Error(v8_str(isolate, "No data found in current file object.")));
 			return;
 		}
@@ -780,7 +779,7 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 			return;
 		}
 		const char* data = app->get_body();
-		if (data == NULL || (data != NULL && data == '\0')) {
+		if (strlen(data) == 0) {
 			isolate->ThrowException(v8::Exception::Error(v8_str(isolate, "No data found in current context.")));
 			return;
 		}

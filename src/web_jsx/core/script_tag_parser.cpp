@@ -40,6 +40,7 @@ void sow_web_jsx::js_write_header(std::stringstream& js_stream) {
 	js_stream << "context.response.as_gzip = function as_gzip() { if ( !context.request.accept_encoding ) return -1; if ( context.request.accept_encoding.indexOf( 'gzip' ) < 0 ) return -1; this._as_gzip(); return 1; };\r\n";
 	js_stream << "context.response.header(\"Content-Type\", \"text/html; charset=utf-8\");\n";
 	js_stream << "context.response.header(\"Connection\", \"Keep-Alive\");\n";
+	js_stream << "sys.load_native_module();\n";//Impliment native module according to module.cfg
 	add_common_func(js_stream);
 	//js_stream << "try{\n";
 }
@@ -82,6 +83,7 @@ void sow_web_jsx::js_write_console_header(std::stringstream& js_stream) {
 	js_stream << "env.path_translated = ( function () { if ( env.path_translated === undefined || env.path_translated === null ) { throw new Error(\"Translated path not found in current context!!!\"); } return env.path_translated.replace( /\\\\/g,'/' ) }());\n";
 	js_stream << "env.path = ( function () { if ( env.path === undefined || env.path === null ) { throw new Error(\"Environment path not found in current context!!!\"); } return env.path.replace( /\\\\/g,'/' ) }());\n";
 	js_stream << "env.arg = ( function () { try { return JSON.parse( env.arg ); } catch ( e ) { __print( e.message ); return []; } }() );\n";
+	js_stream << "sys.load_native_module();\n";//Impliment native module according to module.cfg
 	add_common_func(js_stream);
 	/*js_stream << "try{\n";*/
 };
