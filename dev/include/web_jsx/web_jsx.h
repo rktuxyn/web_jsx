@@ -5,13 +5,13 @@
 * See the accompanying LICENSE file for terms.
 */
 //9:49 PM 1/14/2020
-#if !defined(_web_jsx_h)
-#define _web_jsx_h
 #if defined(_MSC_VER)
 #pragma once
 #endif//!_MSC_VER
+#if !defined(_web_jsx_h)
+#	define _web_jsx_h
 #	include <v8.h>
-#	include  <io.h> 
+#	include <io.h> 
 #	include <regex>
 
 #if !defined(__file_exists)
@@ -36,9 +36,14 @@ _access(fname, 0)!=-1
 	isolate->ThrowException(v8::Exception::Error(v8_str(isolate, err)))
 #endif//!throw_js_error
 
-#if !defined(register_wjsx_module)
+#if !defined(wjsx_set_method)
 #define wjsx_set_method(isolate, target, name, func)\
 	target->Set(isolate->GetCurrentContext(), v8_str(isolate, name), v8::Function::New(isolate, func) )
+#endif//!register_wjsx_module
+
+#if !defined(wjsx_set_object)
+#define wjsx_set_object(isolate, target, name, obj)\
+	target->Set(isolate->GetCurrentContext(), v8_str(isolate, name), obj )
 #endif//!register_wjsx_module
 
 #if !defined(to_char_str_n)
@@ -59,12 +64,15 @@ __forceinline static const char* to_char_str(v8::Isolate* isolate, v8::Local<v8:
 #else
 #	define _export_web_jsx_native
 #endif//_WIN32|_WIN64
+
 #if !defined(FALSE)
 #	define FALSE               0
-#endif
+#endif//!FALSE
+
 #if !defined(TRUE)
 #	define TRUE                1
-#endif
+#endif//!FALSE
+
 template<class _input>
 inline int is_error_code(_input ret) {
 	return (ret == FALSE || ret == std::string::npos || ret < 0) ? TRUE : FALSE;
