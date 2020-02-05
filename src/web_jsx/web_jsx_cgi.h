@@ -9,9 +9,9 @@
 #pragma once
 #endif//!_MSC_VER
 #if !defined(_web_jsx_cgi_h)
-#define _web_jsx_cgi_h
+#	define _web_jsx_cgi_h
 #	include "web_jsx_app_core.h"
-namespace web_jsx_cgi {
+namespace web_jsx {
 	namespace cgi_request {
 		int request_handler(const char*execute_path);
 	}
@@ -28,4 +28,4 @@ int main(int argc, char *argv[], char*envp[]);
 #pragma pop_macro("new")
 _STL_RESTORE_CLANG_WARNINGS
 #endif//!FAST_CGI_APP
-#endif//!_web_jsx_cgi_global_h
+#endif//!_web_jsx_global_h

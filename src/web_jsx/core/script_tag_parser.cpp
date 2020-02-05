@@ -46,7 +46,7 @@ void sow_web_jsx::js_write_header(std::stringstream& js_stream) {
 }
 void sow_web_jsx::js_write_footer(std::string&str) {
 	//str.append("\ncontext.response.header(\"X-Powered-By\", \"safeonline.world\");\n");
-	//str.append("context.response.header(\"X-Process-By\", \"web_jsx_cgi\");\n");
+	//str.append("context.response.header(\"X-Process-By\", \"web_jsx\");\n");
 	//str.append("context.response.body.flush();\n");
 	//str.append("}catch(_exp){\n\
 	//			context.response.clear();\n\
@@ -62,7 +62,7 @@ void sow_web_jsx::js_write_footer(std::string&str) {
 };
 void sow_web_jsx::js_write_footer(std::stringstream& js_stream) {
 	//js_stream << "\ncontext.response.header(\"X-Powered-By\", \"safeonline.world\");\n";
-	//js_stream << "context.response.header(\"X-Process-By\", \"web_jsx_cgi\");\n";
+	//js_stream << "context.response.header(\"X-Process-By\", \"web_jsx\");\n";
 	/*js_stream << "}catch(_exp){\n";
 	js_stream << "context.response.clear();\n";
 	js_stream << "context.response.header(\"Content-Type\", \"text/html\");\n";

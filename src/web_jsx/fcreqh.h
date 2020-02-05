@@ -13,14 +13,10 @@
 #	include "web_jsx_app_global.h"
 #if defined(FAST_CGI_APP)
 #	include "util.h"
-#if !defined(_FCGI_STDIO)
 #	include <fcgi_stdio.h>
-#endif//!_FCGI_STDIO
-#if !defined(FCGIO_H)
-#	include "fcgio.h"
-#endif//!FCGIO_H
-#	include "fcgi_config.h"  // HAVE_IOSTREAM_WITHASSIGN_STREAMBUF
-namespace web_jsx_cgi {
+#	include <fcgio.h>
+#	include <fcgi_config.h>  // HAVE_IOSTREAM_WITHASSIGN_STREAMBUF
+namespace web_jsx {
 	namespace fcgi_request {
 		const char * freq_env_c(const char* var_name, char **envp);
 		void get_global_obj(std::map<std::string, std::string>& global, std::string&root_dir, const char*app_path, const char*env_path, char **envp);

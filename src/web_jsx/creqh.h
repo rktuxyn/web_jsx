@@ -13,7 +13,7 @@
 #	include "web_jsx_app_global.h"
 #	include "util.h"
 //#if !defined(FAST_CGI_APP)
-namespace web_jsx_cgi {
+namespace web_jsx {
 	namespace cgi_request {
 		void get_global_obj(std::map<std::string, std::string>& global, std::string&root_dir, const char*app_path);
 		void not_found_response(const char* content_type);

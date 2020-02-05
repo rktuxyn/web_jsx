@@ -79,8 +79,6 @@ _access(fname, 0)!=-1
 #define jsx_export
 #endif//!jsx_export
 #endif//jsx_shared
-#define __client_build
-//#undef __client_build
 #define FORCE_EXIT_PROCESS	9
 #pragma warning (disable : 4996)
 #define _CRT_SECURE_NO_WARNINGS

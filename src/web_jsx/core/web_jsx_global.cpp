@@ -238,7 +238,7 @@ int sow_web_jsx::create_process(const process_info*pi) {
 	if (!pi->start_in.empty()) {
 		current_directory = (LPWSTR)ccr2ws(pi->start_in.c_str());
 	}
-	std::string cmd_args("");
+	std::string cmd_args;
 	if (pi->dw_creation_flags == CREATE_NEW_PROCESS_GROUP) {
 		PCWSTR pszCmd = (PWSTR)ccr2ws(pi->process_path.c_str());
 		PWSTR pcl;

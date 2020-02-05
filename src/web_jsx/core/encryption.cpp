@@ -1,5 +1,5 @@
 #	include "encryption.h"
-#if defined(__client_build)
+#if defined(WEB_JSX_CLIENT_BUILD)
 Cipher::Cipher(int n)
 	: map{ make_map(n) } {
 };
@@ -28,4 +28,4 @@ Cipher::~Cipher() {
 	std::unordered_map<char, char>().swap(map);
 }
 ;
-#endif//!__client_build
+#endif//!WEB_JSX_CLIENT_BUILD

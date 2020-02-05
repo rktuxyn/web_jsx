@@ -7,12 +7,12 @@
 //2:09 AM 11/18/2018 START
 //4:11 AM 11/18/2018 END
 #	include "web_jsx_cgi.h"
-int web_jsx_cgi::cgi_request::request_handler(const char*execute_path) {
+int web_jsx::cgi_request::request_handler(const char*execute_path) {
 	try {
 		const char* content_type = get_content_type();
 		const char*path_translated = get_env_c("PATH_TRANSLATED");
 		if (__file_exists(path_translated) == false) {
-			web_jsx_cgi::cgi_request::not_found_response(content_type);
+			web_jsx::cgi_request::not_found_response(content_type);
 			fflush(stdout);
 			return EXIT_FAILURE;
 		}
@@ -35,8 +35,8 @@ int web_jsx_cgi::cgi_request::request_handler(const char*execute_path) {
 		if (aei->ex_dir->find_last_of("\\") == std::string::npos) {
 			aei->ex_dir->append("\\");
 		}
-		web_jsx_cgi::app_core::prepare_response(content_type, path_translated, *aei, method, get_env_c("PATH_INFO"));
-		web_jsx_cgi::app_core::free_app_info(aei);
+		web_jsx::app_core::prepare_response(content_type, path_translated, *aei, method, get_env_c("PATH_INFO"));
+		web_jsx::app_core::free_app_info(aei);
 		return EXIT_SUCCESS;
 	} catch (std::exception&e) {
 		write_header(get_content_type());

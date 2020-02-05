@@ -16,9 +16,9 @@
 #	include "n_help.h"
 #	include "jsx_file.h"
 #	include "http_payload.h"
-#if defined(__client_build)
+#if defined(WEB_JSX_CLIENT_BUILD)
 #	include "encryption.h"
-#endif//__client_build
+#endif//WEB_JSX_CLIENT_BUILD
 #	include "bitmap.h"
 #	include "native_module.h"
 #	include "module_store.h"
@@ -80,7 +80,18 @@ void jsx_file_bind(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx) {
 				v8_str(iso, "Unable to create or open the file!!!")));
 			return;
 		}
-		args.GetReturnValue().Set(v8_str(iso, jf->read()));
+		int read_len = 1024;
+		if (args.Length() > 0) {
+			v8::Local<v8::Context>ctx = iso->GetCurrentContext();
+			v8::Local<v8::Number> num = args[0]->ToNumber(ctx).ToLocalChecked();
+			read_len = static_cast<int>(num->ToInteger(ctx).ToLocalChecked()->Value());
+		}
+		std::string* out = new std::string();
+		size_t out_len = jf->read(read_len, *out);
+		if (is_error_code(out_len) == FALSE) {
+			args.GetReturnValue().Set(v8_str(iso, out->c_str()));
+		}
+		out->clear(); delete out;
 	}));
 	prototype->Set(isolate, "write", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* iso = args.GetIsolate();
@@ -108,12 +119,12 @@ void jsx_file_bind(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx) {
 	prototype->Set(isolate, "flush", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* iso = args.GetIsolate();
 		jsx_file* jf = sow_web_jsx::unwrap<jsx_file>(args);
-		if (jf->err != 0) {
+		if (jf->err != FALSE) {
 			iso->ThrowException(v8::Exception::TypeError(
 				v8_str(iso, "Unable to create or open the file!!!")));
 			return;
 		}
-		if (jf->is_flush == 1) {
+		if (jf->is_flush == TRUE) {
 			iso->ThrowException(v8::Exception::TypeError(
 				v8_str(iso, "Already flush this file!!!")));
 			return;
@@ -201,12 +212,12 @@ int spawn_uv_process(const process_info pi) {
 	uv_process_options_t options;
 	loop = uv_default_loop();
 	const char* args[3];
-	args[0] = pi.process_path.c_str();//"C:\\web_jsx\\web_jsx_cgi.exe";
+	args[0] = pi.process_path.c_str();//"C:\\web_jsx\\web_jsx.exe";
 	args[1] = pi.arg.c_str();// "m.jsxh";
 	args[2] = NULL;
 	options.cwd = pi.start_in.c_str();////"C:\\web_jsx\\";
 	options.exit_cb = NULL;
-	options.file = pi.process_path.c_str();//"C:\\web_jsx\\web_jsx_cgi.exe";
+	options.file = pi.process_path.c_str();//"C:\\web_jsx\\web_jsx.exe";
 	options.args = (char**)args;
 
 	options.flags = UV_PROCESS_DETACHED;
@@ -219,8 +230,8 @@ int spawn_uv_process(const process_info pi) {
 	uv_unref((uv_handle_t*)& child_req);
 	return uv_run(loop, UV_RUN_DEFAULT);
 }
-///Kill any open process by name e.g. web_jsx_cgi.exe
-///@param process_name e.g. web_jsx_cgi.exe
+///Kill any open process by name e.g. web_jsx.exe
+///@param process_name e.g. web_jsx.exe
 ///@throws Permission denied
 ///@returns {-1|0}
 void native_kill_process_by_name(const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -238,7 +249,7 @@ void native_kill_process_by_name(const v8::FunctionCallbackInfo<v8::Value>& args
 ///@param option Containing {start_in:string, process_name:string, process_path:string, title:string, arg:string, wait_for_exit:boolean}
 ///param start_in -> Process start directory default current location; not required
 ///param process_name -> Process name default null; not required
-///param process_path -> Process full location required e.g. C:/web_jsx/web_jsx_cgi.exe
+///param process_path -> Process full location required e.g. C:/web_jsx/web_jsx.exe
 ///param title -> Process title not required
 ///param arg -> Process argument not required
 ///param wait_for_exit -> If you need to wait untill Process exit, than set true default false
@@ -1430,7 +1441,7 @@ void encrypt_source(const v8::FunctionCallbackInfo<v8::Value>& args) {
 			v8_str(isolate, "File absolute path required!!!")));
 		return;
 	}
-#if defined(__client_build)
+#if defined(WEB_JSX_CLIENT_BUILD)
 	v8::Handle<v8::Object> v8_result = v8::Object::New(isolate);
 	
 	native_string utf_soruce_str(isolate, args[0]);
@@ -1472,7 +1483,7 @@ void encrypt_source(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	isolate->ThrowException(v8::Exception::Error(
 		v8::String::NewFromUtf8(isolate, "Not Implemented!!!")));
 	return;
-#endif//!__client_build
+#endif//!WEB_JSX_CLIENT_BUILD
 }
 void decrypt_source(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
@@ -1481,7 +1492,7 @@ void decrypt_source(const v8::FunctionCallbackInfo<v8::Value>& args) {
 			v8_str(isolate, "File absolute path required!!!")));
 		return;
 	}
-#if defined(__client_build)
+#if defined(WEB_JSX_CLIENT_BUILD)
 	v8::Handle<v8::Object> v8_result = v8::Object::New(isolate);
 	native_string utf_soruce_str(isolate, args[0]);
 	v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
@@ -1522,7 +1533,7 @@ void decrypt_source(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	isolate->ThrowException(v8::Exception::Error(
 		v8_str(isolate, "Not Implemented!!!")));
 	return;
-#endif//!__client_build
+#endif//!WEB_JSX_CLIENT_BUILD
 }
 void generate_key_iv(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
@@ -3225,12 +3236,12 @@ void require(const v8::FunctionCallbackInfo<v8::Value>& args) {
 			v8_str(isolate, "File absolute path required!!!")));
 		return;
 	}
-#if defined(__client_build)
+#if defined(WEB_JSX_CLIENT_BUILD)
 	bool is_encrypt = false;
 	if (args[1]->IsBoolean()) {
 		is_encrypt = sow_web_jsx::to_boolean(isolate, args[1]);
 	}
-#endif//!__client_build
+#endif//!WEB_JSX_CLIENT_BUILD
 	native_string utf_abs_path_str(isolate, args[0]);
 	typeof_module ext = get_module_type(utf_abs_path_str.c_str());
 	if (ext == typeof_module::_UNKNOWN) {
@@ -3268,7 +3279,7 @@ void require(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		return;
 	}
 	std::string source_str("");
-#if defined(__client_build)
+#if defined(WEB_JSX_CLIENT_BUILD)
 	if (is_encrypt) {
 		size_t ret = sow_web_jsx::read_file(abs_path->c_str(), source_str, false);
 		delete abs_path;
@@ -3298,7 +3309,7 @@ void require(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		isolate->ThrowException(v8::Exception::Error(v8::String::NewFromUtf8(isolate, source_str.c_str())));
 		return;
 	}
-#endif//!__client_build
+#endif//!WEB_JSX_CLIENT_BUILD
 	v8::HandleScope handle_scope(isolate);
 	v8::Local<v8::ObjectTemplate> v8_global = sow_web_jsx::wrapper::create_v8_context_object(isolate);
 	v8::Local<v8::ObjectTemplate> module_object = v8::ObjectTemplate::New(isolate);

@@ -11,7 +11,7 @@
 #pragma warning(disable : 4996)
 #	define _encryption_h
 #	include "web_jsx_global.h"
-#if defined(__client_build)
+#if defined(WEB_JSX_CLIENT_BUILD)
 #	include <string>
 #	include <unordered_map>
 #	include <algorithm>
@@ -28,4 +28,4 @@ private:
 	static std::unordered_map<char, char> make_map(int n);
 };
 #endif//!_encryption_h
-#endif//!__client_build
+#endif//!WEB_JSX_CLIENT_BUILD

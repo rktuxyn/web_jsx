@@ -14,12 +14,12 @@
 #	include "fcreqh.h"
 #	include "creqh.h"
 typedef struct {
-	//std::string* ex_dir_c;
 	std::string* ex_dir;
 	std::string* ex_name;
 	const char*execute_path;
+	int is_fserver;
 } app_ex_info;
-namespace web_jsx_cgi {
+namespace web_jsx {
 	namespace app_core {
 		void run__js_scrip(const char* content_type, std::string&root_dir, const app_ex_info aei, req_method&method, template_result& tr, const char*env_path, char **envp);
 		void prepare_response(const char* content_type, const char*path_translated, const app_ex_info aei, req_method&method, const char* path_info, const char*env_path, char **envp);

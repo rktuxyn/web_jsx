@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by web_jsx_cgi.rc
+// Used by web_jsx.rc
 //
 #define IDI_ICON1                       101
 

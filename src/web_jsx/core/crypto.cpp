@@ -186,8 +186,10 @@ int crypto::generate_key_iv(
 	_iv.reserve(AES_BLOCK_SIZE);
 	_key.append(reinterpret_cast<const char*>(key), AES_256_KEY_SIZE);
 	_iv.append(reinterpret_cast<const char*>(iv), AES_BLOCK_SIZE);
-	key_str = sow_web_jsx::base64::to_encode_str(reinterpret_cast<const unsigned char*>(_key.c_str()), (int)_key.size());
-	iv_str = sow_web_jsx::base64::to_encode_str(reinterpret_cast<const unsigned char*>(_iv.c_str()), (int)_iv.size());
+	sow_web_jsx::base64::to_encode_str(_key, key_str);
+	sow_web_jsx::base64::to_encode_str(_iv, iv_str);
+	//key_str = sow_web_jsx::base64::to_encode_str(reinterpret_cast<const unsigned char*>(_key.c_str()), (int)_key.size());
+	//iv_str = sow_web_jsx::base64::to_encode_str(reinterpret_cast<const unsigned char*>(_iv.c_str()), (int)_iv.size());
 	delete[] key; delete[] iv; _iv.clear(); _key.clear();
 	return TRUE;
 }
@@ -208,22 +210,33 @@ int crypto::encrypt(
 	}
 	std::stringstream source(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
 	source.write(plain_text, strlen(plain_text));
-	char* key_text = strdup(sow_web_jsx::base64::to_decode_str(key).c_str());
-	char* iv_text = strdup(sow_web_jsx::base64::to_decode_str(iv).c_str());
+	std::string* _key = new std::string();
+	sow_web_jsx::base64::to_decode_str(key, *_key);
+	std::string* _iv = new std::string();
+	sow_web_jsx::base64::to_decode_str(iv, *_iv);
+	/*char* key_text = strdup(sow_web_jsx::base64::to_decode_str(key).c_str());
+	char* iv_text = strdup(sow_web_jsx::base64::to_decode_str(iv).c_str());*/
+	//char* key_text = _key->data();
+	//char* iv_text = _iv->data();
 	dest.clear();
 	int res = evp_encrypt_decrypt(
 		TRUE, source, dest,
-		reinterpret_cast<unsigned char*>(key_text),
-		reinterpret_cast<unsigned char*>(iv_text)
+		reinterpret_cast<unsigned char*>(_key->data()),
+		reinterpret_cast<unsigned char*>(_iv->data())
 	);
-	delete[]key_text; delete[]iv_text;
+	//delete[]key_text; delete[]iv_text;
+	_key->clear(); _iv->clear();
+	delete _key; delete _iv;
 	source.clear(); std::stringstream().swap(source);
 	if (res == FALSE)return FALSE;
 	std::string encrypted_str(dest.str().c_str(), res); dest.clear(); std::stringstream().swap(dest);
-	std::string base64_str = sow_web_jsx::base64::to_encode_str(reinterpret_cast<const unsigned char*>(encrypted_str.c_str()), (int)encrypted_str.size());
+	std::string* base64_str = new std::string();
+	sow_web_jsx::base64::to_encode_str(encrypted_str, *base64_str);
+	//std::string base64_str = sow_web_jsx::base64::to_encode_str(reinterpret_cast<const unsigned char*>(encrypted_str.c_str()), (int)encrypted_str.size());
 	encrypted_str.clear();
-	res = (int)base64_str.size();
-	dest.write(base64_str.c_str(), res); base64_str.clear();
+	res = (int)base64_str->size();
+	dest.write(base64_str->c_str(), res); base64_str->clear();
+	delete base64_str;
 	return res;
 }
 int crypto::decrypt(
@@ -240,16 +253,27 @@ int crypto::decrypt(
 		return FALSE;
 	}
 	std::stringstream source(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
-	std::string str = sow_web_jsx::base64::to_decode_str(encrypt_text);
-	source.write(str.c_str(), str.size()); str.clear();
-	char* key_text = strdup(sow_web_jsx::base64::to_decode_str(key).c_str());
-	char* iv_text = strdup(sow_web_jsx::base64::to_decode_str(iv).c_str());
+	std::string* str = new std::string();
+	sow_web_jsx::base64::to_decode_str(encrypt_text, *str);
+	source.write(str->c_str(), str->size()); str->clear(); delete str;
+	/*char* key_text = strdup(sow_web_jsx::base64::to_decode_str(key).c_str());
+	char* iv_text = strdup(sow_web_jsx::base64::to_decode_str(iv).c_str());*/
+	std::string* _key = new std::string();
+	sow_web_jsx::base64::to_decode_str(key, *_key);
+	std::string* _iv = new std::string();
+	sow_web_jsx::base64::to_decode_str(iv, *_iv);
+	/*char* key_text = strdup(sow_web_jsx::base64::to_decode_str(key).c_str());
+	char* iv_text = strdup(sow_web_jsx::base64::to_decode_str(iv).c_str());*/
+	//char* key_text = _key->data();
+	//char* iv_text = _iv->data();
 	int res = evp_encrypt_decrypt(
 		FALSE, source, dest,
-		reinterpret_cast<unsigned char*>(key_text),
-		reinterpret_cast<unsigned char*>(iv_text)
+		reinterpret_cast<unsigned char*>(_key->data()),
+		reinterpret_cast<unsigned char*>(_iv->data())
 	);
-	delete[]key_text; delete[]iv_text;
+	//delete[]key_text; delete[]iv_text;
+	_key->clear(); _iv->clear();
+	delete _key; delete _iv;
 	source.clear(); std::stringstream().swap(source);
 	return res;
 }

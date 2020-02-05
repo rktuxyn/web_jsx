@@ -21,7 +21,11 @@ z_stream* gzip::create_z_stream() {
 	return _strm;
 }
 
-int gzip::deflate_file(const std::string input_path, const std::string output_path, int level, std::string& error){
+int gzip::deflate_file(
+	const std::string input_path, 
+	const std::string output_path, int level, 
+	std::string& error
+){
 	z_stream* strm = create_z_stream();
 	int ret = deflateInit(strm, level);
 	if (ret != Z_OK) {
@@ -113,7 +117,11 @@ int gzip::deflate_file(const std::string input_path, const std::string output_pa
 	free_zstream(strm);
 	return ret;
 }
-int gzip::inflate_file(const std::string input_path, const std::string output_path, std::string& error){
+int gzip::inflate_file(
+	const std::string input_path, 
+	const std::string output_path,
+	std::string& error
+){
 	z_stream* strm = create_z_stream();
 	int ret = inflateInit(strm);
 	if (ret != Z_OK) {
@@ -296,7 +304,7 @@ int gzip::gzip_deflate::panic(const char* error, int error_code) {
 }
 int gzip::gzip_deflate::panic(char* erro_msg) {
 	if (_internal_error != NULL)
-		free(_internal_error);
+		delete[]_internal_error;
 	_internal_error = new char[strlen(erro_msg) + 1];
 	strcpy(_internal_error, const_cast<const char*>(erro_msg));
 	_is_error = TRUE;
@@ -394,7 +402,7 @@ int gzip::gzip_inflate::panic(const char* error, int error_code) {
 }
 int gzip::gzip_inflate::panic(char* erro_msg){
 	if (_internal_error != NULL)
-		free(_internal_error);
+		delete[]_internal_error;
 	_internal_error = new char[strlen(erro_msg) + 1];
 	strcpy(_internal_error, const_cast<const char*>(erro_msg));
 	_is_error = TRUE;

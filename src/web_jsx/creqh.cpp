@@ -5,7 +5,7 @@
 * See the accompanying LICENSE file for terms.
 */
 #	include "creqh.h"
-void web_jsx_cgi::cgi_request::get_global_obj(std::map<std::string, std::string>& global, std::string&root_dir, const char*app_path) {
+void web_jsx::cgi_request::get_global_obj(std::map<std::string, std::string>& global, std::string&root_dir, const char*app_path) {
 	replace_back_slash(root_dir);
 	global["root_dir"] = root_dir;
 	global["host"] = get_env_c("HTTP_HOST");
@@ -15,7 +15,7 @@ void web_jsx_cgi::cgi_request::get_global_obj(std::map<std::string, std::string>
 	global["app_path"] = app_path;//get_app_path();
 	global["env_path"] = get_env_c("path");
 }
-void web_jsx_cgi::cgi_request::get_request_object(std::map<std::string, std::string>&request, std::map<std::string, std::string>&query_string, req_method&method) {
+void web_jsx::cgi_request::get_request_object(std::map<std::string, std::string>&request, std::map<std::string, std::string>&query_string, req_method&method) {
 	request["method"] = method == req_method::GET ? "GET" : "POST";
 	if (method == req_method::POST) {
 		request["content_length"] = get_env_c("CONTENT_LENGTH");
@@ -40,7 +40,7 @@ void web_jsx_cgi::cgi_request::get_request_object(std::map<std::string, std::str
 	request["accept"] = get_env_c("HTTP_ACCEPT");
 	request["accept_encoding"] = get_env_c("HTTP_ACCEPT_ENCODING");
 }
-void web_jsx_cgi::cgi_request::not_found_response(const char* content_type) {
+void web_jsx::cgi_request::not_found_response(const char* content_type) {
 	std::cout << "Content-Type:" << content_type << H_N_L;
 	std::cout << "Accept-Ranges:bytes" << H_N_L;
 	std::cout << "X-Powered-By:safeonline.world" << H_N_L;

@@ -6,7 +6,7 @@
 */
 #	include "fcreqh.h"
 #if defined(FAST_CGI_APP)
-const char * web_jsx_cgi::fcgi_request::freq_env_c(const char* var_name, char **envp) {
+const char * web_jsx::fcgi_request::freq_env_c(const char* var_name, char **envp) {
 	char *env_val = FCGX_GetParam(var_name, envp);
 	if (((env_val != NULL) && (env_val[0] == '\0')) || env_val == NULL) {
 		return "";
@@ -23,7 +23,7 @@ std::string read_request_header(char **envp) {
 	}
 	return str;
 }
-void web_jsx_cgi::fcgi_request::get_global_obj(std::map<std::string, std::string>& global, std::string&root_dir, const char*app_path, const char*env_path, char **envp) {
+void web_jsx::fcgi_request::get_global_obj(std::map<std::string, std::string>& global, std::string&root_dir, const char*app_path, const char*env_path, char **envp) {
 	replace_back_slash(root_dir);
 	global["root_dir"] = root_dir;
 	global["host"] = freq_env_c("HTTP_HOST", envp);
@@ -33,7 +33,7 @@ void web_jsx_cgi::fcgi_request::get_global_obj(std::map<std::string, std::string
 	global["app_path"] = app_path;
 	global["env_path"] = env_path;
 }
-void web_jsx_cgi::fcgi_request::get_request_object(std::map<std::string, std::string>&request, std::map<std::string, std::string>&query_string, req_method&method, const char*content_type, char **envp) {
+void web_jsx::fcgi_request::get_request_object(std::map<std::string, std::string>&request, std::map<std::string, std::string>&query_string, req_method&method, const char*content_type, char **envp) {
 	request["method"] = method == req_method::GET ? "GET" : "POST";
 	if (method == req_method::POST) {
 		request["content_length"] = freq_env_c("CONTENT_LENGTH", envp);
@@ -60,13 +60,18 @@ void web_jsx_cgi::fcgi_request::get_request_object(std::map<std::string, std::st
 	request["accept"] = freq_env_c("HTTP_ACCEPT", envp);
 	request["accept_encoding"] = freq_env_c("HTTP_ACCEPT_ENCODING", envp);
 }
-void web_jsx_cgi::fcgi_request::not_found_response(const char* content_type, char **envp, const char* ex_dir) {
+void web_jsx::fcgi_request::not_found_response(
+	const char* content_type, 
+	char **envp, 
+	const char* ex_dir
+) {
 	std::cout << "Content-Type:" << content_type << H_N_L;
 	std::cout << "Accept-Ranges:bytes" << H_N_L;
 	std::cout << "X-Powered-By:safeonline.world" << H_N_L;
 	std::cout << "X-Process-By:web_jsx" << H_N_L;
 	std::cout << "Status: 404 Not found" << H_N_L;
 	std::cout << "WebJsx-Error-Code:404" << H_N_L;
+	std::cout << "path_translated:" << freq_env_c("PATH_TRANSLATED", envp) << H_N_L;
 	std::cout << "\r\n";
 	std::string* str = new std::string(ex_dir);
 	str->append("error\\404.html");

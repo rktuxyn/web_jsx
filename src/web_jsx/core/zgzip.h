@@ -8,29 +8,29 @@
 #pragma once
 #endif//!_MSC_VER
 #if !defined(_zgzip_h)
-#define _zgzip_h
+#	define _zgzip_h
 #pragma warning (disable : 4231)
 #pragma warning(disable : 4996)
 //3:45 PM 11/24/2018
-#include	<iostream>
-#include	<stdio.h>  /* defines FILENAME_MAX, printf, sprintf */
-#include	<string>// !_XSTRING_// memcpy, memset
+#	include	<iostream>
+#	include	<stdio.h>  /* defines FILENAME_MAX, printf, sprintf */
+#	include	<string>// !_XSTRING_// memcpy, memset
 #if defined(MSDOS) || defined(OS2) || defined(WIN32) || defined(_WIN64) || defined(__CYGWIN__)
-#include	<windows.h>
-#include	<fcntl.h>
-#include	<io.h>
+#	include	<windows.h>
+#	include	<fcntl.h>
+#	include	<io.h>
 #if !defined(OS_CODE)
 #	define OS_CODE  0x00
 #endif//!OS_CODE
 #if !defined(SET_BINARY_MODE)
 #if defined(__CYGWIN__)
-#define SET_BINARY_MODE(file) setmode(fileno(my_stdio_stream), O_BINARY)
+#	define SET_BINARY_MODE(file) setmode(fileno(my_stdio_stream), O_BINARY)
 #else
-#  define SET_BINARY_MODE(file) _setmode(_fileno(file), _O_BINARY)
+#	define SET_BINARY_MODE(file) _setmode(_fileno(file), _O_BINARY)
 #endif//!__CYGWIN__
 #endif//!SET_BINARY_MODE
 #else
-#include	<io.h>
+#	include	<io.h>
 #if !defined(SET_BINARY_MODE)
 #	define SET_BINARY_MODE(file) setmode(fileno(file), O_BINARY)
 #endif//!SET_BINARY_MODE
@@ -38,9 +38,9 @@
 #	define OS_CODE  0x03 /*Assume Unix*/
 #endif//!OS_CODE
 #endif//WIN32
-#include	<sstream> // std::stringstream
-#include	<fstream>// std::ifstream
-#include	<zlib.h>
+#	include	<sstream> // std::stringstream
+#	include	<fstream>// std::ifstream
+#	include	<zlib.h>
 #if !defined(CHUNK)
 #	define CHUNK 16384
 #endif//!CHUNK
