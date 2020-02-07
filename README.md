@@ -267,9 +267,13 @@ let plainText = "Hello world";
 /** Encryption **/
 let encText = crypto.encrypt( plainText, crypto_inf.key, crypto_inf.iv );
 context.response.write( `Encrypted:${encText}` );
+//Encrypt file
+crypto.encrypt_decrypt_file( crypto_inf.key, crypto_inf.iv, "plain_source_file", "encrypted_dest_file", 1 );
 
 /** Decryption **/
 let decText = crypto.decrypt( enctext, crypto_inf.key, crypto_inf.iv );
 context.response.write( `Decrypted:${dectext}` );
+//Decrypt file
+crypto.encrypt_decrypt_file( crypto_inf.key, crypto_inf.iv, "encrypted_source_file", "decrypted_dest_file", 0 );
 ```
 Learn more https://web_jsx.safeonline.world/ and https://www.youtube.com/channel/UCsEq3IcHPLJGFseuINsYs_w
