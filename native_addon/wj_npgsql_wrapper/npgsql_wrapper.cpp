@@ -82,21 +82,26 @@ int _npgsql_execute_scalar(
 			throw_js_error(isolate, "Param parameter_direction required!!!");
 			return -1;
 		}
+		std::string str_val;
 		int p_direction = static_cast<int>(v8_val->ToNumber(ctx).ToLocalChecked()->Value());
 		if (p_direction == parameter_direction::Output ||
 			p_direction == parameter_direction::ReturnValue) {
+			get_prop_value(isolate, ctx, v8_obj, "parameter_name", str_val);
 			sql_param->push_back(new npgsql_params(
-				/*name*/ get_prop_value(isolate, ctx, v8_obj, "parameter_name"),
+				/*name*/ str_val.c_str(),
 				/*dtype*/(npgsql_db_type)db_type,
 				/*pd*/(parameter_direction)p_direction
 			));
 		}
 		else {
+			get_prop_value(isolate, ctx, v8_obj, "parameter_name", str_val);
+			std::string data;
+			get_prop_value(isolate, ctx, v8_obj, "data", data);
 			sql_param->push_back(new npgsql_params(
-				/*name*/ get_prop_value(isolate, ctx, v8_obj, "parameter_name"),
+				/*name*/ str_val.c_str(),
 				/*dtype*/(npgsql_db_type)db_type,
 				/*pd*/(parameter_direction)p_direction,
-				/*data*/ get_prop_value(isolate, ctx, v8_obj, "data")
+				/*data*/data.c_str()
 			));
 		}
 		obj_val.Clear();
