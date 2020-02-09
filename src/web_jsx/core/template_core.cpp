@@ -8,14 +8,15 @@
 #	include "template_core.h"
 using namespace sow_web_jsx;
 int sow_web_jsx::template_core::process_template(template_result & tr,
-	const std::string root_dir,
-	const std::string request_path) {
+	const char* root_dir,
+	const char* request_path
+) {
 	tr.is_error = false;
-	std::string page_path = root_dir + request_path;
+	std::string page_path(root_dir); page_path.append(request_path);
 	format__path(page_path);
 	std::string html_body("");
 	size_t fret = sow_web_jsx::read_file(page_path.c_str(), html_body, false);
-	if (fret < 0 || fret == std::string::npos) {
+	if (is_error_code(fret) == TRUE) {
 		std::string().swap(page_path);
 		tr.err_msg = "_NOT_FOUND_";
 		tr.is_error = true;
@@ -27,7 +28,7 @@ int sow_web_jsx::template_core::process_template(template_result & tr,
 	//delete rresult;
 	int ret = 0;
 	std::vector<std::string>* templates = new std::vector<std::string>();
-	auto parent_path = new std::string(request_path.c_str());
+	auto parent_path = new std::string(request_path);
 	ret = template_reader::read_template(tr, root_dir, *templates, *parent_path, html_body);
 	delete parent_path;
 	if (ret < 0) {

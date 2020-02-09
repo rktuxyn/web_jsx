@@ -5,8 +5,15 @@
 * See the accompanying LICENSE file for terms.
 */
 //4:02 PM 2/3/2019
+//#define free_str(str)\
+//str->clear(); delete str;
+
 #	include "web_jsx_app_core.h"
-void web_jsx::app_core::run__js_scrip(const char * content_type, std::string & root_dir, const app_ex_info aei, req_method & method, template_result & tr) {
+void web_jsx::app_core::run__js_scrip(
+	const char * content_type, 
+	std::string & root_dir, const app_ex_info aei, 
+	req_method & method, template_result & tr
+) {
 	std::map<std::string, std::map<std::string, std::string>>* ctx = new std::map<std::string, std::map<std::string, std::string>>();
 	std::map<std::string, std::string>* req_obj = new std::map<std::string, std::string>();
 	std::map<std::string, std::string>*query_string = new std::map<std::string, std::string>();
@@ -17,16 +24,10 @@ void web_jsx::app_core::run__js_scrip(const char * content_type, std::string & r
 	(*global_obj)["app_dir"] = aei.ex_dir->c_str();
 	::obj_insert(*req_obj, "request", *ctx);
 	::obj_insert(*global_obj, "global", *ctx);
-	try {
-		sow_web_jsx::js_compiler::create_engine(aei.ex_dir->c_str());
-		sow_web_jsx::js_compiler::run_async(*ctx, aei.ex_dir->c_str(), tr);
-		sow_web_jsx::js_compiler::dispose_engine();
-	} catch (std::exception&e) {
-		tr.is_error = true;
-		tr.err_msg = e.what();
-	}
-	req_obj->clear(); global_obj->clear(); ctx->clear(); query_string->clear();
-	delete req_obj; delete global_obj; delete ctx; delete query_string;
+	sow_web_jsx::js_compiler::create_engine(aei.ex_dir->c_str());
+	sow_web_jsx::js_compiler::run_async(*ctx, aei.ex_dir->c_str(), tr);
+	sow_web_jsx::js_compiler::dispose_engine();
+	_free_obj(req_obj); _free_obj(global_obj); _free_obj(ctx); _free_obj(query_string);
 	std::string().swap(tr.t_source);
 }
 bool is_script_runtime_error(std::string& what) {
@@ -39,17 +40,12 @@ void web_jsx::app_core::prepare_response(const char* content_type, const char*pa
 		|| ext == web_extension::RAW_SCRIPT
 		|| ext == web_extension::JS
 		) {
-		/*::write_header(content_type);
-		std::cout << "\r\n";
-		std::cout << "Unsupported extension....";
-		std::cout << path_translated;*/
 		::write_internal_server_error(
 			/*content_type*/content_type,
 			/*execute_path*/aei.ex_dir->c_str(),
 			/*error_code*/500,
 			/*error_msg*/"Unsupported extension...."
 		);
-		//fflush(stdout);
 		return;
 	}
 	std::string* root_dir = new std::string();
@@ -61,24 +57,22 @@ void web_jsx::app_core::prepare_response(const char* content_type, const char*pa
 		std::stringstream stream(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
 		sow_web_jsx::js_write_header(stream);
 		size_t ret = sow_web_jsx::read_file(path_translated, stream, false);
-		if (ret < 0 || ret == std::string::npos) {
+		if (ret == std::string::npos) {
 			web_jsx::cgi_request::not_found_response(content_type);
+			_free_obj(root_dir); delete tr;
 			return;
-		};
+		}
 		//sow_web_jsx::js_write_footer(stream);
 		tr->t_source = stream.str();
 		std::stringstream().swap(stream);
 		web_jsx::app_core::run__js_scrip(content_type, *root_dir, aei, method, *tr);
 		if (tr->is_error == true) {
 			if (!is_script_runtime_error(tr->err_msg)) {
-				/*::write_header(content_type);
-				std::cout << "\r\n";
-				std::cout << tr->err_msg.c_str();*/
 				::write_internal_server_error(
 					/*content_type*/content_type,
 					/*execute_path*/aei.ex_dir->c_str(),
 					/*error_code*/500,
-					/*error_msg*/tr->err_msg
+					/*error_msg*/tr->err_msg.c_str()
 				);
 			}
 			fflush(stdout);
@@ -93,26 +87,17 @@ void web_jsx::app_core::prepare_response(const char* content_type, const char*pa
 			if (!is_script_runtime_error(tr->err_msg)) {
 				if (tr->err_msg == "_NOT_FOUND_") {
 					web_jsx::cgi_request::not_found_response(content_type);
-					/*if (!tr->t_source.empty()) {
-						std::cout << "Error==>\r\n";
-						std::cout << tr->t_source;
-					}*/
 					tr->err_msg.clear();
 					tr->t_source.clear();
 					fflush(stdout);
 				}
 				else {
-					//::write_header(content_type);
-					//std::cout << "\r\n";
 					::write_internal_server_error(
 						/*content_type*/content_type,
 						/*execute_path*/aei.ex_dir->c_str(),
 						/*error_code*/500,
-						/*error_msg*/tr->err_msg
+						/*error_msg*/tr->err_msg.c_str()
 					);
-					//
-					//std::cout << tr->err_msg.c_str();
-					//fflush(stdout);
 				}
 			}
 			else {
@@ -124,14 +109,11 @@ void web_jsx::app_core::prepare_response(const char* content_type, const char*pa
 			web_jsx::app_core::run__js_scrip(content_type, *root_dir, aei, method, *tr);
 			if (tr->is_error == true) {
 				if (!is_script_runtime_error(tr->err_msg)) {
-					/*::write_header(content_type);
-					std::cout << "\r\n";
-					std::cout << tr->err_msg.c_str();*/
 					::write_internal_server_error(
 						/*content_type*/content_type,
 						/*execute_path*/aei.ex_dir->c_str(),
 						/*error_code*/500,
-						/*error_msg*/tr->err_msg
+						/*error_msg*/tr->err_msg.c_str()
 					);
 				}
 				fflush(stdout);
@@ -148,10 +130,17 @@ void web_jsx::app_core::prepare_response(const char* content_type, const char*pa
 		delete ps;
 	}
 	std::string().swap(tr->err_msg);
-	delete tr;
+	delete tr; _free_obj(root_dir);
 }
 #if defined(FAST_CGI_APP)
-void web_jsx::app_core::run__js_scrip(const char* content_type, std::string&root_dir, const app_ex_info aei, req_method&method, template_result& tr, const char*env_path, char **envp) {
+void web_jsx::app_core::run__js_scrip(
+	const char* content_type,
+	std::string&root_dir,
+	const app_ex_info aei,
+	req_method&method,
+	template_result& tr,
+	const char*env_path, char **envp
+) {
 	std::map<std::string, std::map<std::string, std::string>>* ctx = new std::map<std::string, std::map<std::string, std::string>>();
 	std::map<std::string, std::string>* req_obj = new std::map<std::string, std::string>();
 	std::map<std::string, std::string>*query_string = new std::map<std::string, std::string>();
@@ -163,15 +152,8 @@ void web_jsx::app_core::run__js_scrip(const char* content_type, std::string&root
 	(*global_obj)["app_dir"] = aei.ex_dir->c_str();
 	::obj_insert(*req_obj, "request", *ctx);
 	::obj_insert(*global_obj, "global", *ctx);
-	try {
-		sow_web_jsx::js_compiler::run_async(*ctx, aei.ex_dir->c_str(), tr);
-	} catch (std::exception&e) {
-		tr.is_error = true;
-		tr.err_msg = e.what();
-		sow_web_jsx::wrapper::clear_cache();
-	}
-	req_obj->clear(); global_obj->clear(); query_string->clear(); ctx->clear();
-	delete req_obj; delete global_obj; delete query_string; delete ctx;
+	sow_web_jsx::js_compiler::run_async(*ctx, aei.ex_dir->c_str(), tr);
+	_free_obj(req_obj); _free_obj(global_obj); _free_obj(ctx); _free_obj(query_string);
 	std::string().swap(tr.t_source);
 }
 void web_jsx::app_core::prepare_response(
@@ -188,11 +170,6 @@ void web_jsx::app_core::prepare_response(
 		|| ext == web_extension::RAW_SCRIPT
 		|| ext == web_extension::JS
 		) {
-		/*::write_header(content_type);
-		std::cout << "\r\n";
-		std::cout << "Unsupported extension....";
-		std::cout << path_translated;
-		fflush(stdout);*/
 		::write_internal_server_error(
 			/*content_type*/content_type,
 			/*execute_path*/aei.ex_dir->c_str(),
@@ -202,7 +179,6 @@ void web_jsx::app_core::prepare_response(
 		return;
 	}
 	std::string* root_dir = new std::string(web_jsx::fcgi_request::freq_env_c("DOCUMENT_ROOT", envp));
-	//::server_physical_path(path_translated, path_info, *root_dir);
 	root_dir->append("\\");
 	template_result* tr = new template_result();
 	tr->remove_new_line = true;
@@ -211,24 +187,21 @@ void web_jsx::app_core::prepare_response(
 		std::stringstream js_stream(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
 		sow_web_jsx::js_write_header(js_stream);
 		size_t ret = sow_web_jsx::read_file(path_translated, js_stream, false);
-		if (ret < 0 || ret == std::string::npos) {
+		if (ret == std::string::npos) {
 			web_jsx::fcgi_request::not_found_response(content_type, envp, aei.ex_dir->c_str());
+			_free_obj(root_dir); delete tr;
 			return;
-		};
-		//sow_web_jsx::js_write_footer(js_stream);
+		}
 		tr->t_source = js_stream.str();
 		std::stringstream().swap(js_stream);
 		web_jsx::app_core::run__js_scrip(ct, *root_dir, aei, method, *tr, env_path, envp);
 		if (tr->is_error == true) {
 			if (!is_script_runtime_error(tr->err_msg)) {
-				/*::write_header(content_type);
-				std::cout << "\r\n";
-				std::cout << tr->err_msg.c_str();*/
 				::write_internal_server_error(
 					/*content_type*/content_type,
 					/*execute_path*/aei.ex_dir->c_str(),
 					/*error_code*/500,
-					/*error_msg*/tr->err_msg
+					/*error_msg*/tr->err_msg.c_str()
 				);
 			}
 			fflush(stdout);
@@ -242,22 +215,15 @@ void web_jsx::app_core::prepare_response(
 		if (tr->is_error == true) {
 			if (tr->err_msg == "_NOT_FOUND_") {
 				web_jsx::fcgi_request::not_found_response(content_type, envp, aei.ex_dir->c_str());
-				/*if (!tr->t_source.empty()) {
-					std::cout << "Error==>\r\n";
-					std::cout << tr->t_source;
-				}*/
 				fflush(stdout);
 			}
 			else {
 				if (!is_script_runtime_error(tr->err_msg)) {
-					/*::write_header(content_type);
-					std::cout << "\r\n";
-					std::cout << tr->err_msg.c_str();*/
 					::write_internal_server_error(
 						/*content_type*/content_type,
 						/*execute_path*/aei.ex_dir->c_str(),
 						/*error_code*/500,
-						/*error_msg*/tr->err_msg
+						/*error_msg*/tr->err_msg.c_str()
 					);
 				}
 				fflush(stdout);
@@ -265,21 +231,13 @@ void web_jsx::app_core::prepare_response(
 		}
 		else if (tr->is_script_template == true) {
 			web_jsx::app_core::run__js_scrip(ct, *root_dir, aei, method, *tr, env_path, envp);
-			//::write_header(content_type);
-			//std::cout << "\r\n";
-			//std::cout << tr->t_source.c_str();
-			//std::string().swap(tr->t_source);
-			//fflush(stdout);
 			if (tr->is_error == true) {
 				if (!is_script_runtime_error(tr->err_msg)) {
-					/*::write_header(content_type);
-					std::cout << "\r\n";
-					std::cout << tr->err_msg.c_str();*/
 					::write_internal_server_error(
 						/*content_type*/content_type,
 						/*execute_path*/aei.ex_dir->c_str(),
 						/*error_code*/500,
-						/*error_msg*/tr->err_msg
+						/*error_msg*/tr->err_msg.c_str()
 					);
 				}
 				fflush(stdout);
@@ -296,7 +254,7 @@ void web_jsx::app_core::prepare_response(
 		delete ps;
 	}
 	std::string().swap(tr->err_msg);
-	delete tr;
+	delete tr; _free_obj(root_dir);
 }
 #endif//FAST_CGI_APP
 void get_args(int argc, char *argv[], std::vector<char*>&args) {
@@ -309,7 +267,7 @@ void web_jsx::app_core::prepare_console_response(int argc, char *argv[], bool ir
 	std::string* exec_path = new std::string();
 #if defined(__WEB_JSX_PUBLISH)
 	if (get_env_path(*exec_path) < 0) {
-		exec_path->clear(); delete exec_path;
+		_free_obj(exec_path);
 		std::cout << "Please add web_jsx bin path into environment variable Path!!!\r\n";
 		fflush(stdout);
 		return;
@@ -323,23 +281,17 @@ void web_jsx::app_core::prepare_console_response(int argc, char *argv[], bool ir
 	int param_start = 1;
 	if (ireq == true) {
 		param_start = 2;
-		//writ("IREQ");
 	}
 	const char*may_be_path = const_cast<const char*>(argv[param_start]);
 	web_extension ext = get_request_extension(may_be_path);
-	//writx(may_be_path);
-	//write_argvx(argv, may_be_path);
 	if (ext == web_extension::JSX || ext == web_extension::WJSX) {
-		//writ("JSX");
-		std::cout << "This extension not allowed for CLI";
-		std::cout << " ==> ";
-		std::cout << may_be_path;
+		std::cout << "This extension not allowed for CLI ==> " << may_be_path;
+		_free_obj(exec_path);
 		fflush(stdout);
 		return;
 	}
-	auto root_dir = new std::string(get_current_working_dir());
+	std::string* root_dir = new std::string(get_current_working_dir());
 	root_dir->append("\\");
-	//writ(*root_dir);
 	std::stringstream js_stream(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
 	if (ext == web_extension::RAW_SCRIPT || ext == web_extension::UNKNOWN) {
 		sow_web_jsx::js_write_console_header(js_stream);
@@ -351,66 +303,49 @@ void web_jsx::app_core::prepare_console_response(int argc, char *argv[], bool ir
 		const char* scrip_path_c = scrip_path->c_str();
 		if (__file_exists(scrip_path_c) == false) {
 			std::cout << "No file found in : " << scrip_path_c;
-			root_dir->clear(); scrip_path->clear(); exec_path->clear();
-			delete root_dir; delete scrip_path; delete exec_path;
+			_free_obj(root_dir); _free_obj(scrip_path); _free_obj(exec_path);
 			fflush(stdout);
 			return;
 		}
-		scrip_path->clear(); delete scrip_path;
+		_free_obj(scrip_path);
 		sow_web_jsx::js_write_console_header(js_stream);
 		size_t ret = sow_web_jsx::read_file(may_be_path, js_stream, false);
-		if (ret < 0 || ret == std::string::npos) {
+		if (ret == std::string::npos) {
 			std::cout << "Unable to read file : " << scrip_path_c;
 			std::stringstream().swap(js_stream);
-			root_dir->clear(); exec_path->clear();
-			delete root_dir; delete exec_path;
+			_free_obj(root_dir); _free_obj(exec_path);
 			fflush(stdout);
 			return;
-		};
-	}
-	try {
-		//sow_web_jsx::js_write_console_footer(js_stream);
-		std::vector<char*>*argumnets = new std::vector<char*>();
-		get_args(argc, argv, *argumnets);
-		auto arg_array = new std::string("");
-		json_array_stringify_s(*argumnets, *arg_array);
-		auto script_source = new std::string(js_stream.str());
-		std::stringstream().swap(js_stream);
-		auto ctx = new std::map<std::string, std::string>();
-		std::map<std::string, std::string>& global = *ctx;
-		global["app_path"] = const_cast<const char*>(argv[0]);
-		global["app_dir"] = exec_path->c_str();
-		global["is_interactive"] = ireq == true ? "0" : "1";
-		global["path"] = get_env_c("path");
-		global["root_dir"] = root_dir->c_str();
-		global["arg"] = arg_array->c_str();
-		if (ext == web_extension::RAW_SCRIPT || ext == web_extension::UNKNOWN)
-			global["path_translated"] = "RAW_SCRIPT";
-		else {
-			global["path_translated"] = may_be_path;
 		}
-		sow_web_jsx::js_compiler::run_async(exec_path->c_str(), script_source->c_str(), *ctx);
-		ctx->clear(); argumnets->clear(); script_source->clear();
-		root_dir->clear(); arg_array->clear(); exec_path->clear();
-		delete ctx; delete argumnets; delete script_source;
-		delete root_dir; delete arg_array; delete exec_path;
-		fflush(stdout);
-	} catch (std::exception&e) {
-		std::cout << e.what();
-		//writx(e.what());
-	}  catch (...) {
-		std::cout << "Unknown";
-		//writx("Unknown");
 	}
+	//sow_web_jsx::js_write_console_footer(js_stream);
+	std::vector<char*>* argumnets = new std::vector<char*>();
+	get_args(argc, argv, *argumnets);
+	auto arg_array = new std::string("");
+	json_array_stringify_s(*argumnets, *arg_array);
+	auto script_source = new std::string(js_stream.str());
+	std::stringstream().swap(js_stream);
+	auto ctx = new std::map<std::string, std::string>();
+	std::map<std::string, std::string>& global = *ctx;
+	global["app_path"] = const_cast<const char*>(argv[0]);
+	global["app_dir"] = exec_path->c_str();
+	global["is_interactive"] = ireq == true ? "0" : "1";
+	global["path"] = get_env_c("path");
+	global["root_dir"] = root_dir->c_str();
+	global["arg"] = arg_array->c_str();
+	if (ext == web_extension::RAW_SCRIPT || ext == web_extension::UNKNOWN)
+		global["path_translated"] = "RAW_SCRIPT";
+	else {
+		global["path_translated"] = may_be_path;
+	}
+	sow_web_jsx::js_compiler::run_async(exec_path->c_str(), script_source->c_str(), *ctx);
+	_free_obj(ctx); _free_obj(argumnets); _free_obj(script_source);
+	_free_obj(root_dir); _free_obj(arg_array); _free_obj(exec_path);
+	fflush(stdout);
 }
 void web_jsx::app_core::free_app_info(app_ex_info * aei) {
-	aei->ex_dir->clear();
-	aei->ex_name->clear();
-	//aei->ex_dir_c->clear();
-	delete aei->ex_dir;
-	delete aei->ex_name;
-	//delete aei->ex_dir_c;
+	_free_obj(aei->ex_dir);
+	_free_obj(aei->ex_name);
 	aei->execute_path = NULL;
-	aei->ex_dir = NULL;//aei->ex_dir_c = NULL; 
-	aei->ex_name = NULL; delete aei; aei = NULL;
+	delete aei; aei = NULL;
 }

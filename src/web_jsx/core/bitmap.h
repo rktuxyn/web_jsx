@@ -10,9 +10,9 @@
 #pragma warning (disable : 4231)
 #pragma warning(disable : 4996)
 #	include <iostream>
-#	include <fstream>// std::ifstream
-#	include <sstream> // std::stringstream
-#	include <string>// !_XSTRING_// memcpy, memset
+#	include <fstream>
+#	include <sstream>
+#	include <string>
 #	include <vector>
 #if !defined(FALSE)
 #	define FALSE               0
@@ -81,8 +81,10 @@ private:
 	int save_to_vector(std::vector<char>& dest, image_format format);
 	//int set_pixel(uint8_t* _pixels, rgb32* pixel, uint32_t x, uint32_t y);
 public:
-	bitmap(image_format format);
-	bitmap(const char* path, image_format format);
+	explicit bitmap(image_format format);
+	explicit bitmap(const char* path, image_format format);
+	//creates a deep copy of the source image.
+	bitmap(const bitmap& other);
 	~bitmap();
 	int load(const char* path);
 	int from_base64(const char* data);
@@ -106,7 +108,7 @@ public:
 	uint8_t* data()const;
 	bitmap_header* header()const;
 	// Assignment operator creates a deep copy of the source image.
-	bitmap& operator = (const bitmap& other);
+	//bitmap& operator = (const bitmap& other);
 };
 template<class _source_stream>
 inline int bitmap::load_from_stream(_source_stream& stream) {
@@ -154,7 +156,7 @@ inline int bitmap::save_to_stream(_source_stream& stream, int is_memory, image_f
 	uint8_t* temp = new uint8_t[_header->fHeader.bfSize - _header->fHeader.bfOffBits];
 	uint8_t* out = temp;
 	rgb32* in = reinterpret_cast<rgb32*>(_pixels);
-	int nPadding = ((_header->iHeader.biWidth / 4) + 1) * 4;
+	//int nPadding = ((_header->iHeader.biWidth / 4) + 1) * 4;
 	int padding = (_header->iHeader.biSizeImage - _header->iHeader.biWidth * _header->iHeader.biHeight * 3) / _header->iHeader.biHeight;
 	for (int i = 0; i < _header->iHeader.biHeight; ++i, out += padding) {
 		for (int j = 0; j < _header->iHeader.biWidth; ++j) {

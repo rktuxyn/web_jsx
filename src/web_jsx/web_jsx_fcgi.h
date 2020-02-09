@@ -16,7 +16,7 @@
 namespace web_jsx {
 	namespace fcgi_request {
 		int request_process(const app_ex_info aei, const char*env_path, char **envp);
-		int request_handler(const char*execute_path, const char*path);
+		int request_handler(const char*execute_path, const char*path, int is_spath);
 	}
 }
 #endif//!FAST_CGI_APP

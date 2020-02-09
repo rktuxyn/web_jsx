@@ -47,7 +47,7 @@ namespace smtp_client {
 		_is_debug = false;
 		_disposed = false; _has_error = this->init();
 		if (_has_error)return;
-		_internal_error = new char[1]{ 's' };
+		_internal_error = NULL;
 		_recipients = NULL;
 #if defined(FAST_CGI_APP)
 		if (_sr == false) {
@@ -55,10 +55,15 @@ namespace smtp_client {
 			sow_web_jsx::register_resource(onr_resource_free);
 		}
 #endif//FAST_CGI_APP
+		_cheaders = NULL;
 		_headers = new std::vector<std::string>();
 		_attachments = new std::vector<mail_attachment*>();
 	}
-	bool smtp_request::has_error(){
+	//creates a deep copy of the source smtp_request.
+	smtp_request::smtp_request(const smtp_request& that){
+		throw std::runtime_error("SMTP instance copy doesn't supported...");
+	}
+	bool smtp_request::has_error()const {
 		return _has_error;
 	}
 	bool smtp_request::init() {
@@ -76,7 +81,7 @@ namespace smtp_client {
 		fprintf(stderr, format, str);
 		fputc('\n', stderr);//New Line
 	}
-	void smtp_request::host(const std::string host) {
+	void smtp_request::host(const char* host) {
 		if (this->init())return;
 		/*
 			Pass in a pointer to the URL to work with. The parameter should be
@@ -86,7 +91,7 @@ namespace smtp_client {
 			For a greater explanation of the format please see RFC 3986.
 			This is the URL for your mailserver
 		*/
-		curl_easy_setopt(_curl, CURLOPT_URL, host.c_str());
+		curl_easy_setopt(_curl, CURLOPT_URL, host);
 		/*
 			Pass a long. If the value is 1, curl will send the initial response to
 			the server in the first authentication packet in order to reduce the
@@ -98,23 +103,23 @@ namespace smtp_client {
 			SASL-IR CAPABILITY.
 		*/
 		curl_easy_setopt(_curl, CURLOPT_SASL_IR, 1L);
-		log("Host: %s", host.c_str());
+		log("Host: %s", host);
 	}
-	void smtp_request::credentials(const std::string user, const std::string password) {
+	void smtp_request::credentials(const char* user, const char* password) {
 		if (this->init())return;
 		/*
 			Pass a char * as parameter, which should be pointing to the zero terminated
 			user name to use for the transfer.
 			Set username and password
 		*/
-		curl_easy_setopt(_curl, CURLOPT_USERNAME, user.c_str());
+		curl_easy_setopt(_curl, CURLOPT_USERNAME, user);
 		/*
 			Pass a char * as parameter, which should be pointing to the zero terminated
 			password to use for the transfer.
 		*/
-		curl_easy_setopt(_curl, CURLOPT_PASSWORD, password.c_str());
-		log("credentials->User: %s", user.c_str());
-		log("credentials->Pwd: %s", password.c_str());
+		curl_easy_setopt(_curl, CURLOPT_PASSWORD, password);
+		log("credentials->User: %s", user);
+		log("credentials->Pwd: %s", password);
 	}
 	void smtp_request::http_auth(bool is_http_auth) {
 		if (this->init())return;
@@ -137,7 +142,7 @@ namespace smtp_client {
 		//log("Date: %s", msgDate.c_str());
 		msgDate.clear();
 	}
-	void smtp_request::set_message_id(const std::string mail_domain) {
+	void smtp_request::set_message_id(const char* mail_domain) {
 		if (this->init())return;
 		std::string str("");
 		generate_message_id(str);
@@ -150,27 +155,27 @@ namespace smtp_client {
 		//log("%s", _message_id.c_str());
 	}
 	void smtp_request::add_attachment(
-		const std::string name, 
-		const std::string mime_type, 
-		const std::string path,
-		const std::string encoder
+		const char* name,
+		const char* mime_type,
+		const char* path,
+		const char* encoder
 	) {
-		if (name.empty()
-			|| mime_type.empty()
-			|| path.empty()
+		if (strlen(name) == 0
+			|| strlen(mime_type) == 0
+			|| strlen(path) == 0
 			) {
 			this->set_error("Attachment name or mim_type or path should not left blank...");
 			return;
 		}
 		if (this->init())return;
 		mail_attachment* ma = new mail_attachment();//(mail_attachment*)malloc(sizeof mail_attachment);
-		ma->name = name.c_str();
-		ma->path = path.c_str();
-		ma->mime_type = mime_type.c_str();
-		ma->encoder = encoder.c_str();
+		ma->name = name;
+		ma->path = path;
+		ma->mime_type = mime_type;
+		ma->encoder = encoder;
 		_attachments->push_back(ma);
 	}
-	void smtp_request::mail_from(const std::string from) {
+	void smtp_request::mail_from(const char* from) {
 		if (this->init())return;
 		/* Note that this option isn't strictly required, omitting it will result
 		* in libcurl sending the MAIL FROM command with empty sender data. All
@@ -184,42 +189,42 @@ namespace smtp_client {
 		_headers->push_back(("From: " + str).c_str());
 		str.clear();
 	}
-	void smtp_request::mail_to(const std::string to) {
+	void smtp_request::mail_to(const char* to) {
 		if (this->init())return;
 		std::string str(to);
 		_recipients = curl_slist_append(_recipients, str.c_str());
 		_headers->push_back(("To: " + str).c_str());
 		str.clear();
 	}
-	void smtp_request::mail_cc(const std::string cc) {
+	void smtp_request::mail_cc(const char* cc) {
 		if (this->init())return;
 		std::regex regx("(?:\\r\\n|\\n|\\r)");
 		std::istringstream reader(std::string(cc).c_str());
 		std::string str;
 		while (std::getline(reader, str, ',')) {
 			str = std::regex_replace(str, regx, "");
-			if (str.empty() || str.size() <= 0)continue;
+			if (str.empty() || str.size() == std::string::npos)continue;
 			_recipients = curl_slist_append(_recipients, str.c_str());
 			_headers->push_back(("Cc: " + str).c_str());
 			str.clear();
 		}
 		std::istringstream().swap(reader);
 	}
-	void smtp_request::mail_bcc(const std::string bcc) {
+	void smtp_request::mail_bcc(const char* bcc) {
 		if (this->init())return;
 		std::regex regx("(?:\\r\\n|\\n|\\r)");
 		std::istringstream reader(std::string(bcc).c_str());
 		std::string str;
 		while (std::getline(reader, str, ',')) {
 			str = std::regex_replace(str, regx, "");
-			if (str.empty() || str.size() <= 0)continue;
+			if (str.empty() || str.size() == std::string::npos)continue;
 			_recipients = curl_slist_append(_recipients, str.c_str());
 			_headers->push_back(("Bcc: " + str).c_str());
 			str.clear();
 		}
 		std::istringstream().swap(reader);
 	}
-	void smtp_request::mail_subject(const std::string subject){
+	void smtp_request::mail_subject(const char* subject){
 		if (this->init())return;
 		std::string str(subject);
 		_headers->push_back(("Subject: " + str).c_str());
@@ -259,7 +264,7 @@ namespace smtp_client {
 		curl_easy_setopt(_curl, CURLOPT_SSL_VERIFYHOST, verify == true ? 1L : 0L);
 		log("verify_ssl_host: %s", verify == true ? "TRUE" : "FALSE");
 	}
-	void smtp_request::set_server_cert(const std::string path){
+	void smtp_request::set_server_cert(const char* path){
 		/* If your server doesn't have a valid certificate, then you can disable
 		* part of the Transport Layer Security protection by setting the
 		* CURLOPT_SSL_VERIFYPEER and CURLOPT_SSL_VERIFYHOST options to 0 (false).
@@ -271,8 +276,8 @@ namespace smtp_client {
 		* self-signed) and add it to the set of certificates that are known to
 		* libcurl using CURLOPT_CAINFO and/or CURLOPT_CAPATH. See docs/SSLCERTS
 		* for more information. */
-		curl_easy_setopt(_curl, CURLOPT_CAINFO, path.c_str());
-		log("CERT: %s", path.c_str());
+		curl_easy_setopt(_curl, CURLOPT_CAINFO, path);
+		log("CERT: %s", path);
 	}
 	void smtp_request::enable_tls_connection() {
 		curl_easy_setopt(_curl, CURLOPT_USE_SSL, (long)CURLUSESSL_ALL);
@@ -296,16 +301,16 @@ namespace smtp_client {
 		}
 		this->set_error("No mail header found....");
 	}
-	int smtp_request::send_mail(const std::string body, bool isHtml) {
+	int smtp_request::send_mail(const char* body, bool isHtml) {
 		if (this->init())return -1;
 		_has_error = false;
 		curl_mime* alt = curl_mime_init(_curl);
 		curl_mimepart* part;
 		curl_mime* mime;
 		if (_is_debug)
-			log("Body: %s", body.c_str());
+			log("Body: %s", body);
 		part = curl_mime_addpart(alt);
-		curl_mime_data(part, body.c_str(), CURL_ZERO_TERMINATED);
+		curl_mime_data(part, body, CURL_ZERO_TERMINATED);
 		if (isHtml == true) {
 			curl_mime_type(part, "text/html");
 		}
@@ -410,13 +415,15 @@ namespace smtp_client {
 		_cheaders = NULL; mime = NULL;
 		return rec;
 	}
-	const char* smtp_request::get_last_error() {
+	const char* smtp_request::get_last_error()const {
 		return const_cast<const char*>(_internal_error);
 	}
 	void smtp_request::set_error(const char* error) {
-		free(_internal_error);
-		_internal_error = new char[strlen(error) + 1];
-		strcpy(_internal_error, error);
+		if (_internal_error != NULL)
+			delete[]_internal_error;
+		size_t len = strlen(error);
+		_internal_error = new char[len + 1];
+		strcpy_s(_internal_error, len, error);
 		_has_error = true;
 	}
 	smtp_request::~smtp_request() {

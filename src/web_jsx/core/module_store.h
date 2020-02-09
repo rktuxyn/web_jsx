@@ -15,8 +15,8 @@
 namespace swjsx_module {
 	void implimant_native_module(
 		const v8::FunctionCallbackInfo<v8::Value>& args, 
-		const std::string app_dir,
-		const std::string root_dir
+		const char* app_dir,
+		const char* root_dir
 	);
 	void scope_to_js_global(v8::Isolate* isolate, v8::Local<v8::Context>context);
 	void clean_native_module();

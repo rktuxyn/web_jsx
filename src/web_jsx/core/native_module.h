@@ -30,15 +30,15 @@ namespace sow_web_jsx {
 	typeof_module get_module_type(const std::string& path_str);
 	void require_native(
 		const v8::FunctionCallbackInfo<v8::Value>& args,
-		const std::string abs_path,
-		const std::string app_dir,
+		const char* abs_path,
+		const char* app_dir,
 		const char* module_name
 	);
 	int load_native_module(
 		v8::Isolate* isolate,
 		v8::Handle<v8::Object> target,
 		const char* path,
-		const std::string app_dir
+		const char* app_dir
 	);
 	void free_native_modules();
 	void free_working_module();

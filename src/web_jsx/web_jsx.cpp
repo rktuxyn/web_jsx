@@ -9,10 +9,10 @@
 #endif//FAST_CGI_APP
 #	include "web_jsx_cgi.h"
 
-int pass_request(const char* path);
+int handle_request(const char* path, int is_spath);
 
 #if defined(FAST_CGI_APP)
-#	define _handle_request pass_request
+#	define _handle_request handle_request
 #else
 #	define _handle_request web_jsx::cgi_request::request_handler
 #endif//!FAST_CGI_APP
@@ -27,8 +27,7 @@ int main(int argc, char* argv[], char* envp[]) {
 		if (argc > 1) {
 			const char* f_parm = const_cast<const char*>(argv[1]);
 			if (strcmp(f_parm, "fcgi") == 0) {
-				return _handle_request(const_cast<const char*>(argv[2]));
-				//return _handle_request(const_cast<const char*>(argv[0]), const_cast<const char*>(argv[2]));
+				return _handle_request(const_cast<const char*>(argv[2]), TRUE);
 			}
 			_console_request(argc, argv, false);
 			return EXIT_SUCCESS;
@@ -41,28 +40,49 @@ int main(int argc, char* argv[], char* envp[]) {
 		if (strcmp(f_parm, "I_REQ") == 0) {
 			f_parm = const_cast<const char*>(argv[2]);
 			if (strcmp(f_parm, "fcgi") == 0) {
-				return _handle_request(const_cast<const char*>(argv[3]));
+				return _handle_request(const_cast<const char*>(argv[3]), TRUE);
 			}
 			_console_request(argc, argv, true);
 			return EXIT_SUCCESS;
 		}
 		if (strcmp(f_parm, "fcgi") == 0) {
-			return _handle_request(const_cast<const char*>(argv[2]));
+			return _handle_request(const_cast<const char*>(argv[2]), TRUE);
 		}
 	}
-	return _handle_request(NULL);
-	//return _handle_request(const_cast<const char*>(argv[0]), NULL);
+	return _handle_request(NULL, FALSE);
 }
-int pass_request(const char* path) {
+int handle_request(const char* path, int is_spath) {
 	int ret = EXIT_FAILURE;
+	if (is_spath == TRUE) {
+		if (path == NULL || strlen(path) == 0) {
+			std::cout << "Host address should not left blank!!!\r\n";
+			fflush(stdout);
+			return ret;
+		}
+	}
 	std::string* exec_path = new std::string();
+#if defined(__WEB_JSX_PUBLISH)
 	if (get_env_path(*exec_path) < 0) {
 		std::cout << "Please add web_jsx bin path into environment variable Path!!!\r\n";
 		fflush(stdout);
 	}
-	else {
-		ret = web_jsx::fcgi_request::request_handler(exec_path->c_str(), path);
+#else
+	const char* exec_path_c = get_env_c("web_jsx");
+	if (strlen(exec_path_c) == 0) {
+		exec_path->clear(); delete exec_path;
+		std::cout << "Please add web_jsx bin path into environment variable Path!!!\r\n";
+		fflush(stdout);
+		return ret;
 	}
+	exec_path->append(exec_path_c);
+#endif//!__WEB_JSX_PUBLISH
+#if defined(__WEB_JSX_PUBLISH)
+	else {
+#endif//!__WEB_JSX_PUBLISH
+	ret = web_jsx::fcgi_request::request_handler(exec_path->c_str(), path, is_spath);
+#if defined(__WEB_JSX_PUBLISH)
+	}
+#endif//!__WEB_JSX_PUBLISH
 	exec_path->clear(); delete exec_path;
 	return ret;
 }

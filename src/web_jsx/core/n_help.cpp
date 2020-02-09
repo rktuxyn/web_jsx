@@ -151,14 +151,14 @@ void n_help::v8_object_loop(v8::Isolate* isolate, const v8::Local<v8::Object>v8_
 //	std::transform(str.begin(), str.end(), str.begin(), ::toupper);
 //}
 //https://developer.mozilla.org/en-US/docs/Web/HTTP/Messages
-void n_help::add_header(std::map<std::string, std::string>& header, const std::string& key, const std::string& values) {
+void n_help::add_header(std::map<std::string, std::string>& header, const char* key, const char* values) {
 	auto it = header.find(key);
 	if (it != header.end()) {
 		header.erase(it);
 	}
 	header[key] = values;
 }
-void n_help::remove_header(std::map<std::string, std::string>& header, const std::string& key) {
+void n_help::remove_header(std::map<std::string, std::string>& header, const char* key) {
 	auto it = header.find(key);
 	if (it != header.end()) {
 		header.erase(it);
@@ -179,7 +179,7 @@ const char* get_server_error(response_status status_code) {
 void n_help::error_response(
 	const char* server_root,
 	response_status status_code,
-	const std::string error_msg
+	const char* error_msg
 ) {
 	std::cout << "Content-Type:text/html" << H_N_L;
 	std::cout << "Accept-Ranges:bytes" << H_N_L;
@@ -195,10 +195,12 @@ void n_help::error_response(
 	str->append(".html");
 	std::string* body = new std::string();
 	size_t ret = sow_web_jsx::read_file(str->c_str(), *body, true);
-	if (ret < 0 || ret != std::string::npos) {
-		std::cout << REGEX_REPLACE_MATCH(*body, std::regex("(<%(.+?)%>)"), [&error_msg](const std::smatch& m) {
+	if (is_error_code(ret) == TRUE) {
+		std::string html_body = REGEX_REPLACE_MATCH(*body, std::regex("(<%(.+?)%>)"), [&error_msg](const std::smatch& m) {
 			return error_msg;
-		}).c_str();
+		});
+		std::cout << html_body;
+		html_body.clear(); std::string().swap(html_body);
 	}
 	else {
 		std::cout << "No Error file found in /error/" << status << ".html<br/>";

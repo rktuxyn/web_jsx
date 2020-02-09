@@ -14,7 +14,7 @@
 #ifdef __cplusplus 
 extern "C" {
 #endif
-	jsx_export void ntemplate_parse_x(parser_settings&ps, template_result&rsinf);
+	void ntemplate_parse_x(parser_settings&ps, template_result&rsinf);
 #ifdef __cplusplus
 }
 #endif

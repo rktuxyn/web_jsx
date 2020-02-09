@@ -14,7 +14,7 @@
 namespace sow_web_jsx {
 	namespace template_reader {
 		int read_template(template_result&tr, 
-			const std::string rootDir, 
+			const char* rootDir, 
 			std::vector<std::string>&templates,
 			std::string&parent_template,
 			std::string&source);

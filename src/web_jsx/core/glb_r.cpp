@@ -12,7 +12,7 @@
 #else
 #	define NULL ((void *)0)
 #endif
-#endif
+#endif//!__cplusplus
 
 typedef struct RESOURCE_CTX{
 	RESOURCE_CTX* next;
@@ -23,9 +23,8 @@ resource_ctx* _RESOURCE_CTX;
 
 void sow_web_jsx::free_resource() {
 	if (_RESOURCE_CTX == NULL)return;
-	resource_ctx* ctx;
 	while (_RESOURCE_CTX) {
-		ctx = _RESOURCE_CTX;
+		resource_ctx* ctx = _RESOURCE_CTX;
 		_RESOURCE_CTX = _RESOURCE_CTX->next;
 		((add_resource_func)ctx->data)();
 		delete ctx;

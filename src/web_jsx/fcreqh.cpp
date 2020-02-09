@@ -25,7 +25,7 @@ std::string read_request_header(char **envp) {
 }
 void web_jsx::fcgi_request::get_global_obj(std::map<std::string, std::string>& global, std::string&root_dir, const char*app_path, const char*env_path, char **envp) {
 	replace_back_slash(root_dir);
-	global["root_dir"] = root_dir;
+	global["root_dir"] = std::string(root_dir.c_str());
 	global["host"] = freq_env_c("HTTP_HOST", envp);
 	global["remote_addr"] = freq_env_c("REMOTE_ADDR", envp);
 	global["server_protocol"] = freq_env_c("SERVER_PROTOCOL", envp);
@@ -46,7 +46,7 @@ void web_jsx::fcgi_request::get_request_object(std::map<std::string, std::string
 		std::string* quer_str = new std::string("");
 		json_obj_stringify(query_string, *quer_str);
 		request["query_string"] = std::string(quer_str->c_str());
-		quer_str->clear(); delete quer_str; quer_str = NULL;
+		_free_obj(quer_str);
 	}
 	else {
 		request["query_string"] = "{}";

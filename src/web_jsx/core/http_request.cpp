@@ -34,8 +34,11 @@ void http_request::set_error(const char * error) {
 		delete[] _internal_error;
 		_internal_error = NULL;
 	}
-	_internal_error = new char[strlen(error) + 1];
-	strcpy(_internal_error, error);
+	size_t len = strlen(error);
+	_internal_error = new char[len + 1];
+	strcpy_s(_internal_error, len, error);
+	/*_internal_error = new char[strlen(error) + 1];
+	strcpy(_internal_error, error);*/
 }
 size_t write_callback(char *contents, size_t size, size_t nmemb, void *userp) {
 	((std::string*)userp)->append((char*)contents, size * nmemb);

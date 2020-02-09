@@ -15,7 +15,7 @@ extern "C" {
 			return true;
 		return false;
 	}
-	jsx_export void ntemplate_parse_x(parser_settings& ps, template_result& rsinf) {
+	void ntemplate_parse_x(parser_settings& ps, template_result& rsinf) {
 		if (is_empty_char(ps.dir)) {
 			rsinf.err_msg = "Directory required!!!";
 			rsinf.is_error = true;

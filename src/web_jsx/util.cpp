@@ -4,14 +4,8 @@
 * Copyrights licensed under the New BSD License.
 * See the accompanying LICENSE file for terms.
 */
-#	include "util.h"
 //9:11 PM 11/18/2018
-/*std::string get_current_working_dir(void) {
-	char buff[FILENAME_MAX];
-	get_current_dir(buff, FILENAME_MAX);
-	std::string current_working_dir(buff);
-	return current_working_dir;
-};*/
+#	include "util.h"
 #if !(defined(_WIN32) || defined(_WIN64)) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
 bool is_user_interactive() {
 	return false;
@@ -161,7 +155,7 @@ const char* get_app_path() {
 	return reinterpret_cast<const char*>(buf);
 #else
 #error !TODO
-#endif
+#endif//!GetModuleFileName
 }
 const char* get_current_working_dir(void) {
 	static char cwd[FILENAME_MAX];
@@ -176,7 +170,7 @@ void get_app_path(std::string&path) {
 	}
 #else
 	path = get_env_c("web_jsx");
-#endif
+#endif//!__WEB_JSX_PUBLISH
 }
 void print_envp_c(char **envp) {
 	int count = 0;
@@ -279,7 +273,7 @@ void write_internal_server_error(
 	const char* content_type,
 	const char* ex_dir,
 	int error_code,
-	const std::string error_msg
+	const char* error_msg
 ) {
 	write_headert(content_type);
 	std::cout << "Status:" << error_code << " " << get_server_error(error_code) << H_N_L;
@@ -291,10 +285,12 @@ void write_internal_server_error(
 	str->append(".html");
 	std::string* body = new std::string();
 	size_t ret = sow_web_jsx::read_file(str->c_str(), *body, true);
-	if (ret < 0 || ret != std::string::npos) {
-		std::cout << REGEX_REPLACE_MATCH(*body, std::regex("(<%(.+?)%>)"), [&error_msg](const std::smatch& m) {
+	if (ret != std::string::npos) {
+		std::string html_body = REGEX_REPLACE_MATCH(*body, std::regex("(<%(.+?)%>)"), [&error_msg](const std::smatch& m) {
 			return error_msg;
-		}).c_str();
+		});
+		std::cout << html_body;
+		std::string().swap(html_body);
 	}
 	else {
 		std::cout << "No Error file found in /error/" << error_code << ".html<br/>";
@@ -309,14 +305,17 @@ void write_internal_server_error(
 void read_query_string(std::map<std::string, std::string>&data, const char*query_string) {
 	if (((query_string != NULL) && (query_string[0] == '\0')) || query_string == NULL)return;
 	std::string* query = new std::string(query_string);
-	if (query->empty())return;
+	if (query->empty()) {
+		_free_obj(query);
+		return;
+	}
 	std::regex* pattern = new std::regex("([\\w+%]+)=([^&]*)");
 	std::sregex_iterator words_begin = std::sregex_iterator(query->begin(), query->end(), *pattern);
 	std::sregex_iterator words_end = std::sregex_iterator();
 	for (auto i = words_begin; i != words_end; i++) {
 		data["\"" + (*i)[1].str() + "\""] = "\"" + (*i)[2].str() + "\"";
 	}
-	delete query; delete pattern;
+	_free_obj(query); delete pattern;
 	return;
 }
 void json_obj_stringify(std::map<std::string, std::string>& json_obj, std::string& json_str) {
@@ -352,3 +351,9 @@ void json_array_stringify_s(std::vector<char*>& json_array_obj, std::string& jso
 	ss->clear(); delete ss;
 	return;
 }
+/*std::string get_current_working_dir(void) {
+	char buff[FILENAME_MAX];
+	get_current_dir(buff, FILENAME_MAX);
+	std::string current_working_dir(buff);
+	return current_working_dir;
+};*/

@@ -38,6 +38,7 @@ namespace sow_web_jsx {
 		char* res = std::fgets(buffer, kBufferSize, stdin);
 		v8::Isolate* isolate = v8::Isolate::GetCurrent();
 		if (res == NULL) {
+			delete[]buffer; delete[]res;
 			v8::Handle<v8::Primitive> t = v8::Undefined(isolate);
 			return v8::Handle<v8::String>::Cast(t);
 		}
@@ -110,12 +111,16 @@ namespace sow_web_jsx {
 		output.append(req_path);
 		output = std::regex_replace(output, std::regex("(?:/)"), "\\");
 	}
-	const char* get_prop_value(v8::Isolate* isolate, v8::Local<v8::Context> ctx, v8::Local<v8::Object> v8_obj, const char* prop){
+	int get_prop_value(
+		v8::Isolate* isolate, v8::Local<v8::Context> ctx, 
+		v8::Local<v8::Object> v8_obj, const char* prop, std::string&out
+	){
+		out.clear();
 		v8::Local<v8::Value> v8_str = v8_obj->Get(ctx, v8_str(isolate, prop)).ToLocalChecked();
-		if (v8_str->IsNullOrUndefined()) return "null";
+		if (v8_str->IsNullOrUndefined()) return FALSE;
 		v8::String::Utf8Value str(isolate, v8_str);
-		std::string* val = new std::string(*str);
-		return val->data();
+		out = std::string(*str);
+		return TRUE;
 	}
 	int v8_object_get_number(v8::Isolate* isolate, v8::Local<v8::Context> ctx, v8::Local<v8::Object> obj, const char* prop){
 		v8::MaybeLocal<v8::Value> mval;
@@ -142,10 +147,10 @@ namespace sow_web_jsx {
 		delete[] msg;
 		return val;
 	}
-	v8::Handle<v8::Object> sow_web_jsx::native_write_filei(v8::Isolate* isolate, const std::string abs_path, const char* buffer) {
+	v8::Handle<v8::Object> sow_web_jsx::native_write_filei(v8::Isolate* isolate, const char* abs_path, const char* buffer) {
 		FILE* fstream;
 		errno_t err;
-		err = fopen_s(&fstream, abs_path.c_str(), "w+");
+		err = fopen_s(&fstream, abs_path, "w+");
 		v8::Handle<v8::Object> v8_result = v8::Object::New(isolate);
 		v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
 		if (err != 0 || fstream == NULL) {
@@ -157,7 +162,7 @@ namespace sow_web_jsx {
 			v8_result->Set(
 				ctx,
 				v8_str(isolate, "message"),
-				sow_web_jsx::concat_msg(isolate, "Unable to create file!!! Server absolute path==>", abs_path.c_str())
+				sow_web_jsx::concat_msg(isolate, "Unable to create file!!! Server absolute path==>", abs_path)
 			);
 			return v8_result;
 		}
@@ -173,7 +178,7 @@ namespace sow_web_jsx {
 			v8_result->Set(
 				ctx,
 				v8_str(isolate, "message"),
-				sow_web_jsx::concat_msg(isolate, "Unable to create file!!! Server absolute path==>", abs_path.c_str())
+				sow_web_jsx::concat_msg(isolate, "Unable to create file!!! Server absolute path==>", abs_path)
 			);
 			return v8_result;
 		}

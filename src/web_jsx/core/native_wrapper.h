@@ -11,24 +11,33 @@
 #if !defined(_native_wrapper_h)
 #	define _native_wrapper_h
 #	include "v8_util.h"
-#if defined(FAST_CGI_APP)
-#	include <fcgi_stdio.h>
-#	include "fcgio.h"
-#else
-#if !defined(DATA_READ_CHUNK)
-#	define DATA_READ_CHUNK 16384
-#endif//!DATA_READ_CHUNK
-#endif//!FAST_CGI_APP
 #pragma warning (disable : 4231)
 #pragma warning(disable : 4996)
+
+#if defined(__WJSX_SHARED)
+#if !defined(_export_wjsx)
+#	define _export_wjsx __declspec(dllexport)
+#endif//!jsx_export
+#else
+#if !defined(_export_wjsx)
+#	define _export_wjsx
+#endif//!_export_wjsx
+#endif//__WJSX_SHARED
+
 namespace sow_web_jsx {
 	namespace wrapper {
 		void response_body_flush(bool end_req);
 		void clear_cache();
-		const char* get_root_dir();
-		jsx_export v8::Local<v8::ObjectTemplate> get_context(v8::Isolate * isolate, std::map<std::string, std::map<std::string, std::string>>& ctx);
-		jsx_export v8::Local<v8::ObjectTemplate> get_console_context(v8::Isolate * isolate, std::map<std::string, std::string>&ctx);
-		jsx_export v8::Local<v8::ObjectTemplate> create_v8_context_object(v8::Isolate* isolate);
+		_export_wjsx const char* get_root_dir();
+		_export_wjsx const char* get_app_dir();
+		_export_wjsx int is_cli();
+		_export_wjsx int is_flush();
+		_export_wjsx void add_header(const char*key, const char*value);
+		_export_wjsx std::stringstream& get_body_stream();
+		_export_wjsx int is_http_status_ok();
+		v8::Local<v8::ObjectTemplate> get_context(v8::Isolate * isolate, std::map<std::string, std::map<std::string, std::string>>& ctx);
+		v8::Local<v8::ObjectTemplate> get_console_context(v8::Isolate * isolate, std::map<std::string, std::string>&ctx);
+		v8::Local<v8::ObjectTemplate> create_v8_context_object(v8::Isolate* isolate);
 		//2:02 PM 1/7/2020
 	}
 };

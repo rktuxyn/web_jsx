@@ -34,7 +34,7 @@ namespace std {
 			auto endOfLastMatch = first;
 			size_t increment = 0;
 			std::sregex_iterator begin(first, last, re), end;
-			std::all_of(begin, end, [&](const std::match_results<BidirIt>& match) {
+			bool find = std::all_of(begin, end, [&](const std::match_results<BidirIt>& match) {
 				auto positionOfThisMatch = match.position(0);
 				auto diff = positionOfThisMatch - positionOfLastMatch;
 				auto startOfThisMatch = endOfLastMatch;
@@ -53,7 +53,8 @@ namespace std {
 				std::advance(endOfLastMatch, lengthOfMatch);
 				return true;
 			});
-			str.append(endOfLastMatch, last);
+			if (find == true)
+				str.append(endOfLastMatch, last);
 		}
 		return str;
 	}
@@ -397,7 +398,7 @@ namespace std {
 			return _end;
 		};
 		Iterator find(const char* key) {
-			for (; _cur != _end; _cur++) {
+			for (; _cur != _end; ++_cur) {
 				if (strcmp(_cur->first, key) == 0) {
 					break;
 				}
@@ -407,7 +408,7 @@ namespace std {
 		void operator++(int dummy) {
 			if (!has_next())
 				throw std::out_of_range("Out of range.");
-			_cur++;
+			++_cur;
 		}
 	};
 } // namespace std

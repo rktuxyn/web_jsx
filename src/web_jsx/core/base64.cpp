@@ -83,7 +83,7 @@ namespace sow_web_jsx {
 	std::string base64::to_encode_str(unsigned char const* bytes_to_encode, unsigned int in_len) {
 		std::string ret;
 		int i = 0;
-		int j = 0;
+		//int j = 0;
 		unsigned char char_array_3[3];
 		unsigned char char_array_4[4];
 		while (in_len--) {
@@ -101,14 +101,14 @@ namespace sow_web_jsx {
 		}
 
 		if (i) {
-			for (j = i; j < 3; j++)
+			for (int j = i; j < 3; j++)
 				char_array_3[j] = '\0';
 
 			char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
 			char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
 			char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
 
-			for (j = 0; (j < i + 1); j++)
+			for (int j = 0; (j < i + 1); j++)
 				ret += base64_chars[char_array_4[j]];
 
 			while ((i++ < 3))
@@ -122,7 +122,7 @@ namespace sow_web_jsx {
 	std::string base64::to_decode_str(std::string const& encoded_string) {
 		size_t in_len = encoded_string.size();
 		int i = 0;
-		int j = 0;
+		//int j = 0;
 		int in_ = 0;
 		unsigned char char_array_4[4], char_array_3[3];
 		std::string ret;
@@ -143,13 +143,13 @@ namespace sow_web_jsx {
 		}
 
 		if (i) {
-			for (j = 0; j < i; j++)
+			for (int j = 0; j < i; j++)
 				char_array_4[j] = base64_chars.find(char_array_4[j]) & 0xff;
 
 			char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
 			char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
 
-			for (j = 0; (j < i - 1); j++) ret += char_array_3[j];
+			for (int j = 0; (j < i - 1); j++) ret += char_array_3[j];
 		}
 
 		return ret;
@@ -176,7 +176,7 @@ namespace sow_web_jsx {
 	3. This notice may not be removed or altered from any source distribution.
 	*/
 	bool base64::to_encode_str(const std::string& in, std::string&out) {
-		int i = 0, j = 0;
+		int i = 0;// , j = 0;
 		size_t enc_len = 0;
 		unsigned char a3[3];
 		unsigned char a4[4];
@@ -194,11 +194,11 @@ namespace sow_web_jsx {
 			}
 		}
 		if (i) {
-			for (j = i; j < 3; j++) {
+			for (int j = i; j < 3; j++) {
 				a3[j] = '\0';
 			}
 			a3_to_a4(a4, a3);
-			for (j = 0; j < i + 1; j++) {
+			for (int j = 0; j < i + 1; j++) {
 				out[enc_len++] = kBase64Alphabet[a4[j]];
 			}
 			while ((i++ < 3)) {
@@ -209,7 +209,7 @@ namespace sow_web_jsx {
 	}
 
 	bool base64::to_encode_str(const char* input, size_t input_length, char* out, size_t out_length) {
-		int i = 0, j = 0;
+		int i = 0;// , j = 0;
 		char* out_begin = out;
 		unsigned char a3[3];
 		unsigned char a4[4];
@@ -227,11 +227,11 @@ namespace sow_web_jsx {
 		}
 
 		if (i) {
-			for (j = i; j < 3; j++) {
+			for (int j = i; j < 3; j++) {
 				a3[j] = '\0';
 			}
 			a3_to_a4(a4, a3);
-			for (j = 0; j < i + 1; j++) {
+			for (int j = 0; j < i + 1; j++) {
 				*out++ = kBase64Alphabet[a4[j]];
 			}
 			while ((i++ < 3)) {
@@ -242,7 +242,7 @@ namespace sow_web_jsx {
 	}
 
 	bool base64::to_decode_str(const std::string& in, std::string&out) {
-		int i = 0, j = 0;
+		int i = 0;// , j = 0;
 		size_t dec_len = 0;
 		unsigned char a3[3];
 		unsigned char a4[4];
@@ -274,17 +274,17 @@ namespace sow_web_jsx {
 		}
 
 		if (i) {
-			for (j = i; j < 4; j++) {
+			for (int j = i; j < 4; j++) {
 				a4[j] = '\0';
 			}
 
-			for (j = 0; j < 4; j++) {
+			for (int j = 0; j < 4; j++) {
 				a4[j] = b64_lookup(a4[j]);
 			}
 
 			a4_to_a3(a3, a4);
 
-			for (j = 0; j < i - 1; j++) {
+			for (int j = 0; j < i - 1; j++) {
 				out[dec_len++] = a3[j];
 			}
 		}
@@ -293,7 +293,7 @@ namespace sow_web_jsx {
 	}
 	
 	bool base64::to_decode_str(const char* input, size_t input_length, char* out, size_t out_length) {
-		int i = 0, j = 0;
+		int i = 0;// , j = 0;
 		char* out_begin = out;
 		unsigned char a3[3];
 		unsigned char a4[4];
@@ -324,17 +324,17 @@ namespace sow_web_jsx {
 		}
 
 		if (i) {
-			for (j = i; j < 4; j++) {
+			for (int j = i; j < 4; j++) {
 				a4[j] = '\0';
 			}
 
-			for (j = 0; j < 4; j++) {
+			for (int j = 0; j < 4; j++) {
 				a4[j] = b64_lookup(a4[j]);
 			}
 
 			a4_to_a3(a3, a4);
 
-			for (j = 0; j < i - 1; j++) {
+			for (int j = 0; j < i - 1; j++) {
 				*out++ = a3[j];
 			}
 		}

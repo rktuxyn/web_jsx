@@ -19,7 +19,7 @@ namespace sow_web_jsx {
 			bool _disposed;
 			void create_engine(const char* exec_path);
 		public:
-			v8_engine(const char* exec_path);
+			explicit v8_engine(const char* exec_path);
 			v8::Isolate* get_current_isolate();
 			v8::Isolate* get_global_isolate();
 			void wait_for_pending_task();

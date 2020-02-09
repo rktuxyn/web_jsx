@@ -134,7 +134,7 @@ void sow_web_jsx::runtime_compiler(const v8::FunctionCallbackInfo<v8::Value>& ar
 			std::string source_str("");
 			size_t ret = sow_web_jsx::read_file(path.get_string().data(), source_str, true);
 			path.clear();
-			if (ret < 0 || ret == std::string::npos) {
+			if (is_error_code(ret) == TRUE) {
 				if (awlf->is_async == true) {
 					//args.GetReturnValue().Set(resolver->GetPromise());
 					resolver->Reject(ctx, v8::String::NewFromUtf8(isolate, source_str.c_str()));

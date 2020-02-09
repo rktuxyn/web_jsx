@@ -19,13 +19,13 @@
 #endif
 
 using namespace sow_web_jsx;
-jsx_file_mode get_mode(const std::string mood) {
-	if (mood == "r")return jsx_file_mode::f_read;
-	if (mood == "w")return jsx_file_mode::f_write;
-	if (mood == "a")return jsx_file_mode::f_append;
-	if (mood == "r+")return jsx_file_mode::f_read_write;
-	if (mood == "w+")return jsx_file_mode::f_read_write;
-	if (mood == "a+")return jsx_file_mode::f_read_write;
+jsx_file_mode get_mode(const char* mode) {
+	if (strcmp(mode, "r") == 0)return jsx_file_mode::f_read;
+	if (strcmp(mode, "w") == 0)return jsx_file_mode::f_write;
+	if (strcmp(mode, "a") == 0)return jsx_file_mode::f_append;
+	if (strcmp(mode, "r+") == 0)return jsx_file_mode::f_read_write;
+	if (strcmp(mode, "w+") == 0)return jsx_file_mode::f_read_write;
+	if (strcmp(mode, "a+") == 0)return jsx_file_mode::f_read_write;
 	return jsx_file_mode::f_ukn;
 }
 jsx_file::jsx_file(const char *path, const char*mode) {
@@ -59,7 +59,7 @@ size_t jsx_file::read(int len, std::string& out) {
 	return panic("You should not read file in current mood.");
 }
 int sow_web_jsx::jsx_file::eof(){
-	if (_total_length <= 0)return TRUE;
+	if (_total_length == 0)return TRUE;
 	return FALSE;
 }
 size_t jsx_file::open(const char* path, const char* mode) {
@@ -79,7 +79,7 @@ size_t jsx_file::open(const char* path, const char* mode) {
 	else {
 		this->err = FALSE;
 		fseek(this->_fstream, 0, SEEK_END);//Go to end of stream
-		size_t size = ftell(this->_fstream);
+		_total_length = ftell(this->_fstream);
 		rewind(this->_fstream);//Back to begain of stream
 	}
 #else
@@ -108,8 +108,8 @@ size_t jsx_file::write(const char *buffer) {
 void jsx_file::flush() {
 	if (this->is_flush == TRUE)return;
 	this->is_flush = TRUE;
-	fclose(this->_fstream);
 	fflush(this->_fstream);
+	fclose(this->_fstream);
 	this->_fstream = NULL;
 }
 
@@ -132,8 +132,11 @@ jsx_file::~jsx_file() {
 int jsx_file::panic(const char* error) {
 	if (_internal_error != NULL)
 		delete[]_internal_error;
-	_internal_error = new char[strlen(error) + 1];
-	strcpy(_internal_error, error);
+	/*_internal_error = new char[strlen(error) + 1];
+	strcpy(_internal_error, error);*/
+	size_t len = strlen(error);
+	_internal_error = new char[len + 1];
+	strcpy_s(_internal_error, len, error);
 	this->err = TRUE;
 	return -1;
 }

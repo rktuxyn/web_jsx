@@ -23,7 +23,7 @@ bool __is_match_extension (const std::string& path_str, const char* ext) {
 		return false;
 	return strcmp(path_str.substr(found + 1).c_str(), ext) == 0;
 }
-#if !defined(_WINDOWS_)
+#if !(defined(_WIN32)||defined(_WIN64))
 int sow_web_jsx::read_directory_files(const char* name, std::vector<char*>&directory) {
 #error Not Implemented
 }

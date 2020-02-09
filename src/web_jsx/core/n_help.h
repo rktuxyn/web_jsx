@@ -32,11 +32,11 @@ namespace sow_web_jsx {
 		static void error_response(
 			const char* server_root,
 			response_status status_code,
-			const std::string error_msg
+			const char* error_msg
 		);
 		//https://developer.mozilla.org/en-US/docs/Web/HTTP/Messages
-		static void add_header(std::map<std::string, std::string>&header, const std::string&key, const std::string&values);
-		static void remove_header(std::map<std::string, std::string>&header, const std::string&key);
+		static void add_header(std::map<std::string, std::string>&header, const char* key, const char* values);
+		static void remove_header(std::map<std::string, std::string>&header, const char* key);
 		static BOOL is_gzip_encoding(std::map<std::string, std::string>&header);
 		static BOOL is_binary_response(std::map<std::string, std::string>& header);
 		static BOOL is_attachment_response(std::map<std::string, std::string>&header);

@@ -29,7 +29,7 @@ using namespace sow_web_jsx;
 std::shared_ptr<std::vector<v8::Persistent<v8::Object, v8::CopyablePersistentTraits<v8::Object>>>> _module_map = NULL;
 //std::shared_ptr<std::vector<v8::Persistent<v8::Object>>>_module_map = NULL;
 int _is_loaded = FALSE;
-int is_active_module(const std::string module_info) {
+int is_active_module(std::string module_info) {
 	if (module_info.empty())return FALSE;
 	if (module_info.find("#") != std::string::npos)return FALSE;//comented module...
 	return TRUE;
@@ -55,8 +55,8 @@ std::istream& get_line(std::ifstream& is, std::string& t) {
 	}
 }
 int prepare_native_module(v8::Isolate* isolate, 
-	const std::string app_dir,
-	const std::string root_dir
+	const char* app_dir,
+	const char* root_dir
 ){
 	std::string ex_path(root_dir);
 	ex_path.append("module.cfg");
@@ -79,11 +79,11 @@ int prepare_native_module(v8::Isolate* isolate,
 	ex_path.clear();
 	_swap_str(ex_path);
 	std::string line, path;
-	const char* module_dirc = app_dir.c_str();
+	//const char* module_dirc = app_dir.c_str();
 	do {
 		get_line(file, line);
 		if (is_active_module(line) == FALSE)continue;
-		path = module_dirc;
+		path = app_dir;
 		path.append(line);
 		if (__file_exists(path.c_str()) == true) {
 			v8::Handle<v8::Object> target = v8::Object::New(isolate);
@@ -108,7 +108,7 @@ int prepare_native_module(v8::Isolate* isolate,
 			path.append(line.c_str());
 			path.append(" Not found.");
 			path.append("Root dir-> ");
-			path.append(app_dir.c_str());
+			path.append(app_dir);
 			throw_js_error(isolate, path.c_str());
 			file.close(); _swap_str(path); _swap_str(line);
 			if (_is_loaded == TRUE) {
@@ -147,8 +147,8 @@ void swjsx_module::scope_to_js_global(v8::Isolate* isolate, v8::Local<v8::Contex
 }
 void swjsx_module::implimant_native_module(
 	const v8::FunctionCallbackInfo<v8::Value>& args, 
-	const std::string app_dir,
-	const std::string root_dir
+	const char* app_dir,
+	const char* root_dir
 ) {
 	if (_is_loaded == _ERROR)return;
 	v8::Isolate* isolate = args.GetIsolate();

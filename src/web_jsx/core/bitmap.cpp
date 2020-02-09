@@ -14,7 +14,6 @@ template<class _input>
 inline int is_error_code(_input ret) {
 	return (ret == FALSE || ret == std::string::npos || ret < 0) ? TRUE : FALSE;
 }
-
 void insert_vct(std::vector<char>& dest, char* data, size_t len) {
 	dest.insert(dest.end(), data, len + data);
 }
@@ -28,11 +27,25 @@ bitmap::bitmap(image_format format) {
 }
 bitmap::bitmap(const char* path, image_format format){
 	_internal_error = new char; _is_error = FALSE; _is_loaded = FALSE;
-	_header = new bitmap_header; _pixels = NULL; _input_file_path = new std::string(path);
+	_header = new bitmap_header; _pixels = NULL;
+	_input_file_path = new std::string(path);
 	_format = format;
 	if (_format != image_format::BMP) {
 		this->panic("Unsupported Image format.", TRUE);
 	}
+	return;
+}
+//creates a deep copy of the source image.
+bitmap::bitmap(const bitmap& other){
+	if (other.is_loaded() == FALSE)return;
+	this->free_memory();
+	_header = new bitmap_header;
+	memcpy(_header, other.header(), sizeof(bitmap_header));
+	size_t len = _header->iHeader.biWidth * _header->iHeader.biHeight * sizeof(rgb32);
+	_pixels = new uint8_t[len];
+	memcpy(_pixels, other.data(), len);
+	_is_loaded = TRUE;
+	_format = image_format::BMP;
 	return;
 }
 int bitmap::load(const char* path) {
@@ -85,11 +98,11 @@ int load_file_to_vct(std::ifstream& file_stream, std::vector<char>& dest) {
 	size_t total_len = (size_t)totalSize;
 	file_stream.seekg(0, std::ios::beg);//Back to begain of stream
 	if (total_len == std::string::npos || total_len == 0)return FALSE;
-	size_t read_len = 0;
+	//size_t read_len = 0;
 	dest.reserve(total_len);
 	do {
 		if (!file_stream.good())break;
-		read_len = totalSize > READ_CHUNK ? READ_CHUNK : totalSize;
+		size_t read_len = totalSize > READ_CHUNK ? READ_CHUNK : totalSize;
 		char* in = new char[read_len];
 		file_stream.read(in, read_len);
 		totalSize -= read_len;
@@ -108,7 +121,7 @@ int bitmap::save_to_vector(std::vector<char>& dest, image_format format) {
 	uint8_t* temp = new uint8_t[_header->fHeader.bfSize - _header->fHeader.bfOffBits];
 	uint8_t* out = temp;
 	rgb32* in = reinterpret_cast<rgb32*>(_pixels);
-	int nPadding = ((_header->iHeader.biWidth / 4) + 1) * 4;
+	//int nPadding = ((_header->iHeader.biWidth / 4) + 1) * 4;
 	int padding = (_header->iHeader.biSizeImage - _header->iHeader.biWidth * _header->iHeader.biHeight * 3) / _header->iHeader.biHeight;
 	for (int i = 0; i < _header->iHeader.biHeight; ++i, out += padding) {
 		for (int j = 0; j < _header->iHeader.biWidth; ++j) {
@@ -184,9 +197,7 @@ int bitmap::set_pixel(rgb32* pixel, uint32_t x, uint32_t y) {
 	return TRUE;
 }
 void bitmap::dump_data() {
-	if (_format != image_format::BMP) {
-		return;
-	}
+	if (_format != image_format::BMP)return;
 	std::cout << "Bitmap data:" << std::endl;
 	std::cout << "============" << std::endl;
 	std::cout << "Width:  " << _header->iHeader.biWidth << std::endl;
@@ -243,17 +254,18 @@ int bitmap::resize(const uint32_t new_width, const uint32_t new_height){
 	return ret;
 }
 //Assignment operator creates a deep copy of the source image.
-bitmap& bitmap::operator = (const bitmap& other){
-	if (other.is_loaded() == FALSE)return *this;
-	this->free_memory();
-	_header = new bitmap_header;
-	memcpy(_header, other.header(), sizeof(bitmap_header));
-	size_t len = _header->iHeader.biWidth * _header->iHeader.biHeight * sizeof(rgb32);
-	_pixels = new uint8_t[len];
-	memcpy(_pixels, other.data(), len);
-	_is_loaded = TRUE;
-	return *this;
-}
+//bitmap& bitmap::operator = (const bitmap& other){
+//	if (other.is_loaded() == FALSE)return *this;
+//	this->free_memory();
+//	_header = new bitmap_header;
+//	memcpy(_header, other.header(), sizeof(bitmap_header));
+//	size_t len = _header->iHeader.biWidth * _header->iHeader.biHeight * sizeof(rgb32);
+//	_pixels = new uint8_t[len];
+//	memcpy(_pixels, other.data(), len);
+//	_is_loaded = TRUE;
+//	_format = image_format::BMP;
+//	return *this;
+//}
 int bitmap::create_canvas(const uint32_t width, const uint32_t height){
 	this->free_memory();
 	if (width % 4 != 0) {
@@ -276,6 +288,7 @@ int bitmap::create_canvas(const uint32_t width, const uint32_t height){
 	this->reset_rgb();
 	return TRUE;
 }
+//Draw white background
 void bitmap::reset_rgb() {
 	if (_is_loaded == FALSE)return;
 	if (_format != image_format::BMP)return;
@@ -324,7 +337,6 @@ const char* bitmap::get_last_error() {
 }
 void bitmap::free_memory(){
 	if (_internal_error != NULL) {
-		//std::free(_internal_error);
 		delete[]_internal_error; _internal_error = NULL; _is_error = FALSE;
 	}
 	if (_pixels != NULL) {
@@ -345,8 +357,11 @@ void bitmap::clear(){
 int bitmap::panic(const char* error, int error_code) {
 	if (_internal_error != NULL)
 		delete[]_internal_error;
-	_internal_error = new char[strlen(error) + 1];
-	strcpy(_internal_error, error);
+	size_t len = strlen(error);
+	_internal_error = new char[len + 1];
+	strcpy_s(_internal_error, len, error);
+	/*_internal_error = new char[strlen(error) + 1];
+	strcpy(_internal_error, error);*/
 	if (error_code >= 0)error_code = error_code * -1;
 	_is_error = error_code;
 	return _is_error;

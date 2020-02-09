@@ -19,47 +19,54 @@ typedef struct native_modules {
 
 #	define n_wjm new wj_native_modules
 
+#if !defined(_free_module)
+#	define _free_module(module_obj)\
+while(module_obj){\
+wj_native_modules* wjm = module_obj;\
+module_obj = module_obj->next;\
+FreeLibrary(wjm->wj_module);\
+delete wjm; wjm = NULL;\
+}
+#endif//!_free_module
+
+#if !defined(_store_module)
+#	define _store_module(module_obj, wj_module)\
+if(module_obj==NULL){\
+module_obj = n_wjm;\
+module_obj->wj_module = wj_module;\
+module_obj->next = NULL;\
+}else{\
+wj_native_modules* anm = n_wjm;\
+anm->wj_module = wj_module;\
+anm->next = module_obj;\
+module_obj = anm;\
+}
+#endif//!_store_module
+
 wj_native_modules* _working_modules = NULL;
 wj_native_modules* _local_modules = NULL;
-void _store_module(wj_native_modules*storage, h_module wj_module) {
-	if (storage == NULL) {
-		storage = n_wjm;
-		storage->wj_module = wj_module;
-		storage->next = NULL;
-		return;
-	}
-	wj_native_modules* anm = n_wjm;
-	anm->wj_module = wj_module;
-	anm->next = storage;
-	storage = anm;
-}
+
 void store_module(h_module wj_module, typeof_storage st = LOCAL) {
-	_store_module(st == LOCAL ? _local_modules : _working_modules, wj_module);
-}
-void _free_modules(wj_native_modules* storage) {
-	if (storage == NULL)return;
-	wj_native_modules* wjm;
-	while (storage) {
-		wjm = storage;
-		storage = storage->next;
-		FreeLibrary(wjm->wj_module);
-		delete wjm; wjm = NULL;
+	if (st == LOCAL) {
+		_store_module(_local_modules, wj_module);
 	}
-	if (storage != NULL)
-		delete storage;
-	storage = NULL;
+	else {
+		_store_module(_working_modules, wj_module);
+	}
 }
 void sow_web_jsx::free_working_module() {
-	_free_modules(_working_modules);
+	_free_module(_working_modules);
 }
 void sow_web_jsx::free_native_modules() {
-	_free_modules(_local_modules);
-	_free_modules(_working_modules);
+	_free_module(_local_modules);
+	_free_module(_working_modules);
 }
-
-wchar_t* s2ws(const char* s) {
-	wchar_t* buf = new wchar_t[_MAX_PATH]();
-	mbsrtowcs(buf, &s, _MAX_PATH, NULL);
+wchar_t* s2ws(const char* mbstr) {
+	mbstate_t state;
+	memset(&state, 0, sizeof state);
+	size_t len = sizeof(wchar_t) + mbsrtowcs(NULL, &mbstr, 0, &state);
+	wchar_t* buf = new wchar_t[len];
+	mbsrtowcs(buf, &mbstr, len, &state);
 	return buf;
 }
 //UNICODE
@@ -83,8 +90,8 @@ typeof_module sow_web_jsx::get_module_type(const std::string& path_str) {
 
 void sow_web_jsx::require_native(
 	const v8::FunctionCallbackInfo<v8::Value>& args, 
-	const std::string abs_path,
-	const std::string app_dir, 
+	const char* abs_path,
+	const char* app_dir,
 	const char* module_name
 ){
 	v8::Isolate* isolate = args.GetIsolate();
@@ -93,7 +100,7 @@ void sow_web_jsx::require_native(
 		js_throw_error(isolate, "This is not valid web_jsx module.. Supported extension *.jn, *.dll.", module_name);
 		return;
 	}
-	const char* path = abs_path.c_str();
+	const char* path = abs_path;
 	if (__file_exists(path) == false) {
 		js_throw_error(isolate, "Native module not found...", module_name);
 		return;
@@ -102,7 +109,7 @@ void sow_web_jsx::require_native(
 #if !(defined(_WIN32)||defined(_WIN64)) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
 	wj_module = dlopen(path, RTLD_NOW);
 #else
-	SetDllDirectoryA(app_dir.c_str());
+	SetDllDirectoryA(app_dir);
 	wchar_t* wpath = s2ws(path);
 	//wj_module = LoadLibraryEx(wpath, NULL, LOAD_LIBRARY_AS_IMAGE_RESOURCE);
 	//wj_module = LoadLibraryW(wpath);
@@ -133,7 +140,7 @@ int sow_web_jsx::load_native_module(
 	v8::Isolate* isolate,
 	v8::Handle<v8::Object> target, 
 	const char* path,
-	const std::string app_dir
+	const char* app_dir
 ){
 	int result = FALSE;
 	h_module wj_module;
@@ -141,7 +148,7 @@ int sow_web_jsx::load_native_module(
 	wj_module = dlopen(path, RTLD_NOW);
 #else
 	//"D:\\Node\\Projects\\win\\x64\\Release\\"
-	SetDllDirectoryA(app_dir.c_str());
+	SetDllDirectoryA(app_dir);
 	wchar_t* wpath = s2ws(path);
 	//LOAD_WITH_ALTERED_SEARCH_PATH
 	//wj_module = LoadLibraryEx(wpath, NULL, LOAD_LIBRARY_AS_IMAGE_RESOURCE);

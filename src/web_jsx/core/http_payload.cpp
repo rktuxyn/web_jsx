@@ -15,7 +15,7 @@ using namespace sow_web_jsx;
 /*[Help]*/
 class http_posted_file {
 public:
-	http_posted_file(
+	explicit http_posted_file(
 		const std::string& disposition,
 		const std::string& name,
 		const std::string& file_name,
@@ -50,7 +50,7 @@ typedef struct POSTED_FILES {
 }posted_files;
 class http_payload {
 public:
-	http_payload(const std::string& content_type, size_t content_length);
+	explicit http_payload(const std::string& content_type, size_t content_length);
 	~http_payload();
 	int read_all();
 	int read_all(const char* temp_dir);
@@ -59,7 +59,7 @@ public:
 	bool is_read_end();
 	int has_error();
 	int get_total_file();
-	const char* get_body();
+	int get_body(std::string&body);
 	const char* get_last_error();
 	void clear();
 	template<class _func>
@@ -132,15 +132,19 @@ http_posted_file* parse_header(const std::string& data) {
 	filename = form_urldecode(filename);
 	return new http_posted_file(disposition, name, filename, cType);
 }
-http_posted_file::http_posted_file(const std::string& disposition,
+http_posted_file::http_posted_file(
+	const std::string& disposition,
 	const std::string& name,
 	const std::string& file_name,
 	const std::string& c_type
-) {
-	_fcontent_disposition = disposition.c_str();
-	_fname = name.c_str();
+) :
+	_fcontent_disposition(disposition.c_str()),
+	_fname(name.c_str()), _ffile_name(file_name.c_str()),
+	_fcontent_type(c_type.c_str()) {
+	//_fcontent_disposition = disposition.c_str();
+	/*_fname = name.c_str();
 	_ffile_name = file_name.c_str();
-	_fcontent_type = c_type.c_str();
+	_fcontent_type = c_type.c_str();*/
 	_is_disposed = false;
 	_is_moved = false; _file_size = 0;
 }
@@ -228,7 +232,7 @@ http_payload::http_payload(
 	_content_length = content_length;
 	_is_multipart = 0;
 	_errc = 0; _is_disposed = false;
-	_internal_error = new char;
+	_internal_error = NULL;
 	_ismemory = false;
 	if (_content_length > 0) {
 		std::string multipart_type = "multipart/form-data";
@@ -250,9 +254,8 @@ void http_payload::clear() {
 	if (_is_disposed)return;
 	_is_disposed = true;
 	if (_posted_files != NULL) {
-		posted_files* pf;
 		while (_posted_files) {
-			pf = _posted_files;
+			posted_files* pf = _posted_files;
 			if (_posted_files->next != NULL) {
 				_posted_files = std::move(_posted_files->next);
 			}
@@ -301,32 +304,27 @@ int http_payload::read_files(_func cb) {
 }
 std::string random_string(int len) {
 	/* initialize random seed: */
-	srand(time(NULL));
+	srand((unsigned int)time(NULL));
 	std::string format = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 	size_t flen = format.size();
 	std::string out_str;
-	int pos;
 	while (out_str.size() != len) {
-		pos = ((rand() % (flen - 1)));
+		int pos = ((rand() % (flen - 1)));
 		out_str += format.substr(pos, 1);
 	}
 	format.clear();
-	//fclose(stdin);
+	srand(1);
 	return out_str;
 }
 #if defined(FAST_CGI_APP)
-#if !defined(_FCGI_STDIO)
-#include <fcgi_stdio.h>
-#endif//!_FCGI_STDIO
-#if !defined(FCGIO_H)
-#include "fcgio.h"
-#endif//!FCGIO_H
+#	include <fcgi_stdio.h>
+#	include "fcgio.h"
 #if !defined(DATA_READ_CHUNK)
-#define DATA_READ_CHUNK 8192
+#	define DATA_READ_CHUNK 8192
 #endif//!DATA_READ_CHUNK
 template<class _func>
 int http_payload::read_line(_func cb) {
-	if (_content_length <= 0) {
+	if (_content_length == 0) {
 		return panic("No payload found in current request", -1);
 	}
 	if (this->is_multipart() == true) {
@@ -353,27 +351,26 @@ int http_payload::read_line(_func cb) {
 	return rec;
 }
 void read_payload(std::stringstream&stream, const size_t content_length) {
-	size_t len = 0;
 	size_t c_len = content_length;
 	//DATA_READ_CHUNK should be 8192 according to FCGX_Accept_r(FCGX_Request *reqDataPtr) line 2215 file fcgiapp.c
 	stream.clear();
-	while (true) {
+	do {
+		size_t len = 0;
 		char* buff;
-		if (content_length > DATA_READ_CHUNK) {
+		if (c_len > DATA_READ_CHUNK) {
 			buff = new char[DATA_READ_CHUNK + 1];
 			len = DATA_READ_CHUNK;
 		}
 		else {
-			buff = new char[content_length + 1];
-			len = content_length;
+			buff = new char[c_len + 1];
+			len = c_len;
 		}
 		buff[len] = '\0';
 		std::cin.read(buff, len);
 		stream.write(buff, len);
 		delete[]buff;
 		c_len -= len;
-		if (c_len <= 0)break;
-	}
+	} while (!std::cin.eof());
 	fclose(stdin);
 }
 #endif//!FAST_CGI_APP
@@ -382,7 +379,7 @@ int http_payload::read_all(const char* temp_dir) {
 	if (_is_disposed)return 0;
 	if (_errc < 0 )return _errc;
 	if (_is_read_end > 0)return 0;
-	if (_content_length <= 0) {
+	if (_content_length == 0) {
 		return panic("No payload found in current request", -1);
 	}
 	if (this->is_multipart() == false) {
@@ -429,8 +426,8 @@ int http_payload::read_all(const char* temp_dir) {
 				//_posted_files->file->set_file_size(static_cast<size_t>(file.tellp()));
 				_posted_files->file->set_file_size(file_total_size);
 				file.flush(); file.close();
-				is_saved = true; start = false;
-				file_total_size = 0; block_size = 0;
+				/*is_saved = true; start = false;
+				file_total_size = 0; block_size = 0;*/
 				break;
 			}
 			else {
@@ -445,9 +442,10 @@ int http_payload::read_all(const char* temp_dir) {
 				//_posted_files->file->set_file_size(static_cast<size_t>(file.tellp()));
 				_posted_files->file->set_file_size(file_total_size);
 				file.flush(); file.close();
-				is_saved = true; file_total_size = 0; block_size = 0;
+				is_saved = true; file_total_size = 0; //block_size = 0;
 			}
-			start = false; break;
+			//start = false; 
+			break;
 		}
 		if (start) {
 			//_posted_files->file->set_file_size(static_cast<size_t>(file.tellp()));
@@ -529,7 +527,7 @@ size_t http_payload::get_stream_size() {
 int http_payload::read_all() {
 	if (_errc < 0 || _is_disposed == true)return 0;
 	if (_is_read_end > 0)return 0;
-	if (_content_length <= 0) {
+	if (_content_length == 0) {
 		return panic("No payload found in current request", -1);
 	}
 	try {
@@ -573,8 +571,11 @@ const char* http_payload::get_last_error() {
 int http_payload::panic(const char* error, int code) {
 	if (_internal_error != NULL)
 		delete[]_internal_error;
-	_internal_error = new char[strlen(error) + 1];
-	strcpy(_internal_error, error);
+	size_t len = strlen(error);
+	_internal_error = new char[len + 1];
+	strcpy_s(_internal_error, len, error);
+	/*_internal_error = new char[strlen(error) + 1];
+	strcpy(_internal_error, error);*/
 	_errc = code;
 	return _errc;
 }
@@ -583,13 +584,14 @@ int http_payload::get_total_file() {
 	return panic("File count allowed only Multipart posted stream....", -1);
 	
 }
-const char* http_payload::get_body() {
-	if (_is_disposed)return NULL;
-	if (_is_read_end <= 0)return NULL;
-	if (is_multipart())return NULL;
+int http_payload::get_body(std::string& body) {
+	if (_is_disposed)return FALSE;
+	if (_is_read_end <= 0)return FALSE;
+	if (is_multipart())return FALSE;
 	size_t size = get_stream_size();
-	if (size == 0 || size == std::string::npos)return NULL;
-	return _stream.str().c_str();
+	if (size == 0 || size == std::string::npos)return FALSE;
+	body = _stream.str().c_str();
+	return TRUE;
 }
 v8::Local<v8::Object> get_file_obj(v8::Isolate* isolate, http_posted_file* pf) {
 	v8::Local<v8::FunctionTemplate> appTemplate = v8::FunctionTemplate::New(isolate);
@@ -605,7 +607,7 @@ v8::Local<v8::Object> get_file_obj(v8::Isolate* isolate, http_posted_file* pf) {
 		native_string absolute_v8_str(isolate, args[0]);
 		std::string std_str(absolute_v8_str.c_str());
 		sow_web_jsx::format__path(std_str);
-		http_posted_file* app = (http_posted_file*)args.Holder()->GetAlignedPointerFromInternalField(0);
+		http_posted_file* app = static_cast<http_posted_file*>(args.Holder()->GetAlignedPointerFromInternalField(0));
 		double ret = app->save_as(std_str.c_str());
 		if (ret > 0) {
 			absolute_v8_str.clear();
@@ -631,7 +633,7 @@ v8::Local<v8::Object> get_file_obj(v8::Isolate* isolate, http_posted_file* pf) {
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "get_data", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* isolate = args.GetIsolate();
-		http_posted_file* app = (http_posted_file*)args.Holder()->GetAlignedPointerFromInternalField(0);
+		http_posted_file* app = static_cast<http_posted_file*>(args.Holder()->GetAlignedPointerFromInternalField(0));
 		if (app->is_text_content()) {
 			isolate->ThrowException(v8::Exception::Error(v8_str(isolate, "Readable chracter not avilable for this content type.")));
 			return;
@@ -646,35 +648,35 @@ v8::Local<v8::Object> get_file_obj(v8::Isolate* isolate, http_posted_file* pf) {
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "get_content_disposition", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* isolate = args.GetIsolate();
-		http_posted_file* app = (http_posted_file*)args.Holder()->GetAlignedPointerFromInternalField(0);
+		http_posted_file* app = static_cast<http_posted_file*>(args.Holder()->GetAlignedPointerFromInternalField(0));
 		const char* data = app->get_content_disposition();
 		args.GetReturnValue().Set(v8_str(isolate, data));
 		return;
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "get_file_size", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* isolate = args.GetIsolate();
-		http_posted_file* app = (http_posted_file*)args.Holder()->GetAlignedPointerFromInternalField(0);
+		http_posted_file* app = static_cast<http_posted_file*>(args.Holder()->GetAlignedPointerFromInternalField(0));
 		size_t len = app->get_file_size();
 		args.GetReturnValue().Set(v8::Number::New(isolate, static_cast<double>(len)));
 		return;
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "get_name", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* isolate = args.GetIsolate();
-		http_posted_file* app = (http_posted_file*)args.Holder()->GetAlignedPointerFromInternalField(0);
+		http_posted_file* app = static_cast<http_posted_file*>(args.Holder()->GetAlignedPointerFromInternalField(0));
 		const char* data = app->get_name();
 		args.GetReturnValue().Set(v8_str(isolate, data));
 		return;
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "get_file_name", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* isolate = args.GetIsolate();
-		http_posted_file* app = (http_posted_file*)args.Holder()->GetAlignedPointerFromInternalField(0);
+		http_posted_file* app = static_cast<http_posted_file*>(args.Holder()->GetAlignedPointerFromInternalField(0));
 		const char* data = app->get_file_name();
 		args.GetReturnValue().Set(v8_str(isolate, data));
 		return;
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "get_content_type", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* isolate = args.GetIsolate();
-		http_posted_file* app = (http_posted_file*)args.Holder()->GetAlignedPointerFromInternalField(0);
+		http_posted_file* app = static_cast<http_posted_file*>(args.Holder()->GetAlignedPointerFromInternalField(0));
 		const char* data = app->get_content_type();
 		args.GetReturnValue().Set(v8_str(isolate, data));
 		return;
@@ -711,7 +713,7 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 			return;
 		}
 		native_string save_dir(isolate, args[0]);
-		http_payload* app = (http_payload*)args.Holder()->GetAlignedPointerFromInternalField(0);
+		http_payload* app = static_cast<http_payload*>(args.Holder()->GetAlignedPointerFromInternalField(0));
 		int len = app->save_to_file(save_dir.c_str()); save_dir.clear();
 		args.GetReturnValue().Set(v8::Number::New(isolate, static_cast<double>(len)));
 		return;
@@ -723,7 +725,7 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 				v8_str(isolate, "Callback should be a Function instance!!!")));
 			return;
 		}
-		http_payload* app = (http_payload*)args.Holder()->GetAlignedPointerFromInternalField(0);
+		http_payload* app = static_cast<http_payload*>(args.Holder()->GetAlignedPointerFromInternalField(0));
 		v8::Persistent<v8::Function> cb;
 		cb.Reset(isolate, v8::Local<v8::Function>::Cast(args[0]));
 		v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate, cb);
@@ -744,7 +746,7 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 		args.GetReturnValue().Set(v8::Number::New(isolate, ret));
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "read_all", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		http_payload* app = (http_payload*)args.Holder()->GetAlignedPointerFromInternalField(0);
+		http_payload* app = static_cast<http_payload*>(args.Holder()->GetAlignedPointerFromInternalField(0));
 		v8::Isolate* isolate = args.GetIsolate();
 		int ret = 0;
 		if (args[0]->IsString()) {
@@ -762,14 +764,14 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 		args.GetReturnValue().Set(v8::Number::New(isolate, ret));
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "is_multipart", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		http_payload* app = (http_payload*)args.Holder()->GetAlignedPointerFromInternalField(0);
+		http_payload* app = static_cast<http_payload*>(args.Holder()->GetAlignedPointerFromInternalField(0));
 		bool ret = app->is_multipart();
 		v8::Isolate* isolate = args.GetIsolate();
 		args.GetReturnValue().Set(v8::Boolean::New(isolate, ret));
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "get_body", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* isolate = args.GetIsolate();
-		http_payload* app = (http_payload*)args.Holder()->GetAlignedPointerFromInternalField(0);
+		http_payload* app = static_cast<http_payload*>(args.Holder()->GetAlignedPointerFromInternalField(0));
 		if (app->is_multipart()) {
 			isolate->ThrowException(v8::Exception::Error(v8_str(isolate, "Multipart posted file not allowed.")));
 			return;
@@ -778,22 +780,23 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 			isolate->ThrowException(v8::Exception::Error(v8_str(isolate, "No posted data read yet from current context. Please use before read_all...")));
 			return;
 		}
-		const char* data = app->get_body();
-		if (strlen(data) == 0) {
+		std::string body;
+		if (app->get_body(body) == FALSE) {
 			isolate->ThrowException(v8::Exception::Error(v8_str(isolate, "No data found in current context.")));
 			return;
 		}
-		args.GetReturnValue().Set(v8_str(isolate, data));
+		args.GetReturnValue().Set(v8_str(isolate, body.c_str()));
+		body.clear(); std::string().swap(body);
 		return;
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "has_error", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		http_payload* app = (http_payload*)args.Holder()->GetAlignedPointerFromInternalField(0);
+		http_payload* app = static_cast<http_payload*>(args.Holder()->GetAlignedPointerFromInternalField(0));
 		int ret = app->has_error();
 		v8::Isolate* isolate = args.GetIsolate();
 		args.GetReturnValue().Set(v8::Boolean::New(isolate, ret < 0 ? true : false));
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "total_file", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		http_payload* app = (http_payload*)args.Holder()->GetAlignedPointerFromInternalField(0);
+		http_payload* app = static_cast<http_payload*>(args.Holder()->GetAlignedPointerFromInternalField(0));
 		int ret = app->get_total_file();
 		v8::Isolate* isolate = args.GetIsolate();
 		args.GetReturnValue().Set(v8::Number::New(isolate, ret));
@@ -805,7 +808,7 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 				v8_str(isolate, "Callback should be a Function instance!!!")));
 			return;
 		}
-		http_payload* app = (http_payload*)args.Holder()->GetAlignedPointerFromInternalField(0);
+		http_payload* app = static_cast<http_payload*>(args.Holder()->GetAlignedPointerFromInternalField(0));
 		//v8::Local<v8::Context> ctx = isolate->GetCurrentContext();
 		v8::Persistent<v8::Function> cb;
 		cb.Reset(isolate, v8::Local<v8::Function>::Cast(args[0]));
@@ -822,7 +825,7 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 		args.GetReturnValue().Set(v8::Number::New(isolate, ret));
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "release", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		http_payload* app = (http_payload*)args.Holder()->GetAlignedPointerFromInternalField(0);
+		http_payload* app = static_cast<http_payload*>(args.Holder()->GetAlignedPointerFromInternalField(0));
 		if (app == NULL ) {
 			v8::Isolate* isolate = args.GetIsolate();
 			isolate->ThrowException(v8::Exception::Error(

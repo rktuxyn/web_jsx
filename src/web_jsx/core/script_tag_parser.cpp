@@ -127,12 +127,25 @@ public:
 		//this->result_key = "_nopr_";
 		delete tags;
 	}
+	js_parser(const js_parser& other) {
+		this->clear();
+		this->regx_sts = other.regx_sts;
+		this->regx_ste = other.regx_ste;
+		this->regx_rts = other.regx_rts;
+		this->regx_rte = other.regx_rte;
+		this->rep_str = other.rep_str;
+		this->rep_str_regex = other.rep_str_regex;
+	}
+	void clear() {
+		delete this->regx_sts;
+		delete this->regx_ste;
+		delete this->regx_rts;
+		delete this->regx_rte;
+		delete this->rep_str_regex;
+		std::string().swap(this->rep_str);
+	}
 	~js_parser() {
-		free(this->regx_sts);
-		free(this->regx_ste);
-		free(this->regx_rts);
-		free(this->regx_rte);
-		free(this->rep_str_regex);
+		this->clear();
 		std::string().swap(this->rep_str);
 		//std::string().swap(this->result_key);
 	}

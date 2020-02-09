@@ -94,24 +94,23 @@ std::string sow_web_jsx::extract_between(
 #include <fstream>// std::ifstream
 #endif//!_FSTREAM_
 size_t sow_web_jsx::read_file(const char* absolute_path, std::stringstream& ssstream, bool check_file_exists) {
-	size_t r_length = -1;
+	//size_t r_length = -1;
 	std::ifstream* file_stream = new std::ifstream(absolute_path, std::ifstream::binary);
 	//std::ifstream file_stream(absolute_path, std::ifstream::binary);
 	if (!file_stream->is_open()) {
 		delete file_stream;
 		ssstream << "File not found in#" << absolute_path;
-		return r_length;
+		return -1;
 	}
 	file_stream->seekg(0, std::ios::end);//Go to end of stream
 	std::streamoff totalSize = file_stream->tellg();
 	size_t total_len = (size_t)totalSize;
 	file_stream->seekg(0, std::ios::beg);//Back to begain of stream
 	if (total_len == std::string::npos || total_len == 0)return total_len;
-	size_t read_len = 0;
 	do {
 		if (!file_stream->good())break;
 		char* in;
-		read_len = totalSize > READ_CHUNK ? READ_CHUNK : totalSize;
+		size_t read_len = totalSize > READ_CHUNK ? READ_CHUNK : totalSize;
 		in = new char[read_len];
 		file_stream->read(in, read_len);
 		totalSize -= read_len;
@@ -124,20 +123,28 @@ size_t sow_web_jsx::read_file(const char* absolute_path, std::stringstream& ssst
 	return total_len;
 }
 #if !(defined(_WIN32)||defined(_WIN64)) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
-#error Not Implemented
-#else
 wchar_t* sow_web_jsx::ccr2ws(const char* s) {
 	size_t len = strlen(s);
-	wchar_t * buf = new wchar_t[len + sizeof(wchar_t)]();
-	//mbstowcs_s(len, buf, len, s, len);
-	mbsrtowcs(buf, &s, len, NULL);
+	std::unique_ptr<wchar_t[]> tmp(new wchar_t[len + 1]);
+	return tmp.release();
+}
+#error Not Implemented
+#else
+//wchar_t* sow_web_jsx::ccr2ws(const char* s) {
+//	size_t len = strlen(s);
+//	wchar_t * buf = new wchar_t[len + sizeof(wchar_t)]();
+//	//mbstowcs_s(len, buf, len, s, len);
+//	mbsrtowcs(buf, &s, len, NULL);
+//	return buf;
+//}
+wchar_t* sow_web_jsx::ccr2ws(const char* mbstr) {
+	mbstate_t state;
+	memset(&state, 0, sizeof state);
+	size_t len = sizeof(wchar_t) + mbsrtowcs(NULL, &mbstr, 0, &state);
+	wchar_t* buf = new wchar_t[len];
+	mbsrtowcs(buf, &mbstr, len, &state);
 	return buf;
 }
-//wchar_t* ccr2ws(const char* s) {
-//	size_t len = strlen(s);
-//	std::unique_ptr<wchar_t[]> tmp(new wchar_t[len + 1]);
-//	return tmp.release();
-//}
 int sow_web_jsx::open_process(const char*process_path, const char*arg) {
 	if (__file_exists(process_path) == false)
 		return -1;
@@ -163,19 +170,22 @@ int sow_web_jsx::process_is_running(DWORD dwPid) {
 			}
 		} while (Process32Next(hProcess, &pe));
 	}
-	CloseHandle(hProcess);
+	_close_handle(hProcess);
 	return ret;
 }
 int sow_web_jsx::terminate_process(DWORD dwPid) {
 	HANDLE explorer;
 	explorer = OpenProcess(PROCESS_ALL_ACCESS, false, dwPid);
-	if (explorer == INVALID_HANDLE_VALUE || explorer == NULL)return -1;
-	DWORD le = GetLastError();
-	if (le == ERROR_ACCESS_DENIED)return -501;
-	if (le == ERROR_INVALID_PARAMETER)return -500;
-	TerminateProcess(explorer, 1);
-	CloseHandle(explorer);
-	return 1;
+	int ret = -1;
+	if (!(explorer == INVALID_HANDLE_VALUE || explorer == NULL)) {
+		DWORD le = GetLastError();
+		if (le == ERROR_ACCESS_DENIED)return -501;
+		if (le == ERROR_INVALID_PARAMETER)return -500;
+		TerminateProcess(explorer, 1);
+		ret = 1;
+		_close_handle(explorer);
+	}
+	return ret;
 }
 DWORD sow_web_jsx::current_process_id() {
 	return ::GetCurrentProcessId();
@@ -197,7 +207,7 @@ int sow_web_jsx::kill_process_by_name(const char *process_name) {
 	if (hSnapShot == INVALID_HANDLE_VALUE || hSnapShot == NULL)return -1;
 	PROCESSENTRY32 pEntry;
 	pEntry.dwSize = sizeof (pEntry);
-	BOOL hRes = Process32First(hSnapShot, &pEntry);
+	//BOOL hRes = Process32First(hSnapShot, &pEntry);
 	if (Process32First(hSnapShot, &pEntry)) {
 		wchar_t* p_name = sow_web_jsx::ccr2ws(process_name);
 		const wchar_t* cp_name = const_cast<const wchar_t*>(p_name);
@@ -207,13 +217,13 @@ int sow_web_jsx::kill_process_by_name(const char *process_name) {
 					(DWORD)pEntry.th32ProcessID);
 				if (hProcess != NULL && hProcess != INVALID_HANDLE_VALUE) {
 					TerminateProcess(hProcess, FORCE_EXIT_PROCESS);
-					CloseHandle(hProcess);
+					_close_handle(hProcess);
 				}
 			}
 		} while (Process32Next(hSnapShot, &pEntry));
 		delete[]p_name;
 	}
-	CloseHandle(hSnapShot);
+	_close_handle(hSnapShot);
 	return 1;
 }
 int sow_web_jsx::create_process(const process_info*pi) {
@@ -271,12 +281,12 @@ int sow_web_jsx::create_process(const process_info*pi) {
 		//HANDLE explorer;
 		//explorer = OpenProcess(PROCESS_ALL_ACCESS, false, dwPid);
 		//TerminateProcess(explorer, 1);
-		//CloseHandle(explorer);
+		//_close_handle(explorer);
 		if (pi->wait_for_exit > 0 || pi->dw_creation_flags == CREATE_NEW_PROCESS_GROUP) {
 			//Wait until child process exits.
 			WaitForSingleObject(pinfo.hProcess, INFINITE);
-			CloseHandle(pinfo.hProcess);
-			CloseHandle(pinfo.hThread);
+			_close_handle(pinfo.hProcess);
+			_close_handle(pinfo.hThread);
 		}
 		CoTaskMemFree(pszApp);
 		CoTaskMemFree(pszCmdLine);
@@ -310,8 +320,8 @@ long sow_web_jsx::create_child_process(const char*process_path, const char*arg) 
 			assert(hr == S_OK);
 			// Wait until child process exits.
 			WaitForSingleObject(pi.hProcess, INFINITE);
-			CloseHandle(pi.hProcess);
-			CloseHandle(pi.hThread);
+			_close_handle(pi.hProcess);
+			_close_handle(pi.hThread);
 		}
 		else {
 			hr = HRESULT_FROM_WIN32(GetLastError());
@@ -358,7 +368,6 @@ char* sow_web_jsx::read_file(const char* absolute_path, bool check_file_exists =
 		FILE*stream;
 		errno_t err;
 		err = fopen_s(&stream, absolute_path, "rb");
-		if (stream == NULL) return new char[8]{ "INVALID" };
 		if (err != 0)return new char[8]{ "INVALID" };
 		fseek(stream, 0, SEEK_END);//Go to end of stream
 		size_t size = ftell(stream);

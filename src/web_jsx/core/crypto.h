@@ -21,13 +21,24 @@ namespace crypto {
 		std::string& iv_str, 
 		std::string& error_msg
 	);
-	int evp_encrypt_decrypt(int should_encrypt,
-		std::stringstream& source,
-		std::stringstream& dest,
-		unsigned char* ckey,
-		unsigned char* ivec
+	int encrypt(
+		const char*plain_text, 
+		const char*key, const char *iv,
+		std::stringstream&dest
 	);
-	int encrypt(const char*plain_text, const char*key, const char *iv, std::stringstream&dest);
-	int decrypt(const char*encrypt_text, const char*key, const char *iv, std::stringstream& dest);
+	int decrypt(
+		const char*encrypt_text, 
+		const char*key, 
+		const char *iv, 
+		std::stringstream& dest
+	);
+	int evp_encrypt_decrypt_file(
+		int should_encrypt,
+		const char* key,
+		const char* iv,
+		const char* in_file_path,
+		const char* out_file_path,
+		std::string& err
+	);
 };
 #endif//!_crypto_h

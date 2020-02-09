@@ -35,7 +35,7 @@
 #	define SET_BINARY_MODE(file) setmode(fileno(file), O_BINARY)
 #endif//!SET_BINARY_MODE
 #if !defined(OS_CODE)
-#	define OS_CODE  0x03 /*Assume Unix*/
+#	define OS_CODE  0x03/*Assume Unix*/
 #endif//!OS_CODE
 #endif//WIN32
 #	include	<sstream> // std::stringstream
@@ -71,10 +71,18 @@
 #endif//!assert
 //Read more http://www.zlib.net/zpipe.c
 namespace gzip {
+#if !defined(_free_zstream)
+#	define _free_zstream(strm)\
+while(strm){\
+	delete strm;strm = NULL;\
+}
+#endif//!_free_zstream
 #	define	GZIP_MAGIC     "\037\213"	/* Magic header for gzip files, 1F 8B */
 	//Success run on 2:05 AM 1/19/2019
 	//https://stackoverflow.com/questions/54256829/zlib-gzip-invalid-response-defined-in-web-browser-c
 	//static int gz_magic[2] = { 0x1f, 0x8b }; /* gzip magic header */
+	/*char* copy_str(const char* str);*/
+	char* copy_str(const char* str, size_t len);
 	template<class _out_stream>
 	void write_magic_header(_out_stream&output) {
 		char* dest = new char[10];
@@ -88,7 +96,7 @@ namespace gzip {
 		const char* crlf = "\r\n\r\n";
 		output.write(crlf, strlen(crlf));
 	}
-	void free_zstream(z_stream* strm);
+	//void free_zstream(z_stream* strm);
 	z_stream* create_z_stream();
 	template<class _stream>
 	size_t get_size_of_stream(_stream& _strm) {
@@ -98,13 +106,13 @@ namespace gzip {
 		return static_cast<size_t>(length);
 		//return (size_t)length;
 	}
-	int deflate_file(const std::string input_path, const std::string output_path, int level, std::string&error);
-	int inflate_file(const std::string input_path, const std::string output_path, std::string& error);
+	int deflate_file(const char* input_path, const char* output_path, int level, std::string&error);
+	int inflate_file(const char* input_path, const char* output_path, std::string& error);
 	template<class _out_stream>
 	int deflate_stream(std::stringstream&source, _out_stream&dest, int level = Z_BEST_SPEED) {
 		//6:08 AM 1/17/2019
 		int ret, flush;
-		unsigned have;
+		//unsigned have;
 		z_stream* strm = create_z_stream();
 		/* negative windowBits to deflateInit2_ means "no header" */
 		ret = deflateInit2_(strm, level, Z_DEFLATED,
@@ -112,7 +120,7 @@ namespace gzip {
 			DEF_MEM_LEVEL, Z_DEFAULT_STRATEGY,
 			ZLIB_VERSION, (int)sizeof(z_stream));
 		if (ret != Z_OK) {
-			free_zstream(strm);
+			_free_zstream(strm);
 			return ret;
 		}
 		size_t totalSize = get_size_of_stream(source);
@@ -138,7 +146,7 @@ namespace gzip {
 				strm->next_out = (Bytef*)out;
 				ret = deflate(strm, flush);    /* no bad return value */
 				assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
-				have = CHUNK - strm->avail_out;
+				unsigned have = CHUNK - strm->avail_out;
 				dest.write(out, have);
 				write_len += have;
 				delete[]out;
@@ -150,7 +158,7 @@ namespace gzip {
 		assert(ret == Z_STREAM_END);        /* stream will be complete */
 		 /* clean up and return */
 		(void)deflateEnd(strm);
-		free_zstream(strm);
+		_free_zstream(strm);
 		/* write gzip footer to out stream*/
 		dest.write((char*)&tcrc, sizeof(tcrc));
 		dest.write((char*)&utotalSize, sizeof(utotalSize));
@@ -166,7 +174,7 @@ namespace gzip {
 	//2:28 PM 1/4/2020
 	class gzip_deflate {
 	public:
-		gzip_deflate(int level);
+		explicit gzip_deflate(int level);
 		~gzip_deflate();
 		template<class _out_stream>
 		void write_header(_out_stream& dest);
@@ -177,11 +185,11 @@ namespace gzip {
 		template<class _out_stream, class _source_stream>
 		size_t write(_out_stream& dest, _source_stream& source, int do_flush, int bypass);
 		template<class _out_stream>
-		size_t write_file(_out_stream& dest, const std::string file_path, int do_flush);
+		size_t write_file(_out_stream& dest, const char* file_path, int do_flush);
 		template<class _out_stream>
 		int flush(_out_stream& dest);
-		int f_open_file(const std::string path);
-		size_t f_write_file(const std::string file_path, int do_flush);
+		int f_open_file(const char* path);
+		size_t f_write_file(const char* file_path, int do_flush);
 		template<class _source_stream>
 		size_t f_write(_source_stream& source, int do_flush);
 		size_t f_write(const char* buff, int do_flush);
@@ -220,7 +228,7 @@ namespace gzip {
 			_is_error = FALSE;
 		}
 		_stream_flush = do_flush;
-		unsigned have;
+		//unsigned have;
 		_strm->avail_in = (uInt)len;
 		_tcrc = crc32(_tcrc, (uint8_t*)in, (uInt)len);
 		_strm->next_in = (Bytef*)in;
@@ -249,7 +257,7 @@ namespace gzip {
 					return panic(_strm->msg);
 				}
 			}
-			have = chunk - _strm->avail_out;
+			unsigned have = chunk - _strm->avail_out;
 			dest.write(out, have);
 			_total_size += have;
 			/* Free memory */
@@ -276,14 +284,19 @@ namespace gzip {
 	}
 	template<class _out_stream>
 	inline size_t gzip_deflate::write(_out_stream& dest, const char* buff, int do_flush){
-		char* in = strdup(buff);
-		size_t ret = this->write(dest, in, strlen(buff), do_flush, FALSE);
+		size_t len = strlen(buff);
+		char* in = copy_str(buff, len);//_strdup(buff);
+		size_t ret = this->write(dest, in, len, do_flush, FALSE);
 		/* Free memory */
 		delete[]in;
 		return ret;
 	}
 	template<class _out_stream, class _source_stream>
-	inline size_t gzip_deflate::write(_out_stream& dest, _source_stream& source, int do_flush, int bypass){
+	inline size_t gzip_deflate::write(
+		_out_stream& dest, 
+		_source_stream& source,
+		int do_flush, int bypass
+	){
 		if (bypass == FALSE) {
 			if (_is_flush == TRUE)return FALSE;
 			if (_is_error == TRUE)return -1;
@@ -299,26 +312,26 @@ namespace gzip {
 		if (total_len == std::string::npos || total_len == 0)return total_len;
 		int end_flush = do_flush == Z_FINISH ? Z_FINISH : Z_NO_FLUSH;
 		do_flush = Z_NO_FLUSH;
-		size_t ret; size_t read_len = 0; int eof = FALSE;
+		int eof = FALSE;
 		do {
 			if (!source.good())break;
 			char* in;
-			read_len = totalSize > CHUNK ? CHUNK : totalSize;
+			size_t read_len = totalSize > CHUNK ? CHUNK : totalSize;
 			in = new char[read_len];
 			source.read(in, read_len);
 			totalSize -= read_len;
-			if (totalSize <= 0) {
+			if (totalSize == 0 || totalSize == std::string::npos) {
 				do_flush = end_flush; eof = TRUE;
 			}
-			ret = this->write(dest, in, read_len, do_flush, TRUE);
+			size_t ret = this->write(dest, in, read_len, do_flush, TRUE);
 			/* Free memory */
 			delete[]in;
-			if (ret == FALSE || ret == std::string::npos || ret < 0)return ret;
+			if (ret == FALSE || ret == std::string::npos)return ret;
 		} while (eof == FALSE);
 		return total_len;
 	}
 	template<class _out_stream>
-	inline size_t gzip_deflate::write_file(_out_stream& dest, const std::string file_path, int do_flush){
+	inline size_t gzip_deflate::write_file(_out_stream& dest, const char* file_path, int do_flush){
 		if (_is_flush == TRUE)return FALSE;
 		if (_is_error == TRUE)return -1;
 		if (_stream_flush == Z_FINISH) {
@@ -327,8 +340,8 @@ namespace gzip {
 		if (!(do_flush == Z_FINISH || do_flush == Z_NO_FLUSH)) {
 			return panic("deflate::Invalid stream end request.", -1);
 		}
-		if (_is_error != FALSE) _is_error = FALSE;
-		std::ifstream* file_stream = new std::ifstream(file_path.c_str(), std::ifstream::binary);
+		_is_error = FALSE;
+		std::ifstream* file_stream = new std::ifstream(file_path, std::ifstream::binary);
 		if (!file_stream->is_open()) {
 			return panic("Unable to open file....", -1);
 		}
@@ -349,7 +362,7 @@ namespace gzip {
 		}
 		/* clean up and return */
 		(void)deflateEnd(_strm);
-		free_zstream(_strm);
+		_free_zstream(_strm);
 		_is_flush = TRUE;
 		return TRUE;
 	}
@@ -366,18 +379,18 @@ namespace gzip {
 	//Start 11:27 PM 1/8/2020
 	class gzip_inflate {
 	public:
-		gzip_inflate(int window_bits);
+		explicit gzip_inflate(int window_bits);
 		~gzip_inflate();
 		template<class _out_stream>
 		size_t write(_out_stream& dest, const char* buff);
 		template<class _out_stream, class _source_stream>
 		size_t write(_out_stream& dest, _source_stream& source, int bypass);
 		template<class _out_stream>
-		size_t write_file(_out_stream& dest, const std::string file_path);
+		size_t write_file(_out_stream& dest, const char* file_path);
 		template<class _out_stream>
 		int flush(_out_stream& dest);
-		int f_open_file(const std::string path);
-		size_t f_write_file(const std::string file_path);
+		int f_open_file(const char* path);
+		size_t f_write_file(const char* file_path);
 		template<class _source_stream>
 		size_t f_write(_source_stream& source);
 		size_t f_write(const char* buff);
@@ -406,7 +419,7 @@ namespace gzip {
 			if (_is_error == TRUE)return -1;
 			_is_error = FALSE;
 		}
-		unsigned have;
+		//unsigned have;
 		_strm->avail_in = (uInt)len;
 		_strm->next_in = (Bytef*)in;
 		/* run inflate() on input until output buffer not full, finish
@@ -430,7 +443,7 @@ namespace gzip {
 					//return panic(_strm->msg);
 				}
 			}
-			have = chunk - _strm->avail_out;
+			unsigned have = chunk - _strm->avail_out;
 			dest.write(out, have);
 			_total_size += have;
 			/* Free memory */
@@ -440,8 +453,9 @@ namespace gzip {
 	}
 	template<class _out_stream>
 	inline size_t gzip_inflate::write(_out_stream& dest, const char* buff) {
-		char* in = strdup(buff);
-		size_t ret = this->write(dest, in, strlen(buff), Z_NO_FLUSH, FALSE);
+		size_t len = strlen(buff);
+		char* in = copy_str(buff, len);//_strdup(buff);
+		size_t ret = this->write(dest, in, len, Z_NO_FLUSH, FALSE);
 		/* Free memory */
 		delete[]in;
 		return ret;
@@ -455,12 +469,10 @@ namespace gzip {
 		size_t totalSize = get_size_of_stream(source);
 		size_t total_len = totalSize;
 		if (total_len == std::string::npos || total_len == 0)return total_len;
-		int do_flush = Z_NO_FLUSH;
-		size_t ret; size_t read_len = 0; int eof = FALSE;
-		int header_len = 10;
+		int do_flush = Z_NO_FLUSH, eof = FALSE, header_len = 10;
 		do {
 			if (!source.good())break;
-			char* in;
+			char* in; size_t read_len = 0;
 			if (_no_footer == FALSE) {
 				read_len = totalSize > CHUNK ? CHUNK : totalSize;
 				if (totalSize > header_len && read_len > header_len) {
@@ -474,7 +486,7 @@ namespace gzip {
 			in = new char[read_len];
 			source.read(in, read_len);
 			totalSize -= read_len;
-			if (totalSize <= 0) {
+			if (totalSize == 0 || totalSize == std::string::npos) {
 				do_flush = Z_FINISH; eof = TRUE;
 			}
 			if (read_len <= header_len && totalSize <= header_len) {
@@ -482,19 +494,19 @@ namespace gzip {
 				/* Free memory */
 				delete[]in; break;
 			}
-			ret = this->write(dest, in, read_len, do_flush, TRUE);
+			size_t ret = this->write(dest, in, read_len, do_flush, TRUE);
 			/* Free memory */
 			delete[]in;
-			if (ret == FALSE || ret == std::string::npos || ret < 0)return ret;
+			if (ret == FALSE || ret == std::string::npos)return ret;
 		} while (eof == FALSE);
 		return total_len;
 	}
 	template<class _out_stream>
-	inline size_t gzip_inflate::write_file(_out_stream& dest, const std::string file_path) {
+	inline size_t gzip_inflate::write_file(_out_stream& dest, const char* file_path) {
 		if (_is_flush == TRUE)return FALSE;
 		if (_is_error == TRUE)return -1;
-		if (_is_error != FALSE) _is_error = FALSE;
-		std::ifstream* file_stream = new std::ifstream(file_path.c_str(), std::ifstream::binary);
+		_is_error = FALSE;
+		std::ifstream* file_stream = new std::ifstream(file_path, std::ifstream::binary);
 		if (!file_stream->is_open()) {
 			return panic("Unable to open file....", -1);
 		}
@@ -513,7 +525,7 @@ namespace gzip {
 		_total_size = NULL;
 		/* clean up and return */
 		(void)inflateEnd(_strm);
-		free_zstream(_strm);
+		_free_zstream(_strm);
 		_is_flush = TRUE;
 		return TRUE;
 	}

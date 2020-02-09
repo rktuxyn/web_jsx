@@ -16,7 +16,7 @@
 #	include <unordered_map>
 #	include <algorithm>
 //https://codereview.stackexchange.com/questions/198226/simple-encryption-for-strings?newreg=ae31ff1ca51a4a5bbdcb2aed1bb6c705
-//template class jsx_export std::unordered_map<char, char>;
+//template class _export_wjsx std::unordered_map<char, char>;
 class Cipher {
 private:
 	std::unordered_map<char, char> map;

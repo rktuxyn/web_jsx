@@ -49,37 +49,39 @@ namespace smtp_client {
 		struct curl_slist* _cheaders;
 		std::vector<std::string>* _headers;
 		std::vector<mail_attachment*>* _attachments;
-		virtual bool init();
-		virtual void log(const char* format, const char* str);
-		virtual void set_error(const char* error);
+		bool init();
+		void log(const char* format, const char* str);
+		void set_error(const char* error);
 	public:
 		smtp_request();
-		virtual bool has_error();
-		virtual void host(const std::string host);
-		virtual void credentials(const std::string user, const std::string password);
-		virtual void http_auth(bool is_http_auth);
-		virtual void add_attachment(
-			const std::string name, 
-			const std::string mime_type,
-			const std::string path,
-			const std::string encoder
+		//creates a deep copy of the source smtp_request.
+		smtp_request(const smtp_request& that);
+		bool has_error()const;
+		void host(const char* host);
+		void credentials(const char* user, const char* password);
+		void http_auth(bool is_http_auth);
+		void add_attachment(
+			const char* name,
+			const char* mime_type,
+			const char* path,
+			const char* encoder
 		);
-		virtual void set_date_header();
-		virtual void set_message_id(const std::string mail_domain);
-		virtual void mail_from(const std::string from);
-		virtual void mail_to(const std::string to);
-		virtual void mail_cc(const std::string cc);
-		virtual void mail_bcc(const std::string bcc);
-		virtual void mail_subject(const std::string subject);
-		virtual void read_debug_information(bool isDebug);
-		virtual void verify_ssl(bool verify);
-		virtual void verify_ssl_host(bool verify);
-		virtual void set_server_cert(const std::string path);
-		virtual void enable_tls_connection();
-		virtual void prepare();
-		virtual int send_mail(const std::string body, bool isHtml);
+		void set_date_header();
+		void set_message_id(const char* mail_domain);
+		void mail_from(const char* from);
+		void mail_to(const char* to);
+		void mail_cc(const char* cc);
+		void mail_bcc(const char* bcc);
+		void mail_subject(const char* subject);
+		void read_debug_information(bool isDebug);
+		void verify_ssl(bool verify);
+		void verify_ssl_host(bool verify);
+		void set_server_cert(const char* path);
+		void enable_tls_connection();
+		void prepare();
+		int send_mail(const char* body, bool isHtml);
 		//virtual int test_mail(const std::string body, bool isHtml);
-		virtual const char* get_last_error();
+		const char* get_last_error()const;
 		virtual ~smtp_request();
 	};
 };

@@ -12,6 +12,7 @@
 #	include <fcgi_stdio.h>
 #	include <fcgio.h>
 #	include "web_jsx_cgi.h"
+#	include "core/native_wrapper.h"
 #pragma warning(disable: _STL_DISABLED_WARNINGS)
 _STL_DISABLE_CLANG_WARNINGS
 #pragma push_macro("new")
@@ -23,62 +24,57 @@ int web_jsx::fcgi_request::request_process(
 	const char*env_path, char **envp
 ) {
 	const char* content_type = "text/html";// FCGX_GetParam("CONTENT_TYPE", envp);
-	try {
-		//if (aei.is_fserver == TRUE) {
-		//	//REQUEST_URI
-		//}
-		const char*path_translated = web_jsx::fcgi_request::freq_env_c("PATH_TRANSLATED", envp);
-		if (__file_exists(path_translated) == false) {
-			web_jsx::fcgi_request::not_found_response(
-				content_type, 
-				envp, aei.ex_dir->c_str()
-			);
-			fflush(stdout);
-			return EXIT_FAILURE;
-		}
-		const char* reqm = web_jsx::fcgi_request::freq_env_c("REQUEST_METHOD", envp);
-		req_method method = determine_req_method(reqm);
-		if (method == req_method::UNSUPPORTED) {
-			write_header(content_type);
-			std::cout << "\r\n";
-			std::cout << "This method " << reqm << "not supported!!!" << "\r\n";
-			fflush(stdout);
-			return EXIT_FAILURE;
-		}
-		const char* path_info = web_jsx::fcgi_request::freq_env_c("PATH_INFO", envp);
-		web_jsx::app_core::prepare_response(
+	//if (aei.is_fserver == TRUE) {
+	//	//REQUEST_URI
+	//}
+	const char* path_translated = web_jsx::fcgi_request::freq_env_c("PATH_TRANSLATED", envp);
+	if (__file_exists(path_translated) == false) {
+		web_jsx::fcgi_request::not_found_response(
 			content_type,
-			path_translated, aei,
-			method, path_info,
-			env_path,
-			envp
+			envp, aei.ex_dir->c_str()
 		);
-		return EXIT_SUCCESS;
-	} catch (std::exception&e) {
-		write_internal_server_error("text/html", aei.ex_dir->c_str(), 500, e.what());
-		return EXIT_FAILURE;
-	} catch (...) {
-		std::cout << "Content-type: text/html\r\n\r\n" << "Unknown error!";
+		fflush(stdout);
 		return EXIT_FAILURE;
 	}
+	const char* reqm = web_jsx::fcgi_request::freq_env_c("REQUEST_METHOD", envp);
+	req_method method = determine_req_method(reqm);
+	if (method == req_method::UNSUPPORTED) {
+		write_header(content_type);
+		std::cout << "\r\n";
+		std::cout << "This method " << reqm << "not supported!!!" << "\r\n";
+		fflush(stdout);
+		return EXIT_FAILURE;
+	}
+	const char* path_info = web_jsx::fcgi_request::freq_env_c("PATH_INFO", envp);
+	web_jsx::app_core::prepare_response(
+		content_type,
+		path_translated, aei,
+		method, path_info,
+		env_path,
+		envp
+	);
+	return EXIT_SUCCESS;
 }
-//void print_fcgi_envp(char* envp[]) {
-//	std::cout << "Content-Type:text/html" << H_N_L;
-//	std::cout << "Accept-Ranges:bytes" << H_N_L;
-//	std::cout << "X-Powered-By:safeonline.world" << H_N_L;
-//	std::cout << "X-Process-By:web_jsx" << H_N_L;
-//	std::cout << "Status: 404 Not found" << H_N_L;
-//	std::cout << "WebJsx-Error-Code:404" << H_N_L;
-//	std::cout << "\r\n";
-//	print_envp(envp);
-//}
+void print_fcgi_envp(char* envp[]) {
+	std::cout << "Content-Type:text/html" << H_N_L;
+	std::cout << "Accept-Ranges:bytes" << H_N_L;
+	std::cout << "X-Powered-By:safeonline.world" << H_N_L;
+	std::cout << "X-Process-By:web_jsx" << H_N_L;
+	std::cout << "Status: 404 Not found" << H_N_L;
+	std::cout << "WebJsx-Error-Code:404" << H_N_L;
+	std::cout << "\r\n";
+	print_envp(envp);
+}
 // Debug https://blogs.msdn.microsoft.com/friis/2012/09/24/easy-debugging-of-cgi-fastcgi-application/
-int web_jsx::fcgi_request::request_handler(const char*execute_path, const char* path) {
+int web_jsx::fcgi_request::request_handler(
+	const char* execute_path, 
+	const char* path, int is_spath
+) {
 	streambuf * cin_streambuf = cin.rdbuf();
 	streambuf * cout_streambuf = cout.rdbuf();
 	streambuf * cerr_streambuf = cerr.rdbuf();
-	int is_self_req = path != NULL && strlen(path) != 0;
-	if (is_self_req == TRUE) {
+	//int is_self_req = path != NULL && strlen(path) != 0;
+	if (is_spath == TRUE) {
 		std::cout << "Execute dir:" << execute_path << std::endl;
 	}
 	FCGX_Request request;
@@ -90,7 +86,7 @@ int web_jsx::fcgi_request::request_handler(const char*execute_path, const char* 
 			if (count >= max)break;
 		}
 		if (err != 0) {
-			if (is_self_req == FALSE) {
+			if (is_spath == FALSE) {
 				app_ex_info* aei = new app_ex_info();
 				aei->ex_dir = new std::string();
 				aei->ex_name = new std::string();
@@ -107,7 +103,7 @@ int web_jsx::fcgi_request::request_handler(const char*execute_path, const char* 
 			return EXIT_FAILURE;
 		}
 	}
-	if (is_self_req == TRUE) {
+	if (is_spath == TRUE) {
 		if (FCGX_OpenSocket(path, 1000) < 0) {
 			fprintf(stderr, "%=>%", "Unable to open socket to requested", path);
 			return EXIT_FAILURE;
@@ -125,7 +121,7 @@ int web_jsx::fcgi_request::request_handler(const char*execute_path, const char* 
 	aei->ex_dir = new std::string();
 	aei->ex_name = new std::string();
 	aei->execute_path = execute_path;
-	aei->is_fserver = is_self_req;
+	aei->is_fserver = is_spath;
 	request_file_info(aei->execute_path, *aei->ex_dir, *aei->ex_name);
 	aei->ex_dir->append("\\");
 	sow_web_jsx::js_compiler::create_engine(aei->ex_dir->c_str());

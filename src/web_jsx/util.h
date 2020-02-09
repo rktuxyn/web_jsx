@@ -16,13 +16,11 @@
 #	include <vector>
 #if !defined(_WIN32) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
 #	include <unistd.h>
-#define get_current_dir getcwd
+#	define get_current_dir getcwd
 bool is_user_interactive();
 void print_info();
 #else
-#if !defined(_INC_DIRECT)
 #	include <direct.h>
-#endif//!_INC_DIRECT
 #define get_current_dir _getcwd
 #if !defined(_WINCON_)
 #	include <Wincon.h>
@@ -98,7 +96,7 @@ void write_internal_server_error(
 	const char* content_type,
 	const char* ex_dir,
 	int error_code,
-	const std::string error_msg
+	const char* error_msg
 );
 void json_obj_stringify(
 	std::map<std::string, std::string>& json_obj,

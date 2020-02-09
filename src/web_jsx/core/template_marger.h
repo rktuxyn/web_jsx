@@ -17,11 +17,11 @@ namespace sow_web_jsx {
 			std::vector<std::string>& templates,
 			std::string&html_body,
 			const std::regex start_tag,
-			const std::string root_dir
+			const char* root_dir
 		);
 		int implimant_attachment(
 			template_result& tr, 
-			const std::string root_dir, 
+			const char* root_dir,
 			std::string&html_body
 		);
 	};

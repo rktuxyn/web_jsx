@@ -18,8 +18,8 @@ namespace sow_web_jsx {
 	namespace template_core {
 		int process_template(
 			template_result& tr,
-			const std::string root_dir,
-			const std::string request_path
+			const char* root_dir,
+			const char* request_path
 		);
 	};
 };

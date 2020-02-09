@@ -10,6 +10,15 @@
 #endif//!_MSC_VER
 #if !defined(_web_jsx_global_h)
 #	define _web_jsx_global_h
+#if defined(__WJSX_SHARED)
+#if !defined(_export_wjsx)
+#	define _export_wjsx __declspec(dllexport)
+#endif//!jsx_export
+#else
+#if !defined(_export_wjsx)
+#	define _export_wjsx
+#endif//!_export_wjsx
+#endif//__WJSX_SHARED
 #	include <iostream>
 #	include <stdlib.h>
 #	include <sstream>
@@ -30,9 +39,9 @@
 #	include <sys/stat.h>
 #	define __file_exists(fname)\
 access(fname, 0)!=-1
-#  include <io.h>
+#	include <io.h>
 #if !defined(SET_BINARY_MODE)
-#  define SET_BINARY_MODE(file) setmode(fileno(file), O_BINARY)
+#	define SET_BINARY_MODE(file) setmode(fileno(file), O_BINARY)
 #endif//!SET_BINARY_MODE
 #else
 #	include <assert.h>
@@ -45,43 +54,48 @@ access(fname, 0)!=-1
 #	include <tlhelp32.h>
 #	define __file_exists(fname)\
 _access(fname, 0)!=-1
-#  include <fcntl.h>
+#	include <fcntl.h>
 #if !defined(SET_BINARY_MODE)
 #if defined(__CYGWIN__)
-#define SET_BINARY_MODE(file) setmode(fileno(my_stdio_stream), O_BINARY)
+#	define SET_BINARY_MODE(file) setmode(fileno(my_stdio_stream), O_BINARY)
 #else
-#  define SET_BINARY_MODE(file) _setmode(_fileno(file), _O_BINARY)
-#  define SET_BINARY_MODE_OUT() _setmode(_fileno(__acrt_iob_func(1)), _O_BINARY)
-#  define SET_BINARY_MODE_IN() _setmode(_fileno(__acrt_iob_func(0)), _O_BINARY)
+#	define SET_BINARY_MODE(file) _setmode(_fileno(file), _O_BINARY)
+#	define SET_BINARY_MODE_OUT() _setmode(_fileno(__acrt_iob_func(1)), _O_BINARY)
+#	define SET_BINARY_MODE_IN() _setmode(_fileno(__acrt_iob_func(0)), _O_BINARY)
 #endif//!__CYGWIN__
 #endif//!SET_BINARY_MODE
 #endif//_WIN32||__unix__
-#include "directory_.h"
-#include "glb_r.h"
+#	include "directory_.h"
+#	include "glb_r.h"
 #if !defined(READ_CHUNK)
-#define READ_CHUNK		16384
+#	define READ_CHUNK		16384
 #endif//!READ_CHUNK
 #if defined(FAST_CGI_APP)
 #if !defined(H_N_L)
-#define H_N_L "\r\n"
+#	define H_N_L "\r\n"
 #endif//!H_N_L
 #else
 #if !defined(H_N_L)
-#define H_N_L "\n"
+#	define H_N_L "\n"
 #endif//!H_N_L
 #endif//FAST_CGI_APP
-#if defined(jsx_shared)
-#if !defined(jsx_export)
-#define jsx_export __declspec(dllexport)
-#endif//!jsx_export
-#else
-#if !defined(jsx_export)
-#define jsx_export
-#endif//!jsx_export
-#endif//jsx_shared
-#define FORCE_EXIT_PROCESS	9
+#	define FORCE_EXIT_PROCESS	9
 #pragma warning (disable : 4996)
-#define _CRT_SECURE_NO_WARNINGS
+#	define _CRT_SECURE_NO_WARNINGS
+
+#if !defined(_free_obj)
+#	define _free_obj(obj)\
+while(obj){\
+	obj->clear();delete obj;obj = NULL;\
+}
+#endif//!_free_obj
+//template<class _stream>
+//size_t get_sizeof_stream(_stream&strm) {
+//	strm.seekg(0, std::ios::end);//Go to end of stream
+//	std::streamoff totalSize = strm.tellg();
+//	strm.seekg(0, std::ios::beg);//Back to begain of stream
+//	return (size_t)totalSize;
+//}
 typedef struct {
 	std::string t_source;
 	std::string err_msg;
@@ -106,6 +120,7 @@ typedef struct {
 	int dw_creation_flags;
 	short show_window;
 }process_info;
+
 namespace sow_web_jsx {
 	void format__path(std::string&str);
 	void get_dir_from_path (const std::string& path_str, std::string&dir);
@@ -129,9 +144,15 @@ namespace sow_web_jsx {
 	);
 	template<class _input>
 	inline int is_error_code(_input ret) {
-		return (ret == FALSE || ret == std::string::npos || ret < 0) ? TRUE : FALSE;
+		return (ret == std::string::npos || ret == FALSE || ret < 0) ? TRUE : FALSE;
 	}
-#if defined(_WINDOWS_)
+#if defined(_WIN32)||defined(_WIN64)
+#if !defined(_close_handle)
+#	define _close_handle(handle)\
+if (CloseHandle(handle)){\
+	handle = INVALID_HANDLE_VALUE;\
+}
+#endif//!_close_handle
 	wchar_t* ccr2ws(const char* s);
 	const char* get_error_desc(int error_code);
 	int kill_process_by_name(const char *process_name);
@@ -193,11 +214,11 @@ namespace sow_web_jsx {
 			return -1;
 		/*if (!CreateProcess(NULL, cmd, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pinfo))
 			return -1;*/
-		CloseHandle(pinfo.hProcess);
-		CloseHandle(pinfo.hThread);
-		CloseHandle(pipes[ChildRead]);
-		CloseHandle(pipes[ChildWrite]);
-		CloseHandle(pipes[ParentWrite]);
+		_close_handle(pinfo.hProcess);
+		_close_handle(pinfo.hThread);
+		_close_handle(pipes[ChildRead]);
+		_close_handle(pipes[ChildWrite]);
+		_close_handle(pipes[ParentWrite]);
 		char ReadBuff[4096 + 1];
 		DWORD ReadNum;
 		for (;;) {

@@ -10,23 +10,21 @@
 #if !defined( _js_compiler_h)
 #	define _js_compiler_h
 #	include "v8_engine.h"
-#	include "runtime_compiler.h"
-#	include <libplatform/libplatform.h>
-#	include "native_wrapper.h"
-#	include <uv.h>
+#	include <string>
+#	include <map>
 namespace sow_web_jsx {
 	namespace js_compiler {
 		int run_script(std::map<std::string, std::map<std::string, std::string>>& ctx, template_result& tr);
 		int run_script_x(const char* script_source, std::map<std::string, std::string>& ctx);
-		jsx_export void create_engine(const char* exec_path);
-		jsx_export void dispose_engine();
-		jsx_export v8::Isolate* get_isolate();
-		jsx_export int run_script(const char* exec_path, const char* script_source, std::map<std::string, std::string>& ctx);
-		jsx_export void run_script(std::map<std::string, std::map<std::string, std::string>>&, const char*, template_result&);
+		void create_engine(const char* exec_path);
+		void dispose_engine();
+		v8::Isolate* get_isolate();
+		int run_script(const char* exec_path, const char* script_source, std::map<std::string, std::string>& ctx);
+		void run_script(std::map<std::string, std::map<std::string, std::string>>&, const char*, template_result&);
 		/*uv async*/
-		jsx_export void run_async(std::map<std::string, std::map<std::string, std::string>>& ctx, const char* exec_path, template_result& rsinf);
+		void run_async(std::map<std::string, std::map<std::string, std::string>>& ctx, const char* exec_path, template_result& rsinf);
 		//jsx_export void run_async(const char*, const char*, const char*, const char*, const char*);
-		jsx_export void run_async(const char* exec_path, const char* script_source, std::map<std::string, std::string>& ctx);
+		void run_async(const char* exec_path, const char* script_source, std::map<std::string, std::string>& ctx);
 	}
 }
 #endif //!NTEMPLATE_COMP_

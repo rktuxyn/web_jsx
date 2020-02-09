@@ -5,6 +5,10 @@
 * See the accompanying LICENSE file for terms.
 */
 #	include "js_compiler.h"
+#	include <uv.h>
+#	include "runtime_compiler.h"
+#	include <libplatform/libplatform.h>
+#	include "native_wrapper.h"
 using namespace sow_web_jsx;
 using namespace sow_web_jsx::wrapper;
 using namespace sow_web_jsx::js_compiler;
@@ -189,7 +193,7 @@ void sow_web_jsx::js_compiler::run_async(
 	sow_web_jsx::wrapper::response_body_flush(false);
 	return;
 }
-jsx_export void sow_web_jsx::js_compiler::run_script(
+void sow_web_jsx::js_compiler::run_script(
 	std::map<std::string, std::map<std::string, std::string>>& ctx,
 	const char* exec_path, template_result& rsinf
 ) {
@@ -206,11 +210,11 @@ jsx_export void sow_web_jsx::js_compiler::run_script(
 		return;
 	}
 }
-jsx_export void sow_web_jsx::js_compiler::create_engine(const char* exec_path) {
+void sow_web_jsx::js_compiler::create_engine(const char* exec_path) {
 	if (_v8eng == NULL)
 		_v8eng = new v8_engine(exec_path);
 }
-jsx_export v8::Isolate* sow_web_jsx::js_compiler::get_isolate() {
+v8::Isolate* sow_web_jsx::js_compiler::get_isolate() {
 	if (_v8eng == NULL) throw new std::runtime_error("You should not call this method before initialize engine.");
 	return _v8eng->get_current_isolate();
 }
@@ -232,7 +236,7 @@ int run_v8_async_cja(void* args) {
 	}
 }
 //Served CLI Request
-jsx_export void sow_web_jsx::js_compiler::run_async(
+void sow_web_jsx::js_compiler::run_async(
 	const char* exec_path, const char* script_source, std::map<std::string, std::string>& ctx
 ) {
 	wja_ctx* context = new wja_ctx();
@@ -264,7 +268,7 @@ jsx_export void sow_web_jsx::js_compiler::run_async(
 	//std::cout << "Disposing...." << std::endl;
 	_v8eng->dispose();
 }
-jsx_export int sow_web_jsx::js_compiler::run_script(
+int sow_web_jsx::js_compiler::run_script(
 	const char* exec_path, const char* script_source, std::map<std::string, std::string>& ctx
 ) {
 	try {
@@ -286,7 +290,7 @@ jsx_export int sow_web_jsx::js_compiler::run_script(
 	}
 }
 #include "module_store.h"
-jsx_export void sow_web_jsx::js_compiler::dispose_engine() {
+void sow_web_jsx::js_compiler::dispose_engine() {
 	swjsx_module::clean_native_module();
 	if (_v8eng != NULL) {
 		_v8eng->dispose();
