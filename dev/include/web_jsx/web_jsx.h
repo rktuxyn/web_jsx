@@ -13,6 +13,23 @@
 #	include <v8.h>
 #	include <io.h> 
 #	include <regex>
+#	include <sstream>
+
+#if !defined(NULL)
+    #if defined(__cplusplus)
+        #define NULL 0
+    #else
+        #define NULL ((void *)0)
+    #endif
+#endif//!NULL
+
+#if !defined(_export_wjsx)
+#if (defined(_WIN32)||defined(_WIN64))
+#	define _export_wjsx __declspec(dllexport)
+#else
+#	define _export_wjsx
+#endif//_WIN32||_WIN64
+#endif//!_export_wjsx
 
 #if !defined(__file_exists)
 #define __file_exists(fname)\
@@ -51,6 +68,11 @@ _access(fname, 0)!=-1
 	value.length() <= 0 ? "" :(*value ? *value : "<string conversion failed>")
 #endif//!to_char_str_n
 
+#if !defined(_free_obj)
+#	define _free_obj(obj)\
+	obj->clear(); delete obj; obj = NULL;
+#endif//!_free_obj
+
 __forceinline static void format__path(std::string& str) {
 	str = std::regex_replace(str, std::regex("(?:/)"), "\\");
 }
@@ -58,12 +80,6 @@ __forceinline static const char* to_char_str(v8::Isolate* isolate, v8::Local<v8:
 	v8::String::Utf8Value str(isolate, x);
 	return to_char_str_n(str);
 }
-
-#if (defined(_WIN32)||defined(_WIN64))
-#	define _export_web_jsx_native __declspec(dllexport)
-#else
-#	define _export_web_jsx_native
-#endif//_WIN32|_WIN64
 
 #if !defined(FALSE)
 #	define FALSE               0
@@ -78,6 +94,17 @@ inline int is_error_code(_input ret) {
 	return (ret == FALSE || ret == std::string::npos || ret < 0) ? TRUE : FALSE;
 }
 extern "C" {
-	_export_web_jsx_native void web_jsx_native_module(v8::Handle<v8::Object>target);
+	_export_wjsx void web_jsx_native_module(v8::Handle<v8::Object>target);
 }
+namespace sow_web_jsx {
+	namespace wrapper {
+		_export_wjsx int is_cli();
+		_export_wjsx int is_flush();
+		_export_wjsx std::stringstream& get_body_stream();
+		_export_wjsx const char* get_root_dir();
+		_export_wjsx const char* get_app_dir();
+		_export_wjsx void add_header(const char*key, const char*value);
+	}
+}
+
 #endif//!_web_jsx_h

@@ -9,23 +9,28 @@
 #	define _v8_util_h
 #	include <v8.h>
 #	include <string>
+#if !defined(_export_wjsx)
 #if (defined(_WIN32)||defined(_WIN64))
-#	define _export_util __declspec(dllexport)
+#	define _export_wjsx __declspec(dllexport)
 #else
-#	define _export_util
+#	define _export_wjsx
 #endif//_WIN32||_WIN64
+#endif//!_export_wjsx
 namespace sow_web_jsx {
-	_export_util bool to_boolean(v8::Isolate* isolate, v8::Local<v8::Value> value);
-	_export_util void garbage_collect(v8::Isolate* isolat);
-	_export_util void set__exception(
+	_export_wjsx bool to_boolean(v8::Isolate* isolate, v8::Local<v8::Value> value);
+	_export_wjsx void garbage_collect(v8::Isolate* isolat);
+	_export_wjsx void set__exception(
 		v8::Isolate * isolate, 
 		v8::TryCatch*try_catch, 
 		std::string& error_str
 	);
-	_export_util void get_server_map_path(const char* req_path, std::string& output);
-	_export_util const char* get_prop_value(v8::Isolate* isolate, v8::Local<v8::Context>ctx, v8::Local<v8::Object>v8_obj, const char* prop);
-	_export_util v8::Local<v8::String> concat_msg(v8::Isolate* isolate, const char* a, const char*b);
-	class _export_util native_string {
+	_export_wjsx void get_server_map_path(const char* req_path, std::string& output);
+	_export_wjsx int get_prop_value(
+		v8::Isolate* isolate, v8::Local<v8::Context> ctx, 
+		v8::Local<v8::Object> v8_obj, const char* prop, std::string&out
+	);
+	_export_wjsx v8::Local<v8::String> concat_msg(v8::Isolate* isolate, const char* a, const char*b);
+	class _export_wjsx native_string {
 	private:
 		char* _data;
 		size_t _length;
