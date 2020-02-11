@@ -23,6 +23,8 @@ namespace sow_web_jsx {
 	};
 	class jsx_file {
 	private:
+		int _errorc;
+		int _is_flush;
 		char* _internal_error;
 		//std::ifstream* _read_stream;
 		//std::ofstream* _write_stream;
@@ -31,9 +33,8 @@ namespace sow_web_jsx {
 		size_t _total_length;
 		int panic(const char* error);
 	public:
-		int is_flush;
-		errno_t err;
-		jsx_file(const char*, const char*);
+		explicit jsx_file(const char*, const char*);
+		int is_flush()const;
 		size_t open(const char* path, const char* mode);
 		size_t read(int len, std::string&out);
 		int eof();
@@ -41,6 +42,7 @@ namespace sow_web_jsx {
 		void flush();
 		const char* get_last_error();
 		void clear();
+		int has_error()const;
 		~jsx_file();
 	};
 }

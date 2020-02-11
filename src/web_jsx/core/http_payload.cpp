@@ -16,10 +16,10 @@ using namespace sow_web_jsx;
 class http_posted_file {
 public:
 	explicit http_posted_file(
-		const std::string& disposition,
-		const std::string& name,
-		const std::string& file_name,
-		const std::string& c_type
+		const char* disposition,
+		const char* name,
+		const char* file_name,
+		const char* c_type
 	);
 	~http_posted_file();
 	void store(const char* path);
@@ -130,21 +130,17 @@ http_posted_file* parse_header(const std::string& data) {
 	// This is hairy: Netscape and IE don't encode the filenames
 	// The RFC says they should be encoded, so I will assume they are.
 	filename = form_urldecode(filename);
-	return new http_posted_file(disposition, name, filename, cType);
+	return new http_posted_file(disposition.c_str(), name.c_str(), filename.c_str(), cType.c_str());
 }
 http_posted_file::http_posted_file(
-	const std::string& disposition,
-	const std::string& name,
-	const std::string& file_name,
-	const std::string& c_type
+	const char* disposition,
+	const char* name,
+	const char* file_name,
+	const char* c_type
 ) :
-	_fcontent_disposition(disposition.c_str()),
-	_fname(name.c_str()), _ffile_name(file_name.c_str()),
-	_fcontent_type(c_type.c_str()) {
-	//_fcontent_disposition = disposition.c_str();
-	/*_fname = name.c_str();
-	_ffile_name = file_name.c_str();
-	_fcontent_type = c_type.c_str();*/
+	_fcontent_disposition(disposition),
+	_fname(name), _ffile_name(file_name),
+	_fcontent_type(c_type) {
 	_is_disposed = false;
 	_is_moved = false; _file_size = 0;
 }

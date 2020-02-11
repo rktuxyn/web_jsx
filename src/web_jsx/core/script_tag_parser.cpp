@@ -77,8 +77,9 @@ void sow_web_jsx::js_write_footer(std::stringstream& js_stream) {
 };
 void sow_web_jsx::js_write_console_header(std::stringstream& js_stream) {
 	js_stream << "this.__print = function ( str ) { if ( env.is_interactive === false ) return; print( String.format( str, Array.prototype.slice.call( arguments, 1 ) ) ); return; };\n";
+	//js_stream << "this.__print = function ( str ) { print( str ); return; };\n";
 	js_stream << "env.app_dir = ( function () { if ( env.app_dir === undefined || env.app_dir === null ) { throw new Error(\"App directory not found in current context!!!\"); } return env.app_dir.replace( /\\\\/g,'/' ).replace(/\\/\\//gi, '/'); }());\n";
-	js_stream << "env.app_path = ( function () { if ( env.app_path === undefined || env.app_path === null ) { throw new Error(\"App path not found in current context!!!\"); } return env.app_dir + env.app_path.replace( /\\\\/g,'/' )+'.exe'; }());\n";
+	js_stream << "env.app_path = ( function () { if ( env.app_path === undefined || env.app_path === null ) { throw new Error(\"App path not found in current context!!!\"); } return env.app_path.replace( /\\\\/g,'/' ); }());\n";
 	js_stream << "env.root_dir = ( function () { if ( env.root_dir === undefined || env.root_dir === null ) { throw new Error(\"Root directory not found in current context!!!\"); } return env.root_dir.replace( /\\\\/g,'/' ) }());\n";
 	js_stream << "env.path_translated = ( function () { if ( env.path_translated === undefined || env.path_translated === null ) { throw new Error(\"Translated path not found in current context!!!\"); } return env.path_translated.replace( /\\\\/g,'/' ) }());\n";
 	js_stream << "env.path = ( function () { if ( env.path === undefined || env.path === null ) { throw new Error(\"Environment path not found in current context!!!\"); } return env.path.replace( /\\\\/g,'/' ) }());\n";
@@ -146,8 +147,6 @@ public:
 	}
 	~js_parser() {
 		this->clear();
-		std::string().swap(this->rep_str);
-		//std::string().swap(this->result_key);
 	}
 private:
 public:
@@ -289,14 +288,14 @@ int script_tag_parser::parse(template_result & tr, std::string&html_body) {
 			info->line = "context.response.write(" + jsp->rep_str + info->line;
 			js_stream << "\n";
 		}
-		info->etag = e_tag::sts;
+		info->etag = sts;
 		jsp->start_tag(*jsp->regx_sts, *info);/**TAG-1 <js::**/
-		info->etag = e_tag::ste;
+		info->etag = ste;
 		if (jsp->end_tag(*jsp->regx_ste, *info)/**TAG-2 ::js>**/ < 0)
 			js_stream << "\n";
-		info->etag = e_tag::rts;
+		info->etag = rts;
 		jsp->start_tag(*jsp->regx_rts, *info);/**TAG-3 <js=**/
-		info->etag = e_tag::rte;
+		info->etag = rte;
 		jsp->end_tag(*jsp->regx_rte, *info);/**TAG-4 =js>**/
 		if (info->is_tag_end) {
 			info->line = std::regex_replace(info->line, *qu, "\\x27");

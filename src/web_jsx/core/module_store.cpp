@@ -121,6 +121,9 @@ int prepare_native_module(v8::Isolate* isolate,
 	_swap_str(path); _swap_str(line);
 	return _is_loaded;
 }
+//int object_extend(v8::Local<v8::Value> value) {
+//	return FALSE;
+//}
 void add_to_js_global_internal(
 	v8::Isolate* isolate,
 	v8::Local<v8::Context>ctx,

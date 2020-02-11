@@ -142,6 +142,8 @@ namespace sow_web_jsx {
 		const std::string& separator1,
 		const std::string& separator2
 	);
+	int fprintf_stdout(const char* msg);
+	int fprintf_stderr(const char* msg);
 	template<class _input>
 	inline int is_error_code(_input ret) {
 		return (ret == std::string::npos || ret == FALSE || ret < 0) ? TRUE : FALSE;
@@ -163,20 +165,15 @@ if (CloseHandle(handle)){\
 	enum { ParentRead, ParentWrite, ChildWrite, ChildRead, NumPipeTypes };
 	template<class func>
 	int read_child_process(const process_info*pi, func fn) {
-		if (pi->process_path.empty())
-			return -10;
-		if (__file_exists(pi->process_path.c_str()) == false)
-			return -4;
+		if (pi->process_path.empty()) return -10;
+		if (__file_exists(pi->process_path.c_str()) == false) return -4;
 		SECURITY_ATTRIBUTES sa;
 		sa.nLength = sizeof(sa);
 		sa.bInheritHandle = TRUE;
 		sa.lpSecurityDescriptor = nullptr;
-
 		HANDLE pipes[NumPipeTypes];
-		if (!CreatePipe(&pipes[ParentWrite], &pipes[ChildRead], &sa, 0))
-			return -1;
-		if (!CreatePipe(&pipes[ParentRead], &pipes[ChildWrite], &sa, 0))
-			return -1;
+		if (!CreatePipe(&pipes[ParentWrite], &pipes[ChildRead], &sa, 0)) return -1;
+		if (!CreatePipe(&pipes[ParentRead], &pipes[ChildWrite], &sa, 0)) return -1;
 		// make sure the handles the parent will use aren't inherited.
 		SetHandleInformation(pipes[ParentRead], HANDLE_FLAG_INHERIT, 0);
 		SetHandleInformation(pipes[ParentWrite], HANDLE_FLAG_INHERIT, 0);
@@ -191,13 +188,11 @@ if (CloseHandle(handle)){\
 		PROCESS_INFORMATION pinfo;
 		ZeroMemory(&pinfo, sizeof(PROCESS_INFORMATION));
 		//TCHAR cmd[] = _T(arg);
-		std::string cmd_args(pi->process_name);
-		cmd_args.append(" ").append(pi->arg);
-		PWSTR pszCmdLine = (PWSTR)ccr2ws(cmd_args.c_str());
-		std::string().swap(cmd_args);
-		PWSTR pszApp = NULL;
-		if (!pi->process_path.empty())
-			pszApp = (PWSTR)ccr2ws(pi->process_path.c_str());
+		std::string* cmd_args= new std::string(pi->process_name);
+		cmd_args->append(" "); cmd_args->append(pi->arg);
+		PWSTR pszCmdLine = (PWSTR)ccr2ws(cmd_args->c_str());
+		_free_obj(cmd_args);
+		PWSTR pszApp = (PWSTR)ccr2ws(pi->process_path.c_str());
 		LPWSTR current_directory = NULL;
 		if (!pi->start_in.empty())
 			current_directory = (LPWSTR)ccr2ws(pi->start_in.c_str());
@@ -206,27 +201,30 @@ if (CloseHandle(handle)){\
 			NULL/*lpProcessAttributes*/,
 			NULL/*lpThreadAttributes*/,
 			TRUE/*bInheritHandles*/,
-			CREATE_NEW_PROCESS_GROUP/*dwCreationFlags*/,
+			NULL,//CREATE_NEW_PROCESS_GROUP/*dwCreationFlags*/,
 			NULL/*lpEnvironment*/,
 			current_directory/*lpCurrentDirectory*/,
 			&si/*lpStartupInfo*/,
 			&pinfo/*lpProcessInformation*/))
 			return -1;
-		/*if (!CreateProcess(NULL, cmd, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pinfo))
-			return -1;*/
 		_close_handle(pinfo.hProcess);
 		_close_handle(pinfo.hThread);
 		_close_handle(pipes[ChildRead]);
 		_close_handle(pipes[ChildWrite]);
 		_close_handle(pipes[ParentWrite]);
-		char ReadBuff[4096 + 1];
-		DWORD ReadNum;
+		unsigned read_len = 4096;
+		DWORD read_num;
 		for (;;) {
-			BOOL success = ReadFile(pipes[ParentRead], ReadBuff, sizeof(ReadBuff) - 1, &ReadNum, NULL);
-			if (!success || !ReadNum)
+			char* buff = new char[(read_len + 1)];
+			buff[read_len] = '\0';
+			BOOL success = ReadFile(pipes[ParentRead], buff, sizeof(buff) - 1, &read_num, NULL);
+			if (!success || !read_num) {
+				delete[]buff;
 				break;
-			ReadBuff[ReadNum] = 0;
-			fn(ReadNum, const_cast<const char*>(ReadBuff));
+			}
+			buff[read_num] = 0;
+			fn(static_cast<size_t>(read_num), const_cast<const char*>(buff));
+			delete[]buff;
 		}
 		return 1;
 	}

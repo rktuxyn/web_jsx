@@ -91,8 +91,8 @@ int web_jsx::fcgi_request::request_handler(
 				aei->ex_dir = new std::string();
 				aei->ex_name = new std::string();
 				aei->execute_path = execute_path;
-				aei->ex_dir->append("\\");
 				::request_file_info(aei->execute_path, *aei->ex_dir, *aei->ex_name);
+				aei->ex_dir->append("\\");
 				::write_internal_server_error("text/html", aei->ex_dir->c_str(), 500, "Unable to initialize FastCGI module!!!");
 				web_jsx::app_core::free_app_info(aei);
 			}

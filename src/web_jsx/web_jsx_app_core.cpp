@@ -9,6 +9,7 @@
 //str->clear(); delete str;
 
 #	include "web_jsx_app_core.h"
+#	include "core/script_tag_parser.h"
 void web_jsx::app_core::run__js_scrip(
 	const char * content_type, 
 	std::string & root_dir, const app_ex_info aei, 
@@ -34,7 +35,12 @@ bool is_script_runtime_error(std::string& what) {
 	std::size_t found = what.find("Error::");
 	return found != std::string::npos;
 }
-void web_jsx::app_core::prepare_response(const char* content_type, const char*path_translated, const app_ex_info aei, req_method&method, const char* path_info) {
+void web_jsx::app_core::prepare_response(const char* content_type,
+	const char*path_translated, 
+	const app_ex_info aei, 
+	req_method&method, 
+	const char* path_info
+) {
 	web_extension ext = ::get_request_extension(path_translated);
 	if (ext == web_extension::UNKNOWN
 		|| ext == web_extension::RAW_SCRIPT
@@ -87,6 +93,10 @@ void web_jsx::app_core::prepare_response(const char* content_type, const char*pa
 			if (!is_script_runtime_error(tr->err_msg)) {
 				if (tr->err_msg == "_NOT_FOUND_") {
 					web_jsx::cgi_request::not_found_response(content_type);
+					/*write_header("text/plain");
+					std::cout << H_N_L;
+					std::cout << tr->err_msg.c_str() << H_N_L;
+					std::cout << tr->t_source.c_str() << H_N_L;*/
 					tr->err_msg.clear();
 					tr->t_source.clear();
 					fflush(stdout);
@@ -150,6 +160,7 @@ void web_jsx::app_core::run__js_scrip(
 	read_query_string(*query_string, req_query_string);
 	web_jsx::fcgi_request::get_request_object(*req_obj, *query_string, method, content_type, envp);
 	(*global_obj)["app_dir"] = aei.ex_dir->c_str();
+	(*global_obj)["app_name"] = aei.ex_name->c_str();
 	::obj_insert(*req_obj, "request", *ctx);
 	::obj_insert(*global_obj, "global", *ctx);
 	sow_web_jsx::js_compiler::run_async(*ctx, aei.ex_dir->c_str(), tr);
@@ -262,7 +273,7 @@ void get_args(int argc, char *argv[], std::vector<char*>&args) {
 		args.push_back(argv[i]);
 	}
 }
-void web_jsx::app_core::prepare_console_response(int argc, char *argv[], bool ireq) {
+void web_jsx::app_core::prepare_console_response(int argc, char *argv[], int is_internal_request) {
 	//4:37 AM 12/13/2018
 	std::string* exec_path = new std::string();
 #if defined(__WEB_JSX_PUBLISH)
@@ -278,8 +289,9 @@ void web_jsx::app_core::prepare_console_response(int argc, char *argv[], bool ir
 	if (exec_path->find_last_of("\\") == std::string::npos) {
 		exec_path->append("\\");
 	}
+	exec_path->append("web_jsx.exe");
 	int param_start = 1;
-	if (ireq == true) {
+	if (is_internal_request == TRUE) {
 		param_start = 2;
 	}
 	const char*may_be_path = const_cast<const char*>(argv[param_start]);
@@ -298,7 +310,7 @@ void web_jsx::app_core::prepare_console_response(int argc, char *argv[], bool ir
 		js_stream << may_be_path;
 	}
 	else {
-		auto scrip_path = new std::string(root_dir->c_str());
+		std::string* scrip_path = new std::string(root_dir->c_str());
 		scrip_path->append(may_be_path);
 		const char* scrip_path_c = scrip_path->c_str();
 		if (__file_exists(scrip_path_c) == false) {
@@ -307,29 +319,35 @@ void web_jsx::app_core::prepare_console_response(int argc, char *argv[], bool ir
 			fflush(stdout);
 			return;
 		}
-		_free_obj(scrip_path);
 		sow_web_jsx::js_write_console_header(js_stream);
-		size_t ret = sow_web_jsx::read_file(may_be_path, js_stream, false);
+		size_t ret = sow_web_jsx::read_file(scrip_path_c, js_stream, false);
 		if (ret == std::string::npos) {
 			std::cout << "Unable to read file : " << scrip_path_c;
 			std::stringstream().swap(js_stream);
-			_free_obj(root_dir); _free_obj(exec_path);
+			_free_obj(root_dir); _free_obj(exec_path); _free_obj(scrip_path);
 			fflush(stdout);
 			return;
 		}
+		_free_obj(scrip_path);
 	}
 	//sow_web_jsx::js_write_console_footer(js_stream);
 	std::vector<char*>* argumnets = new std::vector<char*>();
 	get_args(argc, argv, *argumnets);
-	auto arg_array = new std::string("");
+	std::string* arg_array = new std::string();
 	json_array_stringify_s(*argumnets, *arg_array);
-	auto script_source = new std::string(js_stream.str());
+	std::string* script_source = new std::string(js_stream.str());
 	std::stringstream().swap(js_stream);
 	auto ctx = new std::map<std::string, std::string>();
 	std::map<std::string, std::string>& global = *ctx;
-	global["app_path"] = const_cast<const char*>(argv[0]);
-	global["app_dir"] = exec_path->c_str();
-	global["is_interactive"] = ireq == true ? "0" : "1";
+
+	std::string*ex_dir = new std::string();
+	std::string*ex_name = new std::string();
+	request_file_info(*exec_path, *ex_dir, *ex_name);
+	ex_dir->append("\\");
+	global["app_path"] = exec_path->c_str();
+	global["app_dir"] = ex_dir->c_str();
+	global["app_name"] = ex_name->c_str();
+	global["is_interactive"] = is_internal_request == TRUE ? "0" : "1";
 	global["path"] = get_env_c("path");
 	global["root_dir"] = root_dir->c_str();
 	global["arg"] = arg_array->c_str();
@@ -341,6 +359,7 @@ void web_jsx::app_core::prepare_console_response(int argc, char *argv[], bool ir
 	sow_web_jsx::js_compiler::run_async(exec_path->c_str(), script_source->c_str(), *ctx);
 	_free_obj(ctx); _free_obj(argumnets); _free_obj(script_source);
 	_free_obj(root_dir); _free_obj(arg_array); _free_obj(exec_path);
+	_free_obj(ex_dir); _free_obj(ex_name);
 	fflush(stdout);
 }
 void web_jsx::app_core::free_app_info(app_ex_info * aei) {

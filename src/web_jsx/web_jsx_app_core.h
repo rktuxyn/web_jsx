@@ -27,7 +27,7 @@ namespace web_jsx {
 		void run__js_scrip(const char* content_type, std::string&root_dir, const app_ex_info aei, req_method&method, template_result& tr);
 		void prepare_response(const char* content_type, const char*path_translated, const app_ex_info aei, req_method&method, const char* path_info);
 #endif//!FAST_CGI_APP
-		void prepare_console_response(int argc, char *argv[], bool ireq);
+		void prepare_console_response(int argc, char *argv[], int ireq);
 		void free_app_info(app_ex_info*aei);
 	}
 }

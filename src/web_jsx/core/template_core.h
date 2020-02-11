@@ -11,9 +11,6 @@
 #if !defined(_template_core_h)
 #	define _template_core_h
 #	include "web_jsx_global.h"
-#	include "template_marger.h"
-#	include "template_reader.h"
-#	include "script_tag_parser.h"
 namespace sow_web_jsx {
 	namespace template_core {
 		int process_template(

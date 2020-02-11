@@ -29,7 +29,7 @@ int main(int argc, char* argv[], char* envp[]) {
 			if (strcmp(f_parm, "fcgi") == 0) {
 				return _handle_request(const_cast<const char*>(argv[2]), TRUE);
 			}
-			_console_request(argc, argv, false);
+			_console_request(argc, argv, FALSE);
 			return EXIT_SUCCESS;
 		}
 		print_info();
@@ -37,12 +37,12 @@ int main(int argc, char* argv[], char* envp[]) {
 	}
 	if (argc > 1) {
 		const char* f_parm = const_cast<const char*>(argv[1]);
-		if (strcmp(f_parm, "I_REQ") == 0) {
+		if (strcmp(f_parm, "internal_request") == 0) {
 			f_parm = const_cast<const char*>(argv[2]);
 			if (strcmp(f_parm, "fcgi") == 0) {
 				return _handle_request(const_cast<const char*>(argv[3]), TRUE);
 			}
-			_console_request(argc, argv, true);
+			_console_request(argc, argv, TRUE);
 			return EXIT_SUCCESS;
 		}
 		if (strcmp(f_parm, "fcgi") == 0) {
@@ -66,10 +66,11 @@ int handle_request(const char* path, int is_spath) {
 		std::cout << "Please add web_jsx bin path into environment variable Path!!!\r\n";
 		fflush(stdout);
 	}
+
 #else
 	const char* exec_path_c = get_env_c("web_jsx");
 	if (strlen(exec_path_c) == 0) {
-		exec_path->clear(); delete exec_path;
+		_free_obj(exec_dir);
 		std::cout << "Please add web_jsx bin path into environment variable Path!!!\r\n";
 		fflush(stdout);
 		return ret;
@@ -79,10 +80,14 @@ int handle_request(const char* path, int is_spath) {
 #if defined(__WEB_JSX_PUBLISH)
 	else {
 #endif//!__WEB_JSX_PUBLISH
-	ret = web_jsx::fcgi_request::request_handler(exec_path->c_str(), path, is_spath);
+		if (exec_path->find_last_of("\\") == std::string::npos) {
+			exec_path->append("\\");
+		}
+		exec_path->append("web_jsx.exe");
+		ret = web_jsx::fcgi_request::request_handler(exec_path->c_str(), path, is_spath);
 #if defined(__WEB_JSX_PUBLISH)
 	}
 #endif//!__WEB_JSX_PUBLISH
-	exec_path->clear(); delete exec_path;
+	_free_obj(exec_path);
 	return ret;
 }

@@ -29,6 +29,11 @@
 #	define DATA_READ_CHUNK 16384
 #endif//!DATA_READ_CHUNK
 #endif//!FAST_CGI_APP
+
+#define _set_srd(_str, str)\
+_free_obj(_str);\
+_str = new std::string(str);
+
 using namespace sow_web_jsx;
 /*[Help]*/
 std::string* _root_dir = NULL;
@@ -36,19 +41,11 @@ const char* _root_dir_c = NULL;
 std::string* _app_dir = NULL;
 const char* _app_dir_c = NULL;
 void set_root_dir(const char* root_dir) {
-	if (_root_dir != NULL) {
-		_free_obj(_root_dir);
-		_root_dir_c = NULL;
-	}
-	_root_dir = new std::string(root_dir);
+	_set_srd(_root_dir, root_dir);
 	_root_dir_c = _root_dir->c_str();
 }
 void set_app_dir(const char* app_dir) {
-	if (_app_dir != NULL) {
-		_free_obj(_app_dir);
-		_app_dir_c = NULL;
-	}
-	_app_dir = new std::string(app_dir);
+	_set_srd(_app_dir, app_dir);
 	_app_dir_c = _app_dir->c_str();
 }
 bool _is_interactive = false;
@@ -60,7 +57,7 @@ std::vector<std::string>* _cookies = NULL;
 std::vector<std::string>* _http_status = NULL;
 /*[/Help]*/
 void jsx_file_bind(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx) {
-	v8::Local<v8::FunctionTemplate> tpl = v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+	v8::Local<v8::FunctionTemplate> jsx_file_tmplate = v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* iso = args.GetIsolate();
 		if (!args.IsConstructCall()) {
 			iso->ThrowException(v8::Exception::TypeError(
@@ -77,31 +74,33 @@ void jsx_file_bind(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx) {
 				v8_str(iso, "Mood required!!!")));
 			return;
 		}
-		v8::String::Utf8Value utf_abs_path_str(iso, args[0]);
-		v8::String::Utf8Value utf_mood_str(iso, args[1]);
-		//sow_web_jsx::make_object<jsx_file>(iso, args.This(), *utf_abs_path_str, *utf_mood_str);
+		native_string utf_abs_path_str(iso, args[0]);
+		native_string utf_mood_str(iso, args[1]);
 		v8::Local<v8::Object> obj = args.This();
 		std::string* abs_path = new std::string(_root_dir_c);
-		sow_web_jsx::get_server_map_path(*utf_abs_path_str, *abs_path);
-		jsx_file* xx = new jsx_file(abs_path->c_str(), *utf_mood_str);
+		sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
+		jsx_file* xx = new jsx_file(abs_path->c_str(), utf_mood_str.c_str());
 		obj->SetInternalField(0, v8::External::New(iso, xx));
 		v8::Persistent<v8::Object, v8::CopyablePersistentTraits<v8::Object>> pobj(iso, obj);
 		pobj.SetWeak<jsx_file*>(&xx, [](const v8::WeakCallbackInfo<jsx_file*>& data) {
 			delete[] data.GetParameter();
 		}, v8::WeakCallbackType::kParameter);
-		_free_obj(abs_path);
+		_free_obj(abs_path); utf_abs_path_str.clear(); utf_mood_str.clear();
 	});
-	tpl->SetClassName(v8_str(isolate, "file"));
-	tpl->InstanceTemplate()->SetInternalFieldCount(1);
-	v8::Local<v8::ObjectTemplate> prototype = tpl->PrototypeTemplate();
+	jsx_file_tmplate->SetClassName(v8_str(isolate, "file"));
+	jsx_file_tmplate->InstanceTemplate()->SetInternalFieldCount(1);
+	v8::Local<v8::ObjectTemplate> prototype = jsx_file_tmplate->PrototypeTemplate();
 	// Add object properties to the prototype
 	// Methods, Properties, etc.
 	prototype->Set(isolate, "read", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* iso = args.GetIsolate();
 		jsx_file* jf = sow_web_jsx::unwrap<jsx_file>(args);
-		if (jf->err != 0) {
-			iso->ThrowException(v8::Exception::TypeError(
-				v8_str(iso, "Unable to create or open the file!!!")));
+		if (jf->has_error() == TRUE) {
+			throw_js_error(iso, jf->get_last_error());
+			return;
+		}
+		if (jf->is_flush() == TRUE) {
+			throw_js_error(iso, "Already flush this file!!!");
 			return;
 		}
 		int read_len = 1024;
@@ -112,7 +111,7 @@ void jsx_file_bind(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx) {
 		}
 		std::string* out = new std::string();
 		size_t out_len = jf->read(read_len, *out);
-		if (is_error_code(out_len) == FALSE) {
+		if (is_error_code(out_len) == TRUE) {
 			args.GetReturnValue().Set(v8_str(iso, out->c_str()));
 		}
 		_free_obj(out);
@@ -120,42 +119,38 @@ void jsx_file_bind(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx) {
 	prototype->Set(isolate, "write", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* iso = args.GetIsolate();
 		jsx_file* jf = sow_web_jsx::unwrap<jsx_file>(args);
-		if (jf->err != 0) {
-			iso->ThrowException(v8::Exception::TypeError(
-				v8_str(iso, "Unable to create or open the file!!!")));
+		if (jf->has_error() == TRUE) {
+			throw_js_error(iso, jf->get_last_error());
 			return;
 		}
-		if (jf->is_flush == 1) {
-			iso->ThrowException(v8::Exception::TypeError(
-				v8_str(iso, "Already flush this file!!!")));
+		if (jf->is_flush() == TRUE) {
+			throw_js_error(iso, "Already flush this file!!!");
 			return;
 		}
-		v8::String::Utf8Value utf_str(iso, args[0]);
-		size_t ret = jf->write(*utf_str);
-		if (ret > 0) {
-			args.GetReturnValue().Set(v8::Number::New(iso, (double)ret));
-			return;
+		native_string utf_str(iso, args[0]);
+		size_t ret = jf->write(utf_str.c_str()); utf_str.clear();
+		if (is_error_code(ret) == TRUE) {
+			throw_js_error(iso, jf->get_last_error());
 		}
-		iso->ThrowException(v8::Exception::TypeError(
-			v8_str(iso, "Unable to write data to file!!!")));
+		else {
+			args.GetReturnValue().Set(v8::Integer::New(iso, static_cast<int>(ret)));
+		}
 		return;
 	}));
 	prototype->Set(isolate, "flush", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* iso = args.GetIsolate();
 		jsx_file* jf = sow_web_jsx::unwrap<jsx_file>(args);
-		if (jf->err != FALSE) {
-			iso->ThrowException(v8::Exception::TypeError(
-				v8_str(iso, "Unable to create or open the file!!!")));
+		if (jf->has_error() == TRUE) {
+			throw_js_error(iso, jf->get_last_error());
 			return;
 		}
-		if (jf->is_flush == TRUE) {
-			iso->ThrowException(v8::Exception::TypeError(
-				v8_str(iso, "Already flush this file!!!")));
+		if (jf->is_flush() == TRUE) {
+			throw_js_error(iso, "Already flush this file!!!");
 			return;
 		}
 		jf->flush();
 	}));
-	ctx->Set(isolate, "file", tpl);
+	ctx->Set(isolate, "file", jsx_file_tmplate);
 }
 void v8_gc(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	args.GetIsolate()->LowMemoryNotification();
@@ -211,9 +206,9 @@ void get_req_process_info(v8::Local<v8::Context> ctx, v8::Isolate* isolate, v8::
 	if (_is_cli == false) {
 		//Internal request defined
 		if (pri.arg.empty())
-			pri.arg = "I_REQ";
+			pri.arg = "internal_request";
 		else
-			pri.arg = "I_REQ " + pri.arg;
+			pri.arg = "internal_request " + pri.arg;
 	}
 	/*if (pri.arg.empty())
 		pri.arg = "I_REQ";
@@ -310,20 +305,22 @@ void native_create_process(const v8::FunctionCallbackInfo<v8::Value>& args) {
 				else
 					pri->dw_creation_flags = CREATE_NO_WINDOW;
 			}
-			if (pri->dw_creation_flags == CREATE_NO_WINDOW)
-				pri->wait_for_exit = -1;
+			if (pri->dw_creation_flags == CREATE_NO_WINDOW)pri->wait_for_exit = -1;
 			std::string().swap(ptype);
 			ret = sow_web_jsx::create_process(pri);
 		}
 		else {
+			//ret = spawn_uv_child_process(*pri);
 			pri->wait_for_exit = -1;
 			v8::Persistent<v8::Function> cb;
 			cb.Reset(isolate, v8::Local<v8::Function>::Cast(js_reader));
 			v8::Local<v8::Object>global = args.Holder();
 			v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate, cb);
-			ret = sow_web_jsx::read_child_process(pri, [&](long i, const char* buff) {
+			//std::cout << "Creating child process and reading data..."  << std::endl;
+			ret = sow_web_jsx::read_child_process(pri, [&](size_t i, const char* buff) {
+				//std::cout << "Reading data from pipe:" << buff << std::endl;
 				v8::Handle<v8::Value> arg[2] = {
-					v8::Number::New(isolate, i),
+					v8::Number::New(isolate, static_cast<double>(i)),
 					v8_str(isolate, buff)
 				};
 				callback->Call(ctx, global, 2, arg);
@@ -354,7 +351,6 @@ void native_create_process(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	default:break;
 	}
 	args.GetReturnValue().Set(v8::Number::New(isolate, ret));
-	//throw_js_error(isolate, std::string("ret" + std::to_string(ret) + "arg:" + pri->arg + "; start_in:" + pri->start_in + "; process_name:" + pri->process_name + "; process_path:" + pri->process_path).c_str());
 
 }
 ///Create new child process
@@ -453,12 +449,12 @@ void native_exists_file(const v8::FunctionCallbackInfo<v8::Value>& args) {
 			v8_str(isolate, "File absolute path required!!!")));
 		return;
 	}
-	v8::String::Utf8Value utf_abs_path_str(isolate, args[0]);
+	native_string utf_abs_path_str(isolate, args[0]);
 	std::string* abs_path = new std::string(_root_dir_c);
-	sow_web_jsx::get_server_map_path(*utf_abs_path_str, *abs_path);
+	sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
 	int ret = 0;
 	if (__file_exists(abs_path->c_str()) == false) ret = 1;
-	_free_obj(abs_path);
+	_free_obj(abs_path); utf_abs_path_str.clear();
 	args.GetReturnValue().Set(v8::Boolean::New(isolate, ret > 0));
 }
 void native_write_file(const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -3391,7 +3387,46 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_console_context(v8::Isol
 	v8_global->Set(isolate, "__clear", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		delete _root_dir; _root_dir = NULL;
 	}));
-	//
+	v8_global->Set(isolate, "stderr", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		if (!_is_interactive)return;
+		v8::Isolate* isolate = args.GetIsolate();
+		if (args.Length() <= 0) {
+			throw_js_error(isolate, "Argument required!!!");
+			return;
+		}
+		if (args[0]->IsNullOrUndefined()) {
+			fprintf(stdout, "%", "undefined");
+			return;
+		}
+		if (!args[0]->IsString()) {
+			throw_js_error(isolate, "Formeted string required!!!");
+			return;
+		}
+		native_string utf_msg_str(isolate, args[0]);
+		sow_web_jsx::fprintf_stderr(utf_msg_str.c_str());
+		utf_msg_str.clear();
+		return;
+	}));
+	v8_global->Set(isolate, "stdout", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		if (!_is_interactive)return;
+		v8::Isolate* isolate = args.GetIsolate();
+		if (args.Length() <= 0) {
+			throw_js_error(isolate, "Argument required!!!");
+			return;
+		}
+		if (args[0]->IsNullOrUndefined()) {
+			fprintf(stdout, "%", sow_web_jsx::to_char_str(isolate, args[0]));
+			return;
+		}
+		if (!args[0]->IsString()) {
+			throw_js_error(isolate, "Formeted string required!!!");
+			return;
+		}
+		native_string utf_msg_str(isolate, args[0]);
+		sow_web_jsx::fprintf_stdout(utf_msg_str.c_str());
+		utf_msg_str.clear();
+		return;
+	}));
 	v8_global->Set(isolate, "print", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		if (!_is_interactive)return;
 		v8::Isolate* isolate = args.GetIsolate();
@@ -3400,7 +3435,7 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_console_context(v8::Isol
 			return;
 		}
 		if (args[0]->IsNullOrUndefined()) {
-			throw_js_error(isolate, "String Required!!!");
+			std::cout << sow_web_jsx::to_char_str(isolate, args[0]) << std::endl;
 			return;
 		}
 		if (args[0]->IsString()) {

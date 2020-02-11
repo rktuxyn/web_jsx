@@ -10,7 +10,9 @@ void sow_web_jsx::format__path(std::string&str) {
 	str = std::regex_replace(str, std::regex("(?:/)"), "\\");
 }
 void sow_web_jsx::get_dir_from_path (const std::string& path_str, std::string&dir) {
+	dir.clear();
 	size_t found = path_str.find_last_of("/\\");
+	if (found == std::string::npos)return;
 	dir = path_str.substr(0, found);
 }
 //\r\n
@@ -90,9 +92,17 @@ std::string sow_web_jsx::extract_between(
 
 	return result;
 }
-#if !defined(_FSTREAM_)
-#include <fstream>// std::ifstream
-#endif//!_FSTREAM_
+int sow_web_jsx::fprintf_stdout(const char* msg){
+	int rec = fprintf(stdout, "%s\n", msg);
+	fflush(stdout);
+	return rec;
+}
+int sow_web_jsx::fprintf_stderr(const char* msg){
+	int rec = fprintf(stderr, "%s\n", msg);
+	fflush(stderr);
+	return rec;
+}
+#	include <fstream>
 size_t sow_web_jsx::read_file(const char* absolute_path, std::stringstream& ssstream, bool check_file_exists) {
 	//size_t r_length = -1;
 	std::ifstream* file_stream = new std::ifstream(absolute_path, std::ifstream::binary);
@@ -106,7 +116,7 @@ size_t sow_web_jsx::read_file(const char* absolute_path, std::stringstream& ssst
 	std::streamoff totalSize = file_stream->tellg();
 	size_t total_len = (size_t)totalSize;
 	file_stream->seekg(0, std::ios::beg);//Back to begain of stream
-	if (total_len == std::string::npos || total_len == 0)return total_len;
+	if (total_len == std::string::npos || total_len == 0)return TRUE;
 	do {
 		if (!file_stream->good())break;
 		char* in;

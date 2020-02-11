@@ -11,9 +11,7 @@ using namespace sow_web_jsx;
 extern "C" {
 #endif
 	bool is_empty_char(const char* val) {
-		if (((val != NULL) && (val[0] == '\0')) || val == NULL)
-			return true;
-		return false;
+		return (val == NULL || strlen(val) == 0);
 	}
 	void ntemplate_parse_x(parser_settings& ps, template_result& rsinf) {
 		if (is_empty_char(ps.dir)) {
