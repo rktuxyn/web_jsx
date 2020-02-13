@@ -21,20 +21,23 @@
 #	define _ERROR             -1
 #endif
 
+#if !defined(_swap_str)
 #define _swap_str(str)\
 str.clear();\
 std::string().swap(str)
+#endif//!_swap_str
 
 using namespace sow_web_jsx;
 std::shared_ptr<std::vector<v8::Persistent<v8::Object, v8::CopyablePersistentTraits<v8::Object>>>> _module_map = NULL;
-//std::shared_ptr<std::vector<v8::Persistent<v8::Object>>>_module_map = NULL;
-int _is_loaded = FALSE;
-int is_active_module(std::string module_info) {
+int _is_loaded = FALSE, _try_to_load = TRUE;
+int is_active_module(const std::string module_info) {
 	if (module_info.empty())return FALSE;
 	if (module_info.find("#") != std::string::npos)return FALSE;//comented module...
 	return TRUE;
 }
-std::istream& get_line(std::ifstream& is, std::string& t) {
+std::istream& get_line(
+	std::ifstream& is, std::string& t
+) {
 	t.clear();
 	std::streambuf* sb = is.rdbuf();
 	for (;;) {
@@ -54,10 +57,12 @@ std::istream& get_line(std::ifstream& is, std::string& t) {
 		}
 	}
 }
-int prepare_native_module(v8::Isolate* isolate, 
+int prepare_native_module(
+	v8::Isolate* isolate, 
 	const char* app_dir,
 	const char* root_dir
 ){
+	_try_to_load = FALSE;//No need to try agin in current context
 	std::string ex_path(root_dir);
 	ex_path.append("module.cfg");
 	if (__file_exists(ex_path.c_str()) == false) {
@@ -69,19 +74,17 @@ int prepare_native_module(v8::Isolate* isolate,
 			std::string err("module.cfg not found in web_jsx app directory... App Dir:");
 			err.append(app_dir);
 			throw_js_error(isolate, err.c_str());
-			err.clear(); std::string().swap(err);
+			_swap_str(ex_path); _swap_str(err);
 			return FALSE;
 		}
 	}
 	
-	std::ifstream file;
-	file.open(ex_path, std::ofstream::out | std::ofstream::binary);
-	ex_path.clear();
+	std::ifstream* file = new std::ifstream(ex_path, std::ofstream::out | std::ofstream::binary);
 	_swap_str(ex_path);
 	std::string line, path;
 	//const char* module_dirc = app_dir.c_str();
 	do {
-		get_line(file, line);
+		get_line(*file, line);
 		if (is_active_module(line) == FALSE)continue;
 		path = app_dir;
 		path.append(line);
@@ -93,7 +96,7 @@ int prepare_native_module(v8::Isolate* isolate,
 				}
 				path = "Unable to load native module-> " + line;
 				throw_js_error(isolate, path.c_str());
-				file.close(); std::string().swap(path);
+				file->close(); delete file; _swap_str(path); _swap_str(line);
 				return FALSE;
 			}
 			if (_is_loaded == FALSE) {
@@ -110,21 +113,20 @@ int prepare_native_module(v8::Isolate* isolate,
 			path.append("Root dir-> ");
 			path.append(app_dir);
 			throw_js_error(isolate, path.c_str());
-			file.close(); _swap_str(path); _swap_str(line);
+			file->close(); delete file; _swap_str(path); _swap_str(line);
 			if (_is_loaded == TRUE) {
 				swjsx_module::clean_native_module();
 			}
 			return FALSE;
 		}
 		path.clear();
-	} while (!file.eof());
+	} while (!file->eof());
 	_swap_str(path); _swap_str(line);
+	file->close();
+	delete file;
 	return _is_loaded;
 }
-//int object_extend(v8::Local<v8::Value> value) {
-//	return FALSE;
-//}
-void add_to_js_global_internal(
+void object_extend_internal(
 	v8::Isolate* isolate,
 	v8::Local<v8::Context>ctx,
 	v8::Local<v8::Object> js_this, 
@@ -137,6 +139,14 @@ void add_to_js_global_internal(
 		if (!key->IsString())continue;
 		v8::Local<v8::Value> value = target->Get(ctx, key).ToLocalChecked();
 		if (value->IsNullOrUndefined())continue;
+		if (value->IsObject() && !value->IsFunction()) {
+			v8::Local<v8::Value> next = js_this->Get(ctx, key).ToLocalChecked();
+			if (!next->IsNullOrUndefined() && next->IsObject() && !next->IsFunction()) {
+				//deep extend here...
+				object_extend_internal(isolate, ctx, v8::Local<v8::Object>::Cast(next), v8::Local<v8::Object>::Cast(value));
+				continue;
+			}
+		}
 		js_this->Set(ctx, key, value);
 	}
 }
@@ -145,7 +155,7 @@ void swjsx_module::scope_to_js_global(v8::Isolate* isolate, v8::Local<v8::Contex
 	v8::Local<v8::Object> js_this = context->Global()->GetPrototype().As<v8::Object>();
 	for (auto itr = _module_map->begin(); itr != _module_map->end(); ++itr) {
 		v8::Local<v8::Object> target = v8::Local<v8::Object>::New(isolate, (*itr));
-		add_to_js_global_internal(isolate, context, js_this, target);
+		object_extend_internal(isolate, context, js_this, target);
 	}
 }
 void swjsx_module::implimant_native_module(
@@ -159,6 +169,7 @@ void swjsx_module::implimant_native_module(
 		scope_to_js_global(isolate, isolate->GetCurrentContext());
 		return;
 	}
+	if (_try_to_load == FALSE)return;
 	if (prepare_native_module(isolate, app_dir, root_dir) == FALSE)return;
 	scope_to_js_global(isolate, isolate->GetCurrentContext());
 }

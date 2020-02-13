@@ -4,13 +4,14 @@
 * Copyrights licensed under the New BSD License.
 * See the accompanying LICENSE file for terms.
 */
-#	include "web_jsx_global.h"
 #	include "runtime_compiler.h"
 #	include <libplatform/libplatform.h>
-#	include "native_wrapper.h"
-#	include <uv.h>
+#	include "web_jsx_global.h"
 #	include "web_jsx_exp.h"
 #	include "../util.h"
+#	include "v8_util.h"
+#	include <uv.h>
+#	include "native_wrapper.h"
 //7:34 PM 12/8/2019
 typedef struct {
 	v8::Persistent<v8::String>source;
@@ -115,10 +116,7 @@ void sow_web_jsx::runtime_compiler(const v8::FunctionCallbackInfo<v8::Value>& ar
 	}
 	if (task_type == 0) {
 		web_extension ext = (web_extension)(int)config->Get(ctx, v8_str(isolate, "extension")).ToLocalChecked()->ToNumber(isolate)->Value();
-		if ( ext == web_extension::JS
-			|| ext == web_extension::JSXH
-			|| ext == web_extension::WJSXH
-		) {
+		if (ext == JS || ext == JSXH || ext == WJSXH ) {
 			native_string path(isolate, config->Get(ctx, v8_str(isolate, "full_path")).ToLocalChecked());
 			if (path.is_empty()) {
 				if (awlf->is_async == true) {
@@ -150,15 +148,16 @@ void sow_web_jsx::runtime_compiler(const v8::FunctionCallbackInfo<v8::Value>& ar
 			awlf->source.Reset(isolate, v8_str(isolate, source_str.c_str()));
 			source_str.clear(); std::string().swap(source_str);
 		}
-		else if (ext == web_extension::JSX
-			|| ext == web_extension::WJSX) {
+		else if (ext == JSX || ext == WJSX) {
 			parser_settings* ps = new parser_settings();
 			template_result* tr = new template_result();
 			native_string root_dir(isolate, config->Get(ctx, v8_str(isolate, "root_dir")).ToLocalChecked());
 			native_string page_path(isolate, config->Get(ctx, v8_str(isolate, "page_path")).ToLocalChecked());
-			ps->dir = root_dir.get_string().data();
-			ps->page_path = page_path.get_string().data();
+			ps->dir = root_dir.c_str();
+			ps->page_path = page_path.c_str();
 			::ntemplate_parse_x(*ps, *tr);
+			root_dir.clear(); page_path.clear();
+			delete ps;
 			if (tr->is_error == true) {
 				if (awlf->is_async == true) {
 					//args.GetReturnValue().Set(resolver->GetPromise());
@@ -167,7 +166,7 @@ void sow_web_jsx::runtime_compiler(const v8::FunctionCallbackInfo<v8::Value>& ar
 				else {
 					isolate->ThrowException(v8::Exception::Error(v8_str(isolate, tr->err_msg.c_str())));
 				}
-				delete ps; delete tr; delete awlf; config.Clear();
+				delete tr; delete awlf; config.Clear();
 				return;
 			}
 			if (!tr->is_script_template) {
@@ -179,13 +178,13 @@ void sow_web_jsx::runtime_compiler(const v8::FunctionCallbackInfo<v8::Value>& ar
 					args.GetReturnValue().Set(v8_str(isolate, tr->t_source.c_str()));
 				}
 				tr->t_source.clear();
-				delete ps; delete tr; delete awlf; config.Clear();
+				delete tr; delete awlf; config.Clear();
 				return;
 			}
 			tr->t_source = "function create_context( context ) {\n" + tr->t_source + "\n};";
 			awlf->source.Reset(isolate, v8_str(isolate, tr->t_source.c_str()));
-			tr->t_source.clear();
-			delete ps; delete tr;
+			tr->t_source.clear(); std::string().swap(tr->t_source);
+			delete tr;
 		}
 		else {
 			if (awlf->is_async == true) {

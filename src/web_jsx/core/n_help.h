@@ -10,6 +10,7 @@
 #if !defined(_n_help_h)
 #	define _n_help_h
 #	include "v8_util.h"
+#	include <string>
 namespace sow_web_jsx {
 	enum response_status {
 		OK = 200,
@@ -23,6 +24,8 @@ namespace sow_web_jsx {
 		INTERNAL_SERVER_ERROR = 500,
 		NOT_IMPLEMENTED = 501
 	};
+	void string_to_hex(const std::string& input, std::string& output);
+	void hex_to_string(const std::string& input, std::string& output);
 	class n_help {
 	public:
 		static void add_http_status(std::vector<std::string>&http_status, std::string&values);

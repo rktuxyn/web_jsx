@@ -28,13 +28,21 @@ namespace sow_web_jsx {
 	namespace wrapper {
 		void response_body_flush(bool end_req);
 		void clear_cache();
+		_export_wjsx void clear_cache(int clean_body, int clean_root);
 		_export_wjsx const char* get_root_dir();
 		_export_wjsx const char* get_app_dir();
 		_export_wjsx int is_cli();
 		_export_wjsx int is_flush();
+		_export_wjsx int set_flush_status(int flush);
 		_export_wjsx void add_header(const char*key, const char*value);
 		_export_wjsx std::stringstream& get_body_stream();
 		_export_wjsx int is_http_status_ok();
+		_export_wjsx int is_gzip_encoding();
+		_export_wjsx int flush_http_status();
+		_export_wjsx int set_binary_output();
+		_export_wjsx int set_binary_mode_in();
+		_export_wjsx void flush_header();
+		_export_wjsx void flush_cookies();
 		v8::Local<v8::ObjectTemplate> get_context(v8::Isolate * isolate, std::map<std::string, std::map<std::string, std::string>>& ctx);
 		v8::Local<v8::ObjectTemplate> get_console_context(v8::Isolate * isolate, std::map<std::string, std::string>&ctx);
 		v8::Local<v8::ObjectTemplate> create_v8_context_object(v8::Isolate* isolate);

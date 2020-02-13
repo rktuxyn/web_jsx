@@ -39,6 +39,7 @@ int sow_web_jsx::jsx_file::is_flush()const {
 size_t jsx_file::read(int len, std::string& out) {
 	if (this->_is_flush == TRUE)return -1;
 	if (
+		_file_mode == jsx_file_mode::f_append ||
 		_file_mode == jsx_file_mode::f_read ||
 		_file_mode == jsx_file_mode::f_read_write
 		) {
@@ -81,9 +82,18 @@ size_t jsx_file::open(const char* path, const char* mode) {
 		this->panic("Unable to open/create file...");
 	}
 	else {
-		fseek(this->_fstream, 0, SEEK_END);//Go to end of stream
-		_total_length = ftell(this->_fstream);
-		rewind(this->_fstream);//Back to begain of stream
+		if (
+			_file_mode == jsx_file_mode::f_append ||
+			_file_mode == jsx_file_mode::f_read ||
+			_file_mode == jsx_file_mode::f_read_write
+			) {
+			fseek(this->_fstream, 0, SEEK_END);//Go to end of stream
+			_total_length = ftell(this->_fstream);
+			rewind(this->_fstream);//Back to begain of stream
+		}
+		else {
+			_total_length = 0;
+		}
 	}
 #else
 	errno_t err = fopen_s(&this->_fstream, path, mode);

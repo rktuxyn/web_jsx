@@ -10,7 +10,8 @@
 #endif//!_MSC_VER
 #if !defined(_native_module_h)
 #	define _native_module_h
-#	include "v8_util.h"
+#	include <v8.h>
+#	include <string>
 
 typedef enum {
 	NATIVE = 1,
@@ -18,14 +19,6 @@ typedef enum {
 	NO_EXT = 3,
 	_UNKNOWN = -1
 }typeof_module;
-#if !(defined(_WIN32)||defined(_WIN64)) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
-typedef void* h_get_proc_iddl;
-typedef void* h_module;
-#else
-typedef HINSTANCE h_get_proc_iddl;
-typedef HMODULE h_module;
-#endif//!_WIN32
-typedef void(*web_jsx_native_module)(v8::Handle<v8::Object>target);
 namespace sow_web_jsx {
 	typeof_module get_module_type(const std::string& path_str);
 	void require_native(

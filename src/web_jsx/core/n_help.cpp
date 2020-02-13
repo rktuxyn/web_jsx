@@ -225,3 +225,32 @@ void n_help::write_header(std::map<std::string, std::string>& header) {
 	std::cout << H_POWERED_BY << ":" << H_POWERED_BY_VAL << H_N_L;
 	return;
 }
+//https://stackoverflow.com/questions/3381614/c-convert-string-to-hexadecimal-and-vice-versa
+void sow_web_jsx::string_to_hex(const std::string& input, std::string& output){
+	static const char* const lut = "0123456789ABCDEF";
+	size_t len = input.length();
+	output.reserve(2 * len);
+	for (size_t i = 0; i < len; ++i) {
+		const unsigned char c = input[i];
+		output.push_back(lut[c >> 4]);
+		output.push_back(lut[c & 15]);
+	}
+	return;
+}
+void sow_web_jsx::hex_to_string(const std::string& input, std::string& output) {
+	static const char* const lut = "0123456789ABCDEF";
+	size_t len = input.length();
+	if (len & 1) throw std::invalid_argument("odd length");
+	output.reserve(len / 2);
+	for (size_t i = 0; i < len; i += 2) {
+		char a = input[i];
+		const char* p = std::lower_bound(lut, lut + 16, a);
+		if (*p != a) throw std::invalid_argument("not a hex digit");
+
+		char b = input[i + 1];
+		const char* q = std::lower_bound(lut, lut + 16, b);
+		if (*q != b) throw std::invalid_argument("not a hex digit");
+		output.push_back((char)((p - lut) << 4) | (char)(q - lut));
+	}
+	return;
+}
