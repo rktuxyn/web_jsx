@@ -183,20 +183,24 @@ int sow_web_jsx::process_is_running(DWORD dwPid) {
 	_close_handle(hProcess);
 	return ret;
 }
+
 int sow_web_jsx::terminate_process(DWORD dwPid) {
 	HANDLE explorer;
 	explorer = OpenProcess(PROCESS_ALL_ACCESS, false, dwPid);
-	int ret = -1;
+	int ret = FALSE;
 	if (!(explorer == INVALID_HANDLE_VALUE || explorer == NULL)) {
 		DWORD le = GetLastError();
-		if (le == ERROR_ACCESS_DENIED)return -501;
-		if (le == ERROR_INVALID_PARAMETER)return -500;
-		TerminateProcess(explorer, 1);
-		ret = 1;
+		if (le == ERROR_ACCESS_DENIED)ret = -501;
+		if (le == ERROR_INVALID_PARAMETER)ret = -500;
+		if (ret == FALSE) {
+			TerminateProcess(explorer, 1);
+			ret = 1;
+		}
 		_close_handle(explorer);
 	}
-	return ret;
+	return ret == FALSE ? -1 : ret;
 }
+
 DWORD sow_web_jsx::current_process_id() {
 	return ::GetCurrentProcessId();
 }
