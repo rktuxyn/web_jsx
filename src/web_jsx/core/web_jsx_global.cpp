@@ -374,27 +374,22 @@ char* sow_web_jsx::read_file(const char* absolute_path, bool check_file_exists =
 			return new char[8]{ "INVALID" };
 		}
 	}
-	try {
-		FILE*stream;
-		errno_t err;
-		err = fopen_s(&stream, absolute_path, "rb");
-		if (err != 0)return new char[8]{ "INVALID" };
-		fseek(stream, 0, SEEK_END);//Go to end of stream
-		size_t size = ftell(stream);
-		rewind(stream);//Back to begain of stream
-		char *chars = new char[size + 1];
-		chars[size] = '\0';
-		for (size_t i = 0; i < size;) {
-			i += fread(&chars[i], 1, size - i, stream);
-			if (ferror(stream)) {
-				fclose(stream);
-				return new char[8]{ "INVALID" };
-			}
+	FILE* stream;
+	errno_t err = fopen_s(&stream, absolute_path, "rb");
+	if (err != 0)return new char[8]{ "INVALID" };
+	fseek(stream, 0, SEEK_END);//Go to end of stream
+	size_t size = ftell(stream);
+	rewind(stream);//Back to begain of stream
+	char* chars = new char[size + 1];
+	chars[size] = '\0';
+	for (size_t i = 0; i < size;) {
+		i += fread(&chars[i], 1, size - i, stream);
+		if (ferror(stream)) {
+			fclose(stream);
+			return new char[8]{ "INVALID" };
 		}
-		fclose(stream);
-		stream = NULL;
-		return chars;
-	} catch (...) {
-		return new char[8]{ "INVALID" };
 	}
+	fclose(stream);
+	stream = NULL;
+	return chars;
 }

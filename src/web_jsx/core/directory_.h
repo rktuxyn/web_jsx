@@ -11,6 +11,12 @@
 #	define directory__h
 #	include "std_wrapper.hpp"
 #	include <vector>
+#if !defined(_free_obj)
+#	define _free_obj(obj)\
+while(obj){\
+	obj->clear();delete obj;obj = NULL;\
+}
+#endif//!_free_obj
 //3:21 PM 12/24/2018
 namespace sow_web_jsx {
 	int read_directory_files(const char* name, std::vector<char*>&directory);

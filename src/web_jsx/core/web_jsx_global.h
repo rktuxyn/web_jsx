@@ -89,6 +89,12 @@ while(obj){\
 	obj->clear();delete obj;obj = NULL;\
 }
 #endif//!_free_obj
+#if !defined(_free_char)
+#	define _free_char(obj)\
+while(obj){\
+	delete[] obj; obj = NULL;\
+}
+#endif//!_free_char
 //template<class _stream>
 //size_t get_sizeof_stream(_stream&strm) {
 //	strm.seekg(0, std::ios::end);//Go to end of stream
