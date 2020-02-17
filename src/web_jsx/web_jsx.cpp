@@ -4,42 +4,97 @@
 * Copyrights licensed under the New BSD License.
 * See the accompanying LICENSE file for terms.
 */
-//Required https://www.microsoft.com/en-ph/download/details.aspx?id=48145
-//Visual C++ Redistributable for Visual Studio 2015 
 #if defined(FAST_CGI_APP)
-#if !defined(_web_jsx_fcgi_h)
-#include "web_jsx_fcgi.h"
-#endif//!_web_jsx_cgi_h
+#	include "web_jsx_fcgi.h"
+#	define SOCKET_ARG	"fcgi"
 #endif//FAST_CGI_APP
-#if !defined(_web_jsx_cgi_h)
-#include "web_jsx_cgi.h"
-#endif//!_web_jsx_cgi_h
-int main(int argc, char *argv[], char*envp[]) {
+#	include "web_jsx_cgi.h"
+
+int handle_request(const char* path, int is_spath);
+#	define _handle_request handle_request
+
+#if !defined(_console_request)
+#	define _console_request web_jsx::app_core::prepare_console_response
+#endif//!_console_request
+
+int main(int argc, char* argv[], char* envp[]) {
 	std::ios::sync_with_stdio(false);
 	if (is_user_interactive() == TRUE) {
 		if (argc > 1) {
-			try {
-				web_jsx_cgi::app_core::prepare_console_response(argc, argv, false);
-			} catch (std::exception&e) {
-				std::cout << "\r\n";
-				std::cout << e.what() << "\r\n";
+#if defined(FAST_CGI_APP)
+			const char* f_parm = const_cast<const char*>(argv[1]);
+			if (strcmp(f_parm, SOCKET_ARG) == 0) {
+				return _handle_request(const_cast<const char*>(argv[2]), TRUE);
 			}
+#endif//!FAST_CGI_APP
+			_console_request(argc, argv, FALSE);
 			return EXIT_SUCCESS;
 		}
 		print_info();
 		return EXIT_SUCCESS;
 	}
 	if (argc > 1) {
-		const char*interactive_req = const_cast<const char*>(argv[1]);
-		if (strcmp(interactive_req, "I_REQ") == 0) {
-			web_jsx_cgi::app_core::prepare_console_response(argc, argv, true);
+		const char* f_parm = const_cast<const char*>(argv[1]);
+		if (strcmp(f_parm, "internal_request") == 0) {
+#if defined(FAST_CGI_APP)
+			f_parm = const_cast<const char*>(argv[2]);
+			if (strcmp(f_parm, SOCKET_ARG) == 0) {
+				return _handle_request(const_cast<const char*>(argv[3]), TRUE);
+			}
+#endif//!FAST_CGI_APP
+			_console_request(argc, argv, TRUE);
 			return EXIT_SUCCESS;
 		}
-	}
-	//12:28 AM 1/28/2019
 #if defined(FAST_CGI_APP)
-	return web_jsx_cgi::fcgi_request::request_handler(const_cast<const char*>(argv[0]));
-#else
-	return web_jsx_cgi::cgi_request::request_handler(const_cast<const char*>(argv[0]));
+		if (strcmp(f_parm, SOCKET_ARG) == 0) {
+			return _handle_request(const_cast<const char*>(argv[2]), TRUE);
+		}
 #endif//!FAST_CGI_APP
+	}
+	return _handle_request(NULL, FALSE);
+}
+
+int handle_request(const char* path, int is_spath) {
+	int ret = EXIT_FAILURE;
+	if (is_spath == TRUE) {
+		if (path == NULL || strlen(path) == 0) {
+			std::cout << "Host address should not left blank!!!\r\n";
+			fflush(stdout);
+			return ret;
+		}
+	}
+	std::string* exec_path = new std::string();
+#if defined(__WEB_JSX_PUBLISH)
+	if (get_env_path(*exec_path) < 0) {
+		std::cout << "Please add web_jsx bin path into environment variable Path!!!\r\n";
+		fflush(stdout);
+	}
+#else
+	const char* exec_path_c = get_env_c("web_jsx");
+	if (strlen(exec_path_c) == 0) {
+		_free_obj(exec_path);
+		std::cout << "Please add web_jsx bin path into environment variable Path!!!\r\n";
+		fflush(stdout);
+		return ret;
+	}
+	exec_path->append(exec_path_c);
+#endif//!__WEB_JSX_PUBLISH
+#if defined(__WEB_JSX_PUBLISH)
+	else {
+#endif//!__WEB_JSX_PUBLISH
+		if (exec_path->find_last_of("\\") == std::string::npos) {
+			exec_path->append("\\");
+		}
+		exec_path->append("web_jsx.exe");
+#if defined(FAST_CGI_APP)
+		ret = web_jsx::fcgi_request::request_handler(exec_path->c_str(), path, is_spath);
+#else
+		web_jsx::cgi_request::request_handler(exec_path->c_str());
+		ret = EXIT_SUCCESS;
+#endif
+#if defined(__WEB_JSX_PUBLISH)
+	}
+#endif//!__WEB_JSX_PUBLISH
+	_free_obj(exec_path);
+	return ret;
 }

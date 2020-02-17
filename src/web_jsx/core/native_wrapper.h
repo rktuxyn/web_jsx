@@ -9,69 +9,44 @@
 #pragma once
 #endif//!_MSC_VER
 #if !defined(_native_wrapper_h)
-#define _native_wrapper_h
-#if !defined(_v8_util_h)
-#include "v8_util.h"
-#endif//!v8_util_h
-#if !defined(_npgsql_h)
-#include <npgsql.h>
-#endif//!_npgsql_h
-#if !defined(_npgsql_tools_h)
-#include <npgsql_tools.h>
-#endif//_npgsql_tools_h
-#if !defined(_http_request_h)
-#include "http_request.h"
-#endif//_http_request_h
-#if !defined(_smtp_client_h)
-#include "smtp_client.h"
-#endif//_smtp_client_h
-#if !defined(_pdf_generator_h)
-#include "pdf_generator.h"
-#endif//_npgsql_tools_h
-#if !defined(_crypto_h)
-#include "crypto.h"
-#endif//!_crypto_h
-#if !defined(directory__h)
-#include "directory_.h"
-#endif//!directory__h
-#if !defined(_zgzip_h)
-#include "zgzip.hpp"
-#endif//!_zgzip_h
-#if defined(__client_build)
-#if !defined(_encryption_h)
-#include "encryption.h"
-#endif//!_encryption_h
-#endif//__client_build
-#if defined(FAST_CGI_APP)
-#if !defined(DATA_READ_CHUNK)
-#define DATA_READ_CHUNK 8192
-#endif//!DATA_READ_CHUNK
-#if !defined(_FCGI_STDIO)
-#include <fcgi_stdio.h>
-#endif//!_FCGI_STDIO
-#if !defined(FCGIO_H)
-#include "fcgio.h"
-#endif//!FCGIO_H
-#else
-#if !defined(DATA_READ_CHUNK)
-#define DATA_READ_CHUNK 16384
-#endif//!DATA_READ_CHUNK
-#endif//!FAST_CGI_APP
-#if !defined(_n_help_h)
-#include "n_help.h"
-#endif//_n_help_h
-#if !defined(_jsx_file_h)
-#include "jsx_file.h"
-#endif//_n_help_h
+#	define _native_wrapper_h
+#	include "v8_util.h"
 #pragma warning (disable : 4231)
 #pragma warning(disable : 4996)
+
+#if defined(__WJSX_SHARED)
+#if !defined(_export_wjsx)
+#	define _export_wjsx __declspec(dllexport)
+#endif//!jsx_export
+#else
+#if !defined(_export_wjsx)
+#	define _export_wjsx
+#endif//!_export_wjsx
+#endif//__WJSX_SHARED
+
 namespace sow_web_jsx {
 	namespace wrapper {
-		void response_body_flush();
+		void response_body_flush(bool end_req);
 		void clear_cache();
-		const char* get_root_dir();
-		v8::Local<v8::Context> get_context(v8::Isolate * isolate, std::map<std::string, std::map<std::string, std::string>>& ctx);
-		v8::Local<v8::Context> get_console_context(v8::Isolate * isolate, std::map<std::string, std::string>&ctx);
+		_export_wjsx void clear_cache(int clean_body, int clean_root);
+		_export_wjsx const char* get_root_dir();
+		_export_wjsx const char* get_app_dir();
+		_export_wjsx int is_cli();
+		_export_wjsx int is_flush();
+		_export_wjsx int set_flush_status(int flush);
+		_export_wjsx void add_header(const char*key, const char*value);
+		_export_wjsx std::stringstream& get_body_stream();
+		_export_wjsx int is_http_status_ok();
+		_export_wjsx int is_gzip_encoding();
+		_export_wjsx int flush_http_status();
+		_export_wjsx int set_binary_output();
+		_export_wjsx int set_binary_mode_in();
+		_export_wjsx void flush_header();
+		_export_wjsx void flush_cookies();
+		v8::Local<v8::ObjectTemplate> get_context(v8::Isolate * isolate, std::map<std::string, std::map<std::string, std::string>>& ctx);
+		v8::Local<v8::ObjectTemplate> get_console_context(v8::Isolate * isolate, std::map<std::string, std::string>&ctx);
+		v8::Local<v8::ObjectTemplate> create_v8_context_object(v8::Isolate* isolate);
+		//2:02 PM 1/7/2020
 	}
 };
 #endif//!_native_wrapper_h

@@ -1,0 +1,2 @@
+call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\MSBuild.exe" web_jsx.vcxproj /p:Configuration=Release;Platform=x64 /nologo /p:CLToolExe=clang-cl.exe /p:CLToolPath=D:\C++\clang\llvm-build\Release+Asserts\bin
+pause

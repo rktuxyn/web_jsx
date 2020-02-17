@@ -8,26 +8,15 @@
 #pragma once
 #endif//!_MSC_VER
 #if !defined(directory__h)
-#define directory__h
-#if !defined(_std_wrapper_h)
-#include "std_wrapper.hpp"
-#endif//!std_wrapper_h
-#if !defined(_REGEX_)
-#include <regex>
-#endif// !_REGEX_
-#if !(defined(_WIN32)||defined(_WIN64)) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
-#error Not Implemented
-#else
-#if !defined(_WINDOWS_)
-#include <windows.h>
-#endif//!_WINDOWS_
-#if !defined(DIRENT_H)
-#include<dirent.h>
-#endif//DIRENT_H
-#if !defined(_INC_DIRECT)
-#include <direct.h>
-#endif//!_INC_DIRECT
-#endif//_WIN32||_WIN64
+#	define directory__h
+#	include "std_wrapper.hpp"
+#	include <vector>
+#if !defined(_free_obj)
+#	define _free_obj(obj)\
+while(obj){\
+	obj->clear();delete obj;obj = NULL;\
+}
+#endif//!_free_obj
 //3:21 PM 12/24/2018
 namespace sow_web_jsx {
 	int read_directory_files(const char* name, std::vector<char*>&directory);
@@ -37,6 +26,7 @@ namespace sow_web_jsx {
 	int delete_dir(const char * name);
 	int dir_exists(const char* dir);
 	int create_directory(const char* dir);
+	int rename_dir(const char* old_dir, const char* new_dir);
 
 };
 #endif//directory__h

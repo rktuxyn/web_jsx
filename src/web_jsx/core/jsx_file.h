@@ -9,27 +9,40 @@
 #pragma once
 #endif//!_MSC_VER
 #if !defined(_jsx_file_h)
-#define _jsx_file_h
-#if !defined(_web_jsx_global_h)
-#include "web_jsx_global.h"
-#endif//!_web_jsx_global_h
-#if !defined(_v8_util_h)
-#include "v8_util.h"
-#endif//_v8_util_h
-#if !defined(INCLUDE_V8_H_)
-#include <v8.h>
-#endif // !INCLUDE_V8_H_
+#	define _jsx_file_h
+//#	include	<fstream>
+#	include <io.h> 
+#	include <string>
 namespace sow_web_jsx {
+	enum jsx_file_mode {
+		f_read = 0x0001,
+		f_write = 0x0002,
+		f_append = 0x0003,
+		f_read_write = 0x0004,
+		f_ukn = -1
+	};
 	class jsx_file {
 	private:
+		int _errorc;
+		int _is_flush;
+		char* _internal_error;
+		//std::ifstream* _read_stream;
+		//std::ofstream* _write_stream;
 		FILE*_fstream;
+		jsx_file_mode _file_mode;
+		size_t _total_length;
+		int panic(const char* error);
 	public:
-		int is_flush;
-		errno_t err;
-		jsx_file(const char*, const char*);
-		const char* read();
+		explicit jsx_file(const char*, const char*);
+		int is_flush()const;
+		size_t open(const char* path, const char* mode);
+		size_t read(int len, std::string&out);
+		int eof();
 		size_t write(const char*);
 		void flush();
+		const char* get_last_error();
+		void clear();
+		int has_error()const;
 		~jsx_file();
 	};
 }

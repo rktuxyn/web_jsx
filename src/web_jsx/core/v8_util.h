@@ -8,27 +8,40 @@
 #pragma once
 #endif//!_MSC_VER
 #if !defined(_v8_util_h)
-#define _v8_util_h
-#if !defined(INCLUDE_V8_H_)
-#include <v8.h>
-#endif // !INCLUDE_V8_H_
-#if !defined(_web_jsx_global_h)
-#include "web_jsx_global.h"
-#endif //!_web_jsx_global_h
-#if !defined(_t_async_h)
-#include "t_async.h"
-#endif//!_t_async_h
-#include <libplatform/v8-tracing.h>
+#	define _v8_util_h
+#	include <v8.h>
+#	include "web_jsx_global.h"
+#	include "t_async.h"
+#	include <libplatform/v8-tracing.h>
 #pragma warning (disable : 4231)
 #pragma warning(disable : 4996)
-//#pragma comment(lib, "v8_init.lib")
-//#pragma comment(lib, "v8_initializers.lib")
-//#pragma comment(lib, "v8_libbase.lib")
-//#pragma comment(lib, "v8_libplatform.lib")
-//#pragma comment(lib, "v8_libsampler.lib")
-//#pragma comment(lib, "v8_snapshot.lib")
-//#pragma comment(lib, "icui18n.lib")
-//#pragma comment(lib, "icuuc.lib")
+#if !defined(TYPE_CHECK)
+#define TYPE_CHECK(T, S)                                       \
+  while (false) {                                              \
+    *(static_cast<T* volatile*>(0)) = static_cast<S*>(0);      \
+  }
+#endif//!TYPE_CHECK
+
+#if !defined(v8_str)
+#define v8_str(isolate, x)\
+	v8::String::NewFromUtf8(isolate, x, v8::NewStringType::kNormal).ToLocalChecked()
+#endif//!v8_str
+
+#if !defined(throw_js_error)
+#define throw_js_error(isolate, err)\
+	isolate->ThrowException(v8::Exception::Error(v8_str(isolate, err)))
+#endif//!throw_js_error
+
+#if defined(__WJSX_SHARED)
+#if !defined(_export_wjsx)
+#	define _export_wjsx __declspec(dllexport)
+#endif//!jsx_export
+#else
+#if !defined(_export_wjsx)
+#	define _export_wjsx
+#endif//!_export_wjsx
+#endif//__WJSX_SHARED
+
 namespace sow_web_jsx {
 	typedef struct {
 		int is_flush;
@@ -38,43 +51,62 @@ namespace sow_web_jsx {
 		std::vector<std::string>* http_status;
 		std::string*root_dir;
 	}internal_global_ctx;
+	_export_wjsx bool to_boolean(v8::Isolate* isolate, v8::Local<v8::Value> value);
+	_export_wjsx void garbage_collect(v8::Isolate* isolat);
 	const char* _toCharStr(const v8::String::Utf8Value& value);
 #define T_CHAR _toCharStr
 	const char* to_char_str(v8::Isolate* isolate, v8::Local<v8::Value> x);
-	v8::Local<v8::String> v8_str(v8::Isolate* isolate, const char* x);
-	void set__exception(v8::Isolate * isolate, v8::TryCatch*try_catch, template_result&tr);
-	const char* set__exception(v8::Isolate * isolate, v8::TryCatch*try_catch);
-	void get_server_map_path(const char* req_path, std::string&output);
-	v8::Local<v8::String> concat_msg(v8::Isolate* isolate, const char* a, const char*b);
-	v8::Handle<v8::Object> native_write_filei(v8::Isolate* isolate, const std::string abs_path, const char* buffer);
+	void read_line(const v8::FunctionCallbackInfo<v8::Value>& args);
+	//v8::Local<v8::String> v8_str(v8::Isolate* isolate, const char* x);
+	void set__exception(
+		v8::Isolate * isolate, 
+		v8::TryCatch*try_catch, 
+		template_result&tr
+	);
+	_export_wjsx void set__exception(
+		v8::Isolate * isolate, 
+		v8::TryCatch*try_catch, 
+		std::string& error_str
+	);
+	_export_wjsx void get_server_map_path(const char* req_path, std::string&output);
+	_export_wjsx int get_prop_value(
+		v8::Isolate* isolate, v8::Local<v8::Context> ctx,
+		v8::Local<v8::Object> v8_obj, const char* prop, std::string& out
+	);
+	_export_wjsx int v8_object_get_number(v8::Isolate* isolate, v8::Local<v8::Context>ctx, v8::Local<v8::Object>obj, const char* prop);
+	_export_wjsx v8::Local<v8::String> concat_msg(v8::Isolate* isolate, const char* a, const char*b);
+	v8::Handle<v8::Object> native_write_filei(v8::Isolate* isolate, const char* abs_path, const char* buffer);
+	class _export_wjsx native_string {
+	private:
+		char* _data;
+		size_t _length;
+		char _utf8ValueMemory[sizeof(v8::String::Utf8Value)];
+		v8::String::Utf8Value* _utf8Value = nullptr;
+		bool _invalid = false;
+	public:
+		native_string(v8::Isolate* isolate, const v8::Local<v8::Value>& value);
+		bool is_invalid(v8::Isolate* isolate);
+		std::string_view get_string();
+		//std::string get_string();
+		const char* c_str();
+		bool is_empty();
+		size_t size();
+		/**
+		 * Sets the handle to be empty. is_empty() will then return true.
+		 */
+		void clear();
+		~native_string();
+	};
 	template <typename T>
 	T* unwrap(const v8::FunctionCallbackInfo<v8::Value>& args) {
-		auto self = args.Holder();
-		auto wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
+		v8::Local<v8::Object> self = args.Holder();
+		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(self->GetInternalField(0));
 		return static_cast<T*>(wrap->Value());
 	}
 	template <typename T, typename... Args>
 	void make_object(v8::Isolate* isolate, v8::Handle<v8::Object> object, Args&&... args) {
 		T* xx = new T(std::forward<Args>(args)...);
 		object->SetInternalField(0, v8::External::New(isolate, xx));
-		/*v8::Persistent<v8::Object, v8::CopyablePersistentTraits<v8::Object>> pobj(isolate, object);
-		pobj.SetWeak<T*>(&xx, [](const v8::WeakCallbackInfo<T*> &data) {
-			delete[] data.GetParameter();
-		}, v8::WeakCallbackType::kParameter);*/
-		//
-
-		/*v8::Persistent<v8::Object> obj;
-		obj.Reset(isolate, object);
-		obj.SetWeak<T>(xx, [](const v8::WeakCallbackInfo<void*> &data) {
-			delete[] data.GetParameter();
-		}, v8::WeakCallbackType::kParameter);*/
-		//auto obj = v8::Persistent<v8::Object>::New(isolate, object);
-		/*object.MakeWeak(xx, [](v8::Persistent<v8::Value> objs, void* data) {
-			auto x = static_cast<T*>(data);
-			delete x;
-			//objs.Dispose();
-			//objs.Clear();
-		});*/
 		return;
 	}
 	/*

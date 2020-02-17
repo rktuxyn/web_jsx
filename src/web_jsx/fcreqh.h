@@ -9,26 +9,18 @@
 #pragma once
 #endif//!_MSC_VER
 #if !defined(_fcreqh_h)
-#define _fcreqh_h
-#if !defined(_web_jsx_app_global_h)
-#include "web_jsx_app_global.h"
-#endif//!_web_jsx_app_global_h
+#	define _fcreqh_h
+#	include "web_jsx_app_global.h"
 #if defined(FAST_CGI_APP)
-#if !defined(_util_h)
-#include "util.h"
-#endif//!_util_h
-#if !defined(_FCGI_STDIO)
-#include <fcgi_stdio.h>
-#endif//!_FCGI_STDIO
-#if !defined(FCGIO_H)
-#include "fcgio.h"
-#endif//!FCGIO_H
-#include "fcgi_config.h"  // HAVE_IOSTREAM_WITHASSIGN_STREAMBUF
-namespace web_jsx_cgi {
+#	include "util.h"
+#	include <fcgi_stdio.h>
+#	include <fcgio.h>
+#	include <fcgi_config.h>  // HAVE_IOSTREAM_WITHASSIGN_STREAMBUF
+namespace web_jsx {
 	namespace fcgi_request {
 		const char * freq_env_c(const char* var_name, char **envp);
 		void get_global_obj(std::map<std::string, std::string>& global, std::string&root_dir, const char*app_path, const char*env_path, char **envp);
-		void not_found_response(const char* content_type, char **envp);
+		void not_found_response(const char* content_type, char **envp, const char* ex_dir);
 		void get_request_object(std::map<std::string, std::string>&request, std::map<std::string, std::string>&query_string, req_method&method, const char*content_type, char **envp);
 	}
 }
