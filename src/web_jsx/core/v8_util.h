@@ -10,9 +10,11 @@
 #if !defined(_v8_util_h)
 #	define _v8_util_h
 #	include <v8.h>
-#	include "web_jsx_global.h"
+#	include "template_info.h"
 #	include "t_async.h"
 #	include <libplatform/v8-tracing.h>
+#	include <map>
+#	include <sstream>
 #pragma warning (disable : 4231)
 #pragma warning(disable : 4996)
 #if !defined(TYPE_CHECK)

@@ -11,8 +11,8 @@
 #if !defined(_web_jsx_app_core_h)
 #	define _web_jsx_app_core_h
 #	include "util.h"
-#	include "fcreqh.h"
-#	include "creqh.h"
+#	include <string>
+#	include "core/template_info.h"
 typedef struct {
 	std::string* ex_dir;
 	std::string* ex_name;

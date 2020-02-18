@@ -103,20 +103,6 @@ while(obj){\
 //	return (size_t)totalSize;
 //}
 typedef struct {
-	std::string t_source;
-	std::string err_msg;
-	bool is_error;
-	bool is_script;
-	bool is_script_template;
-	bool remove_new_line;
-	bool is_strict;
-} template_result;
-typedef struct {
-	const char* page_path;
-	const char* dir;
-	const char* data;
-} parser_settings;
-typedef struct {
 	std::string start_in;
 	int wait_for_exit;
 	std::string process_name;
@@ -126,7 +112,6 @@ typedef struct {
 	int dw_creation_flags;
 	short show_window;
 }process_info;
-
 namespace sow_web_jsx {
 	void format__path(std::string&str);
 	void get_dir_from_path (const std::string& path_str, std::string&dir);

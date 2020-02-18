@@ -7,6 +7,8 @@
 #	include "script_tag_parser.h"
 #	include "template_marger.h"
 #	include "template_reader.h"
+#	include "template_info.h"
+#	include "std_wrapper.hpp"
 using namespace sow_web_jsx;
 void sow_web_jsx::add_common_func(std::stringstream& js_stream) {
 	js_stream << "String.format = function ( format ) {if ( typeof ( format ) !== 'string' ) throw new Error(\"String required!!!\"); let args = Array.prototype.slice.call( arguments, 1 ); let len = args.length - 1; return format.replace( /{(\\d+)}/g, function ( match, number )  { let index = parseInt( number ); if ( isNaN( index ) ) throw new Error( \"Invalid param index!!!\" ); if ( index > len ) throw new Error( \"Index should not greater than \" + len + format + JSON.stringify( args ) ); return typeof ( args[index] ) !== 'undefined' ? args[number] : \"\"; } ); };\n";

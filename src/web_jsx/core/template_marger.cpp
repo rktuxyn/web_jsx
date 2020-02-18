@@ -5,6 +5,7 @@
 * See the accompanying LICENSE file for terms.
 */
 //1:17 PM 1/20/2019
+#	include "web_jsx_global.h"
 #	include "template_marger.h"
 using namespace sow_web_jsx;
 int parse_placeholder_node(

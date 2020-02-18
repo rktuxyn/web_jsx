@@ -4,6 +4,7 @@
 * Copyrights licensed under the New BSD License.
 * See the accompanying LICENSE file for terms.
 */
+#	include "web_jsx_global.h"
 #	include "n_help.h"
 using namespace sow_web_jsx;
 //template<class _vct>
@@ -48,7 +49,7 @@ response_status n_help::get_http_response_status(int status_code) {
 	if (status_code == 501)return response_status::NOT_IMPLEMENTED;
 	return response_status::OK;
 }
-BOOL n_help::write_http_status(std::vector<std::string>&http_status, bool check_status = false) {
+int n_help::write_http_status(std::vector<std::string>&http_status, bool check_status = false) {
 	int rec = TRUE;
 	for (size_t i = 0; i < http_status.size(); ++i) {
 		if (rec == TRUE) {
@@ -81,7 +82,7 @@ BOOL n_help::write_http_status(std::vector<std::string>&http_status, bool check_
 	}
 	return rec;
 }
-BOOL n_help::is_binary_response(std::map<std::string, std::string>& header) {
+int n_help::is_binary_response(std::map<std::string, std::string>& header) {
 	if (header.empty())return FALSE;
 	int rec = FALSE;
 	
@@ -97,7 +98,7 @@ BOOL n_help::is_binary_response(std::map<std::string, std::string>& header) {
 	}
 	return rec;
 }
-BOOL n_help::is_gzip_encoding(std::map<std::string, std::string>&header) {
+int n_help::is_gzip_encoding(std::map<std::string, std::string>&header) {
 	if (header.empty())return FALSE;
 	int rec = FALSE;
 	auto it = header.find("Content-Encoding");
@@ -106,7 +107,7 @@ BOOL n_help::is_gzip_encoding(std::map<std::string, std::string>&header) {
 	}
 	return rec;
 }
-BOOL n_help::is_attachment_response(std::map<std::string, std::string>&header) {
+int n_help::is_attachment_response(std::map<std::string, std::string>&header) {
 	if (header.empty())return FALSE;
 	int rec = FALSE;
 	auto it = header.find("x-content-type");

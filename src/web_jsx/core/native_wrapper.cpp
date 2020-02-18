@@ -5,7 +5,9 @@
 * See the accompanying LICENSE file for terms.
 */
 //2:46 AM 11/21/2018
+#	include "web_jsx_global.h"
 #	include "native_wrapper.h"
+#	include "v8_util.h"
 #	include "directory_.h"
 #	include "zgzip.hpp"
 #	include "base64.h"
@@ -26,7 +28,6 @@
 #	define DATA_READ_CHUNK 16384
 #endif//!DATA_READ_CHUNK
 #endif//!FAST_CGI_APP
-
 #define _set_srd(_str, str)\
 _free_obj(_str);\
 _str = new std::string(str);
@@ -283,18 +284,18 @@ void native_create_process(const v8::FunctionCallbackInfo<v8::Value>& args) {
 			v8_str(isolate, "Process info required!!!")));
 		return;
 	}
-	process_info* pri = new process_info();
+	process_info pri;// = new process_info();
 	v8::Local<v8::Context> ctx = isolate->GetCurrentContext();
 	v8::Local<v8::Object> pi = v8::Handle<v8::Object>::Cast(args[0]);
-	get_req_process_info(ctx, isolate, pi, *pri);
+	get_req_process_info(ctx, isolate, pi, pri);
 	int ret = 0;
 	if (_is_cli == false) {
 		//No Child process available in web
 		//SW_SHOWNORMAL
-		pri->show_window = SW_SHOWNORMAL;
-		pri->dw_creation_flags = CREATE_NO_WINDOW;
-		pri->wait_for_exit = -1;
-		ret = sow_web_jsx::create_process(pri);
+		pri.show_window = SW_SHOWNORMAL;
+		pri.dw_creation_flags = CREATE_NO_WINDOW;
+		pri.wait_for_exit = -1;
+		ret = sow_web_jsx::create_process(&pri);
 	}
 	else {
 		v8::Local<v8::Value> js_reader = pi->Get(ctx, v8_str(isolate, "reader")).ToLocalChecked();
@@ -302,26 +303,26 @@ void native_create_process(const v8::FunctionCallbackInfo<v8::Value>& args) {
 			std::string ptype;
 			get_prop_value(ctx, isolate, pi, "process_type", ptype);
 			if (ptype.empty())
-				pri->dw_creation_flags = CREATE_NO_WINDOW;
+				pri.dw_creation_flags = CREATE_NO_WINDOW;
 			else {
 				if (ptype == "CHILD")
-					pri->dw_creation_flags = CREATE_NEW_PROCESS_GROUP;
+					pri.dw_creation_flags = CREATE_NEW_PROCESS_GROUP;
 				else
-					pri->dw_creation_flags = CREATE_NO_WINDOW;
+					pri.dw_creation_flags = CREATE_NO_WINDOW;
 			}
-			if (pri->dw_creation_flags == CREATE_NO_WINDOW)pri->wait_for_exit = -1;
+			if (pri.dw_creation_flags == CREATE_NO_WINDOW)pri.wait_for_exit = -1;
 			std::string().swap(ptype);
-			ret = sow_web_jsx::create_process(pri);
+			ret = sow_web_jsx::create_process(&pri);
 		}
 		else {
 			//ret = spawn_uv_child_process(*pri);
-			pri->wait_for_exit = -1;
+			pri.wait_for_exit = -1;
 			v8::Persistent<v8::Function> cb;
 			cb.Reset(isolate, v8::Local<v8::Function>::Cast(js_reader));
 			v8::Local<v8::Object>global = args.Holder();
 			v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate, cb);
 			//std::cout << "Creating child process and reading data..."  << std::endl;
-			ret = sow_web_jsx::read_child_process(pri, [&](size_t i, const char* buff) {
+			ret = sow_web_jsx::read_child_process(&pri, [&](size_t i, const char* buff) {
 				//std::cout << "Reading data from pipe:" << buff << std::endl;
 				v8::Handle<v8::Value> arg[2] = {
 					v8::Number::New(isolate, static_cast<double>(i)),
@@ -331,12 +332,11 @@ void native_create_process(const v8::FunctionCallbackInfo<v8::Value>& args) {
 			});
 		}
 	}
-	std::string().swap(pri->start_in);
-	std::string().swap(pri->process_name);
-	std::string().swap(pri->process_path);
-	std::string().swap(pri->lp_title);
-	std::string().swap(pri->arg);
-	delete pri;
+	std::string().swap(pri.start_in);
+	std::string().swap(pri.process_name);
+	std::string().swap(pri.process_path);
+	std::string().swap(pri.lp_title);
+	std::string().swap(pri.arg);
 	pi.Clear();
 	if (ret < 0) {
 		switch (ret) {
@@ -1208,9 +1208,6 @@ void gzip_compress_write() {
 	fflush(stdout);
 }
 /*[/zgip]*/
-void attachment_response() {
-	if (write_http_status() < 0)return;
-}
 void bitmap_export(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx) {
 	v8::Local<v8::FunctionTemplate> tpl = v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* isolate = args.GetIsolate();
@@ -1907,7 +1904,7 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_console_context(v8::Isol
 			return;
 		}
 		if (args[0]->IsNullOrUndefined()) {
-			fprintf(stdout, "%", "undefined");
+			fprintf(stdout, "%s", "undefined");
 			return;
 		}
 		if (!args[0]->IsString()) {
@@ -1927,7 +1924,7 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_console_context(v8::Isol
 			return;
 		}
 		if (args[0]->IsNullOrUndefined()) {
-			fprintf(stdout, "%", sow_web_jsx::to_char_str(isolate, args[0]));
+			fprintf(stdout, "%s", sow_web_jsx::to_char_str(isolate, args[0]));
 			return;
 		}
 		if (!args[0]->IsString()) {

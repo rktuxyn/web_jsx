@@ -4,6 +4,7 @@
 * Copyrights licensed under the New BSD License.
 * See the accompanying LICENSE file for terms.
 */
+#	include "core/web_jsx_global.h"
 #	include "creqh.h"
 void web_jsx::cgi_request::get_global_obj(std::map<std::string, std::string>& global, std::string&root_dir, const char*app_path) {
 	replace_back_slash(root_dir);
@@ -15,7 +16,10 @@ void web_jsx::cgi_request::get_global_obj(std::map<std::string, std::string>& gl
 	global["app_path"] = app_path;//get_app_path();
 	global["env_path"] = get_env_c("path");
 }
-void web_jsx::cgi_request::get_request_object(std::map<std::string, std::string>&request, std::map<std::string, std::string>&query_string, req_method&method) {
+void web_jsx::cgi_request::get_request_object(
+	std::map<std::string, std::string>&request, std::map<std::string, std::string>&query_string, 
+	req_method&method
+) {
 	request["method"] = method == req_method::GET ? "GET" : "POST";
 	if (method == req_method::POST) {
 		request["content_length"] = get_env_c("CONTENT_LENGTH");
@@ -28,7 +32,7 @@ void web_jsx::cgi_request::get_request_object(std::map<std::string, std::string>
 		std::string* quer_str = new std::string("");
 		json_obj_stringify(query_string, *quer_str);
 		request["query_string"] = quer_str->c_str();
-		delete quer_str;
+		_free_obj(quer_str);
 	}
 	else {
 		request["query_string"] = "{}";

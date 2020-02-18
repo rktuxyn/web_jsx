@@ -4,7 +4,11 @@
 * Copyrights licensed under the New BSD License.
 * See the accompanying LICENSE file for terms.
 */
+#	include "core/web_jsx_global.h"
 #	include "fcreqh.h"
+#	include <fcgi_stdio.h>
+#	include <fcgio.h>
+#	include <fcgi_config.h>  // HAVE_IOSTREAM_WITHASSIGN_STREAMBUF
 #if defined(FAST_CGI_APP)
 const char * web_jsx::fcgi_request::freq_env_c(const char* var_name, char **envp) {
 	char *env_val = FCGX_GetParam(var_name, envp);

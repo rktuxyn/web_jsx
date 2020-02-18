@@ -5,7 +5,26 @@
 * See the accompanying LICENSE file for terms.
 */
 //9:11 PM 11/18/2018
+#	include "core/web_jsx_global.h"
+#	include "web_jsx_app_global.h"
 #	include "util.h"
+#if !defined(_WIN32) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
+#	include <unistd.h>
+#	define get_current_dir getcwd
+bool is_user_interactive();
+void print_info();
+#else
+#	include <direct.h>
+#define get_current_dir _getcwd
+#if !defined(_WINCON_)
+#	include <Wincon.h>
+#endif//_WINCON_
+#define FOREGROUND_BLACK			0x0000 // text color contains black.
+#define FOREGROUND_YELLOW			0x0006 // text color contains Yellow.
+#define FOREGROUND_DARK_YELLOW		0x0007 // text color contains DarkYellow.
+#define FOREGROUND_LIGHT_GREEN		0XA // text color contains LightGreen.
+#define FOREGROUND_LIGHT_RED		0XC // text color contains LightGreen.
+#endif//!_WIN32
 #if !(defined(_WIN32) || defined(_WIN64)) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
 bool is_user_interactive() {
 	return false;
@@ -31,8 +50,8 @@ void print_info() {
 	std::cout << "*******************************************************";
 }
 #else
-BOOL is_user_interactive() {
-	BOOL bIsUserInteractive = TRUE;
+int is_user_interactive() {
+	int bIsUserInteractive = TRUE;
 	HWINSTA hWinStation = GetProcessWindowStation();
 	if (hWinStation != NULL) {
 		USEROBJECTFLAGS uof = { 0 };

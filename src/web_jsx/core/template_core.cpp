@@ -6,10 +6,10 @@
 */
 //6:45 PM 1/20/2019
 #	include "template_core.h"
+#	include "web_jsx_global.h"
 #	include "template_marger.h"
 #	include "template_reader.h"
 #	include "script_tag_parser.h"
-
 using namespace sow_web_jsx;
 int sow_web_jsx::template_core::process_template(template_result & tr,
 	const char* root_dir,

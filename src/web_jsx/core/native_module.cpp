@@ -7,6 +7,7 @@
 #pragma warning(disable : 4996)
 #	include "native_module.h"
 #	include "v8_util.h"
+#	include "web_jsx_global.h"
 //2:15 PM 1/14/2020
 
 #if !(defined(_WIN32)||defined(_WIN64)) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))

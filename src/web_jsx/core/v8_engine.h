@@ -8,15 +8,17 @@
 #pragma once
 #endif//!_MSC_VER
 #if !defined( _v8_engine_h)
-#define _v8_engine_h
-#include "v8_util.h"
+#	define _v8_engine_h
+//#	include "v8_util.h"
+#	include <v8.h>
+#	include <memory>
 namespace sow_web_jsx {
 	namespace js_compiler {
 		class v8_engine {
 		private:
 			v8::Isolate* _isolate;
 			std::shared_ptr<v8::Platform> _platform;
-			bool _disposed;
+			int _disposed;
 			void create_engine(const char* exec_path);
 		public:
 			explicit v8_engine(const char* exec_path);

@@ -9,9 +9,10 @@
 #endif//!_MSC_VER
 #if !defined( _js_compiler_h)
 #	define _js_compiler_h
-#	include "v8_engine.h"
+#	include "template_info.h"
 #	include <string>
 #	include <map>
+#	include <v8.h>
 namespace sow_web_jsx {
 	namespace js_compiler {
 		int run_script(std::map<std::string, std::map<std::string, std::string>>& ctx, template_result& tr);

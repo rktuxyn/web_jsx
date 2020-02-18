@@ -5,11 +5,13 @@
 * See the accompanying LICENSE file for terms.
 */
 //4:02 PM 2/3/2019
-//#define free_str(str)\
-//str->clear(); delete str;
-
+#	include "core/web_jsx_global.h"
 #	include "web_jsx_app_core.h"
+#	include "fcreqh.h"
+#	include "creqh.h"
 #	include "core/script_tag_parser.h"
+#	include "core/js_compiler.h"
+#	include "core/web_jsx_exp.h"
 void web_jsx::app_core::run__js_scrip(
 	const char * content_type, 
 	std::string & root_dir, const app_ex_info aei, 

@@ -10,7 +10,7 @@
 #endif//!_MSC_VER
 #if !defined(_template_core_h)
 #	define _template_core_h
-#	include "web_jsx_global.h"
+#	include "template_info.h"
 namespace sow_web_jsx {
 	namespace template_core {
 		int process_template(

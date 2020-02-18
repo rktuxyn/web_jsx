@@ -6,8 +6,13 @@
 */
 #	include "v8_engine.h"
 #	include <libplatform/libplatform.h>
-#	include "native_wrapper.h"
-#	include <uv.h>
+#if !defined(FALSE)
+#	define FALSE               0
+#endif//!FALSE
+
+#if !defined(TRUE)
+#	define TRUE                1
+#endif//!FALSE
 void set_v8_flag() {
 	const char* arg[3] = {
 		"--sim_stack_size=20480",
@@ -23,9 +28,18 @@ void set_v8_flag() {
 void sow_web_jsx::js_compiler::v8_engine::create_engine(const char* exec_path) {
 	/*std::string app_dir(exec_path);
 	app_dir.append("\\");*/
-	v8::V8::InitializeICUDefaultLocation(exec_path);
-	v8::V8::InitializeExternalStartupData(exec_path);
-	_platform = v8::platform::NewDefaultPlatform();
+	//v8::V8::InitializeICUDefaultLocation(exec_path);
+	//v8::V8::InitializeExternalStartupData(exec_path);
+	//_platform = v8::platform::NewDefaultPlatform();
+	//_platform = std::move(v8::platform::NewDefaultPlatform(0, v8::platform::IdleTaskSupport::kEnabled));
+	/*v8::StartupData data;
+	data.data = "";
+	data.raw_size = 10;
+	v8::V8::SetNativesDataBlob(&data);
+	v8::V8::SetSnapshotDataBlob(&data);*/
+	_platform = v8::platform::NewDefaultPlatform(0, v8::platform::IdleTaskSupport::kEnabled);
+	//std::unique_ptr<v8::Platform> platform = v8::platform::NewDefaultPlatform(0, v8::platform::IdleTaskSupport::kEnabled);
+	//std::make_unique<v8::Platform> pxn = v8::platform::NewDefaultPlatform();
 	//_platform = platform.get();
 	//v8::V8::InitializePlatform(platform.get());
 	//v8::Platform* platforms = v8::platform::CreateDefaultPlatform();
@@ -45,13 +59,13 @@ void sow_web_jsx::js_compiler::v8_engine::create_engine(const char* exec_path) {
 
 
 sow_web_jsx::js_compiler::v8_engine::v8_engine(const char * exec_path) {
-	_disposed = false;
+	_disposed = FALSE;
 	create_engine(exec_path);
 	//has_context = false;
 }
 
 v8::Isolate * sow_web_jsx::js_compiler::v8_engine::get_current_isolate() {
-	if (_disposed) {
+	if (_disposed == TRUE) {
 		throw new std::runtime_error("Engine already disposed!!!");
 	}
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
@@ -74,15 +88,15 @@ void sow_web_jsx::js_compiler::v8_engine::set_context(v8::Local<v8::Context> ctx
 }*/
 
 void sow_web_jsx::js_compiler::v8_engine::wait_for_pending_task() {
-	if (_disposed)return;
+	if (_disposed == TRUE)return;
 	v8::Platform* platform = _platform.get();
 	while (v8::platform::PumpMessageLoop(platform, _isolate))
 		continue;
 }
 void sow_web_jsx::js_compiler::v8_engine::dispose() {
-	if (_disposed)return;
+	if (_disposed == TRUE)return;
 	//wait_for_pending_task();
-	_disposed = true;
+	_disposed = TRUE;
 	//v8::Local<v8::Context> ctx = v8::Local<v8::Context>::New(_isolate, _context);
 	//ctx->DetachGlobal();
 	//ctx.Clear();
@@ -96,6 +110,5 @@ void sow_web_jsx::js_compiler::v8_engine::dispose() {
 }
 
 sow_web_jsx::js_compiler::v8_engine::~v8_engine() {
-	if (_disposed)return;
 	dispose();
 }

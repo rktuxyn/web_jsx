@@ -7,6 +7,8 @@
 //6:24 PM 1/22/2019
 #	include "v8_util.h"
 #	include <cstring>
+#	include "template_info.h"
+#	include "std_wrapper.hpp"
 namespace sow_web_jsx {
 	bool sow_web_jsx::to_boolean(v8::Isolate* isolate, v8::Local<v8::Value> value) {
 #if V8_MAJOR_VERSION < 7 || (V8_MAJOR_VERSION == 7 && V8_MINOR_VERSION == 0)
@@ -50,7 +52,7 @@ namespace sow_web_jsx {
 				break;
 			}
 		}
-		v8::Local<v8::String>result = v8::String::NewFromUtf8(isolate, const_cast<const char*>(buffer));
+		v8::Local<v8::String>result = v8_str(isolate, const_cast<const char*>(buffer));
 		delete[]buffer; 
 		return result;
 	}
@@ -58,7 +60,7 @@ namespace sow_web_jsx {
 	// function is called. Reads a string from standard input and returns.
 	void sow_web_jsx::read_line(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		if (args.Length() > 0) {
-			args.GetIsolate()->ThrowException(v8::String::NewFromUtf8(args.GetIsolate(), "Unexpected arguments"));
+			args.GetIsolate()->ThrowException(v8_str(args.GetIsolate(), "Unexpected arguments"));
 			return;
 		}
 		args.GetReturnValue().Set(read_line());

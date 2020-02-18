@@ -10,11 +10,9 @@
 #if !defined(_encryption_h)
 #pragma warning(disable : 4996)
 #	define _encryption_h
-#	include "web_jsx_global.h"
 #if defined(WEB_JSX_CLIENT_BUILD)
 #	include <string>
 #	include <unordered_map>
-#	include <algorithm>
 //https://codereview.stackexchange.com/questions/198226/simple-encryption-for-strings?newreg=ae31ff1ca51a4a5bbdcb2aed1bb6c705
 //template class _export_wjsx std::unordered_map<char, char>;
 class Cipher {

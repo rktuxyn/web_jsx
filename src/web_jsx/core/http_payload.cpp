@@ -7,6 +7,8 @@
 //2:00 PM 12/24/2019
 #	include "http_payload.h"
 #	include "web_jsx_global.h"
+#	include "v8_util.h"
+#	include <libplatform/libplatform.h>
 #	include <stdlib.h>/* srand, rand */
 #	include <cstdlib>
 #	include <ctime>
@@ -244,7 +246,7 @@ http_payload::http_payload(
 	else {
 		panic("No payload found in current request", -1);
 	}
-	_content_type = content_type;
+	_content_type = std::string(content_type);
 }
 void http_payload::clear() {
 	if (_is_disposed)return;
@@ -330,9 +332,11 @@ int http_payload::read_line(_func cb) {
 		return panic("Posted data already read end... Please use get_body instead.", -1);
 	}
 	if (SET_BINARY_MODE_IN() == -1) {
-		std::string err("ERROR: while converting cin to binary:");
-		err.append(strerror(errno));
-		return panic(err.c_str(), -10);
+		std::string* err=new std::string("ERROR: while converting cin to binary:");
+		err->append(strerror(errno));
+		panic(err->c_str(), -10);
+		_free_obj(err);
+		return _errc;
 	}
 	_is_read_end = 1;
 	int rec = 0;
@@ -419,11 +423,8 @@ int http_payload::read_all(const char* temp_dir) {
 			file_total_size += read_size;
 			block_size += read_size;
 			if (std::cin.eof()) {
-				//_posted_files->file->set_file_size(static_cast<size_t>(file.tellp()));
 				_posted_files->file->set_file_size(file_total_size);
 				file.flush(); file.close();
-				/*is_saved = true; start = false;
-				file_total_size = 0; block_size = 0;*/
 				break;
 			}
 			else {
@@ -435,16 +436,13 @@ int http_payload::read_all(const char* temp_dir) {
 		}
 		if (std::cin.eof()) {
 			if (start) {
-				//_posted_files->file->set_file_size(static_cast<size_t>(file.tellp()));
 				_posted_files->file->set_file_size(file_total_size);
 				file.flush(); file.close();
 				is_saved = true; file_total_size = 0; //block_size = 0;
 			}
-			//start = false; 
 			break;
 		}
 		if (start) {
-			//_posted_files->file->set_file_size(static_cast<size_t>(file.tellp()));
 			_posted_files->file->set_file_size(file_total_size);
 			file.flush(); file.close();
 			start = false; is_saved = true; file_total_size = 0; block_size = 0;
@@ -526,30 +524,23 @@ int http_payload::read_all() {
 	if (_content_length == 0) {
 		return panic("No payload found in current request", -1);
 	}
-	try {
-		if (this->is_multipart()) {
-			return panic("Multipart not allowed here... Please provide TEMP_DIRECTORY...", -1);
-		}
-		if (SET_BINARY_MODE_IN() == -1) {
-			std::string err("ERROR: while converting cin to binary:");
-			err.append(strerror(errno));
-			return panic(err.c_str(), -10);
-		}
-		_is_read_end = 1;
-		_stream = std::stringstream(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
-		read_payload(_stream, _content_length);
-		size_t size = get_stream_size();
-		if (size == 0 || size == std::string::npos) {
-			return panic("Unable to read payload from current request", -1);
-		}
-		return 1;
+	if (this->is_multipart()) {
+		return panic("Multipart not allowed here... Please provide TEMP_DIRECTORY...", -1);
 	}
-	catch (std::exception& e) {
-		return panic(e.what(), -501);
+	if (SET_BINARY_MODE_IN() == -1) {
+		std::string* err = new std::string("ERROR: while converting cin to binary:");
+		err->append(strerror(errno));
+		panic(err->c_str(), -10); _free_obj(err);
+		return _errc;
 	}
-	catch (...) {
-		return panic("Unknown error...", -501);
+	_is_read_end = 1;
+	_stream = std::stringstream(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
+	read_payload(_stream, _content_length);
+	size_t size = get_stream_size();
+	if (size == 0 || size == std::string::npos) {
+		return panic("Unable to read payload from current request", -1);
 	}
+	return 1;
 }
 bool http_payload::is_multipart() {
 	return _is_multipart != 0;
@@ -570,8 +561,6 @@ int http_payload::panic(const char* error, int code) {
 	size_t len = strlen(error);
 	_internal_error = new char[len + 1];
 	strcpy_s(_internal_error, len, error);
-	/*_internal_error = new char[strlen(error) + 1];
-	strcpy(_internal_error, error);*/
 	_errc = code;
 	return _errc;
 }
@@ -589,6 +578,15 @@ int http_payload::get_body(std::string& body) {
 	body = _stream.str().c_str();
 	return TRUE;
 }
+template<class _my_class>
+_my_class* get_internal_obj(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	_my_class* mc =  static_cast<_my_class*>(args.Holder()->GetAlignedPointerFromInternalField(0));
+	if (mc == NULL) {
+		throw_js_error(args.GetIsolate(), "Internal object disposed...");
+		return NULL;
+	}
+	return mc;
+}
 v8::Local<v8::Object> get_file_obj(v8::Isolate* isolate, http_posted_file* pf) {
 	v8::Local<v8::FunctionTemplate> appTemplate = v8::FunctionTemplate::New(isolate);
 	appTemplate->InstanceTemplate()->SetInternalFieldCount(1);
@@ -603,7 +601,8 @@ v8::Local<v8::Object> get_file_obj(v8::Isolate* isolate, http_posted_file* pf) {
 		native_string absolute_v8_str(isolate, args[0]);
 		std::string std_str(absolute_v8_str.c_str());
 		sow_web_jsx::format__path(std_str);
-		http_posted_file* app = static_cast<http_posted_file*>(args.Holder()->GetAlignedPointerFromInternalField(0));
+		http_posted_file* app = get_internal_obj<http_posted_file>(args);
+		if (app == NULL)return;
 		double ret = app->save_as(std_str.c_str());
 		if (ret > 0) {
 			absolute_v8_str.clear();
@@ -628,8 +627,9 @@ v8::Local<v8::Object> get_file_obj(v8::Isolate* isolate, http_posted_file* pf) {
 		return;
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "get_data", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		http_posted_file* app = get_internal_obj<http_posted_file>(args);
+		if (app == NULL)return;
 		v8::Isolate* isolate = args.GetIsolate();
-		http_posted_file* app = static_cast<http_posted_file*>(args.Holder()->GetAlignedPointerFromInternalField(0));
 		if (app->is_text_content()) {
 			isolate->ThrowException(v8::Exception::Error(v8_str(isolate, "Readable chracter not avilable for this content type.")));
 			return;
@@ -643,38 +643,38 @@ v8::Local<v8::Object> get_file_obj(v8::Isolate* isolate, http_posted_file* pf) {
 		return;
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "get_content_disposition", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		v8::Isolate* isolate = args.GetIsolate();
-		http_posted_file* app = static_cast<http_posted_file*>(args.Holder()->GetAlignedPointerFromInternalField(0));
+		http_posted_file* app = get_internal_obj<http_posted_file>(args);
+		if (app == NULL)return;
 		const char* data = app->get_content_disposition();
-		args.GetReturnValue().Set(v8_str(isolate, data));
+		args.GetReturnValue().Set(v8_str(args.GetIsolate(), data));
 		return;
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "get_file_size", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		v8::Isolate* isolate = args.GetIsolate();
-		http_posted_file* app = static_cast<http_posted_file*>(args.Holder()->GetAlignedPointerFromInternalField(0));
+		http_posted_file* app = get_internal_obj<http_posted_file>(args);
+		if (app == NULL)return;
 		size_t len = app->get_file_size();
-		args.GetReturnValue().Set(v8::Number::New(isolate, static_cast<double>(len)));
+		args.GetReturnValue().Set(v8::Number::New(args.GetIsolate(), static_cast<double>(len)));
 		return;
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "get_name", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		v8::Isolate* isolate = args.GetIsolate();
-		http_posted_file* app = static_cast<http_posted_file*>(args.Holder()->GetAlignedPointerFromInternalField(0));
+		http_posted_file* app = get_internal_obj<http_posted_file>(args);
+		if (app == NULL)return;
 		const char* data = app->get_name();
-		args.GetReturnValue().Set(v8_str(isolate, data));
+		args.GetReturnValue().Set(v8_str(args.GetIsolate(), data));
 		return;
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "get_file_name", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		v8::Isolate* isolate = args.GetIsolate();
-		http_posted_file* app = static_cast<http_posted_file*>(args.Holder()->GetAlignedPointerFromInternalField(0));
+		http_posted_file* app = get_internal_obj<http_posted_file>(args);
+		if (app == NULL)return;
 		const char* data = app->get_file_name();
-		args.GetReturnValue().Set(v8_str(isolate, data));
+		args.GetReturnValue().Set(v8_str(args.GetIsolate(), data));
 		return;
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "get_content_type", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		v8::Isolate* isolate = args.GetIsolate();
-		http_posted_file* app = static_cast<http_posted_file*>(args.Holder()->GetAlignedPointerFromInternalField(0));
+		http_posted_file* app = get_internal_obj<http_posted_file>(args);
+		if (app == NULL)return;
 		const char* data = app->get_content_type();
-		args.GetReturnValue().Set(v8_str(isolate, data));
+		args.GetReturnValue().Set(v8_str(args.GetIsolate(), data));
 		return;
 	}, global));
 
@@ -689,13 +689,11 @@ v8::Local<v8::Object> get_file_obj(v8::Isolate* isolate, http_posted_file* pf) {
 void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsNumber() || args[0]->IsNullOrUndefined()) {
-		isolate->ThrowException(v8::Exception::TypeError(
-			v8_str(isolate, "Contenent length required!!!")));
+		isolate->ThrowException(v8::Exception::TypeError(v8_str(isolate, "Contenent length required!!!")));
 		return;
 	}
 	if (!args[1]->IsString() || args[1]->IsNullOrUndefined()) {
-		isolate->ThrowException(v8::Exception::TypeError(
-			v8_str(isolate, "ContentType required!!!")));
+		isolate->ThrowException(v8::Exception::TypeError(v8_str(isolate, "ContentType required!!!")));
 		return;
 	}
 	v8::Local<v8::FunctionTemplate> appTemplate = v8::FunctionTemplate::New(isolate);
@@ -704,12 +702,12 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "save_to_file", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* isolate = args.GetIsolate();
 		if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
-			isolate->ThrowException(v8::Exception::TypeError(
-				v8_str(isolate, "Directory required!!!")));
+			isolate->ThrowException(v8::Exception::TypeError(v8_str(isolate, "Directory required!!!")));
 			return;
 		}
+		http_payload* app = get_internal_obj<http_payload>(args);
+		if (app == NULL)return;
 		native_string save_dir(isolate, args[0]);
-		http_payload* app = static_cast<http_payload*>(args.Holder()->GetAlignedPointerFromInternalField(0));
 		int len = app->save_to_file(save_dir.c_str()); save_dir.clear();
 		args.GetReturnValue().Set(v8::Number::New(isolate, static_cast<double>(len)));
 		return;
@@ -717,17 +715,17 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "read_line", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* isolate = args.GetIsolate();
 		if (!args[0]->IsFunction() || args[0]->IsNullOrUndefined()) {
-			isolate->ThrowException(v8::Exception::TypeError(
-				v8_str(isolate, "Callback should be a Function instance!!!")));
+			isolate->ThrowException(v8::Exception::TypeError(v8_str(isolate, "Callback should be a Function instance!!!")));
 			return;
 		}
-		http_payload* app = static_cast<http_payload*>(args.Holder()->GetAlignedPointerFromInternalField(0));
+		http_payload* app = get_internal_obj<http_payload>(args);
+		if (app == NULL)return;
 		v8::Persistent<v8::Function> cb;
 		cb.Reset(isolate, v8::Local<v8::Function>::Cast(args[0]));
 		v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate, cb);
 		int ret = app->read_line([&isolate, &callback](const char* data, size_t size) {
 			v8::Local<v8::Value> argv[2] = {
-				v8::String::NewFromUtf8(isolate, data),
+				v8_str(isolate, data),
 				v8::Number::New(isolate, static_cast<double>(size))
 			};
 			callback->Call(isolate->GetCurrentContext(), isolate->GetCurrentContext()->Global(), 2, argv);
@@ -742,7 +740,8 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 		args.GetReturnValue().Set(v8::Number::New(isolate, ret));
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "read_all", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		http_payload* app = static_cast<http_payload*>(args.Holder()->GetAlignedPointerFromInternalField(0));
+		http_payload* app = get_internal_obj<http_payload>(args);
+		if (app == NULL)return;
 		v8::Isolate* isolate = args.GetIsolate();
 		int ret = 0;
 		if (args[0]->IsString()) {
@@ -760,14 +759,16 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 		args.GetReturnValue().Set(v8::Number::New(isolate, ret));
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "is_multipart", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		http_payload* app = static_cast<http_payload*>(args.Holder()->GetAlignedPointerFromInternalField(0));
+		http_payload* app = get_internal_obj<http_payload>(args);
+		if (app == NULL)return;
 		bool ret = app->is_multipart();
 		v8::Isolate* isolate = args.GetIsolate();
 		args.GetReturnValue().Set(v8::Boolean::New(isolate, ret));
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "get_body", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		http_payload* app = get_internal_obj<http_payload>(args);
+		if (app == NULL)return;
 		v8::Isolate* isolate = args.GetIsolate();
-		http_payload* app = static_cast<http_payload*>(args.Holder()->GetAlignedPointerFromInternalField(0));
 		if (app->is_multipart()) {
 			isolate->ThrowException(v8::Exception::Error(v8_str(isolate, "Multipart posted file not allowed.")));
 			return;
@@ -786,13 +787,15 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 		return;
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "has_error", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		http_payload* app = static_cast<http_payload*>(args.Holder()->GetAlignedPointerFromInternalField(0));
+		http_payload* app = get_internal_obj<http_payload>(args);
+		if (app == NULL)return;
 		int ret = app->has_error();
 		v8::Isolate* isolate = args.GetIsolate();
 		args.GetReturnValue().Set(v8::Boolean::New(isolate, ret < 0 ? true : false));
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "total_file", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		http_payload* app = static_cast<http_payload*>(args.Holder()->GetAlignedPointerFromInternalField(0));
+		http_payload* app = get_internal_obj<http_payload>(args);
+		if (app == NULL)return;
 		int ret = app->get_total_file();
 		v8::Isolate* isolate = args.GetIsolate();
 		args.GetReturnValue().Set(v8::Number::New(isolate, ret));
@@ -804,8 +807,8 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 				v8_str(isolate, "Callback should be a Function instance!!!")));
 			return;
 		}
-		http_payload* app = static_cast<http_payload*>(args.Holder()->GetAlignedPointerFromInternalField(0));
-		//v8::Local<v8::Context> ctx = isolate->GetCurrentContext();
+		http_payload* app = get_internal_obj<http_payload>(args);
+		if (app == NULL)return;
 		v8::Persistent<v8::Function> cb;
 		cb.Reset(isolate, v8::Local<v8::Function>::Cast(args[0]));
 		v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate, cb);
@@ -821,15 +824,9 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 		args.GetReturnValue().Set(v8::Number::New(isolate, ret));
 	}, global));
 	appTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(isolate, "release", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		http_payload* app = static_cast<http_payload*>(args.Holder()->GetAlignedPointerFromInternalField(0));
-		if (app == NULL ) {
-			v8::Isolate* isolate = args.GetIsolate();
-			isolate->ThrowException(v8::Exception::Error(
-				v8_str(isolate, "`http_payload` Object already released!!!")));
-			return;
-		}
-		app->clear();
-		delete app;
+		http_payload* app = get_internal_obj<http_payload>(args);
+		if (app == NULL)return;
+		app->clear(); delete app;
 		/* Marks this JS object invalid */
 		args.Holder()->SetAlignedPointerInInternalField(0, nullptr);
 		args.GetReturnValue().Set(args.Holder());
@@ -841,6 +838,7 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 		size_t content_length = static_cast<size_t>(num->Value());
 		native_string ctype(isolate, args[1]);
 		http_payload* hp = new http_payload(ctype.c_str(), content_length);
+		ctype.clear();
 		localApp->SetAlignedPointerInInternalField(0, hp);
 		v8::Persistent<v8::Object, v8::CopyablePersistentTraits<v8::Object>> pobj(isolate, localApp);
 		pobj.SetWeak<http_payload*>(&hp, [](const v8::WeakCallbackInfo<http_payload*>& data) {
@@ -906,7 +904,7 @@ void sow_web_jsx::read_payload(const v8::FunctionCallbackInfo<v8::Value>& args) 
 	v8::Local<v8::Function> callback = v8::Local<v8::Function>::Cast(args[2]);
 	int ret = app->read_line([&isolate, &callback](const char* data, size_t size) {
 		v8::Local<v8::Value> argv[2] = {
-			v8::String::NewFromUtf8(isolate, data),
+			v8_str(isolate, data),
 			v8::Number::New(isolate, static_cast<double>(size))
 		};
 		callback->Call(isolate->GetCurrentContext(), isolate->GetCurrentContext()->Global(), 2, argv);

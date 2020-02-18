@@ -5,7 +5,10 @@
 * See the accompanying LICENSE file for terms.
 */
 //3:46 PM 2/3/2019
+#	include "core/web_jsx_global.h"
 #	include "web_jsx_fcgi.h"
+#	include "fcreqh.h"
+#	include "core/js_compiler.h"
 #if defined(FAST_CGI_APP)
 #	include "core/glb_r.h"
 #	include <fastcgi.h>

@@ -10,7 +10,8 @@
 #endif//!_MSC_VER
 #if !defined(_script_tag_parser_h)
 #	define _script_tag_parser_h
-#	include "web_jsx_global.h"
+#	include "template_info.h"
+#	include <sstream>
 namespace sow_web_jsx {
 	void add_common_func(std::stringstream& stream);
 	void js_write_header(std::stringstream&js_stream);

@@ -7,8 +7,23 @@
 #if defined(FAST_CGI_APP)
 #	include "web_jsx_fcgi.h"
 #	define SOCKET_ARG	"fcgi"
-#endif//FAST_CGI_APP
+#else
 #	include "web_jsx_cgi.h"
+#endif//FAST_CGI_APP
+#	include <iostream>
+#if !defined(FALSE)
+#	define FALSE               0
+#endif//!FALSE
+
+#if !defined(TRUE)
+#	define TRUE                1
+#endif//!FALSE
+#if !defined(_free_obj)
+#	define _free_obj(obj)\
+while(obj){\
+	obj->clear();delete obj;obj = NULL;\
+}
+#endif//!_free_obj
 
 int handle_request(const char* path, int is_spath);
 #	define _handle_request handle_request

@@ -7,7 +7,9 @@
 //2:09 AM 11/18/2018 START
 //4:11 AM 11/18/2018 END
 #	include "web_jsx_cgi.h"
+#	include "core/web_jsx_global.h"
 #	include "web_jsx_app_core.h"
+#	include "creqh.h"
 int web_jsx::cgi_request::request_handler(const char*execute_path) {
 	const char* content_type = get_content_type();
 	const char* path_translated = get_env_c("PATH_TRANSLATED");

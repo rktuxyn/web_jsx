@@ -9,7 +9,9 @@
 #endif//!_MSC_VER
 #if !defined(_n_help_h)
 #	define _n_help_h
-#	include "v8_util.h"
+#	include <vector>
+#	include <map>
+#	include <v8.h>
 #	include <string>
 namespace sow_web_jsx {
 	enum response_status {
@@ -29,7 +31,7 @@ namespace sow_web_jsx {
 	class n_help {
 	public:
 		static void add_http_status(std::vector<std::string>&http_status, std::string&values);
-		static BOOL write_http_status(std::vector<std::string>&http_status, bool check_status);
+		static int write_http_status(std::vector<std::string>&http_status, bool check_status);
 		static response_status get_http_response_status(std::vector<std::string>& http_status);
 		static response_status get_http_response_status(int status_code);
 		static void error_response(
@@ -40,9 +42,9 @@ namespace sow_web_jsx {
 		//https://developer.mozilla.org/en-US/docs/Web/HTTP/Messages
 		static void add_header(std::map<std::string, std::string>&header, const char* key, const char* values);
 		static void remove_header(std::map<std::string, std::string>&header, const char* key);
-		static BOOL is_gzip_encoding(std::map<std::string, std::string>&header);
-		static BOOL is_binary_response(std::map<std::string, std::string>& header);
-		static BOOL is_attachment_response(std::map<std::string, std::string>&header);
+		static int is_gzip_encoding(std::map<std::string, std::string>&header);
+		static int is_binary_response(std::map<std::string, std::string>& header);
+		static int is_attachment_response(std::map<std::string, std::string>&header);
 		static void write_header(std::map<std::string, std::string>&header);
 		static void write_cookies(std::vector<std::string>&cookies);
 		static void v8_object_loop(v8::Isolate* isolate, const v8::Local<v8::Object>v8_obj, std::map<const char*, const char*>&out_put);

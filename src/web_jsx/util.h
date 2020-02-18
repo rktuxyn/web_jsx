@@ -10,30 +10,9 @@
 #endif//!_MSC_VER
 #if !defined(_util_h)
 #	define _util_h
-#	include "web_jsx_app_global.h"
 #	include <string>
 #	include <map>
 #	include <vector>
-#if !defined(_WIN32) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
-#	include <unistd.h>
-#	define get_current_dir getcwd
-bool is_user_interactive();
-void print_info();
-#else
-#	include <direct.h>
-#define get_current_dir _getcwd
-#if !defined(_WINCON_)
-#	include <Wincon.h>
-#endif//_WINCON_
-#define FOREGROUND_BLACK			0x0000 // text color contains black.
-#define FOREGROUND_YELLOW			0x0006 // text color contains Yellow.
-#define FOREGROUND_DARK_YELLOW		0x0007 // text color contains DarkYellow.
-#define FOREGROUND_LIGHT_GREEN		0XA // text color contains LightGreen.
-#define FOREGROUND_LIGHT_RED		0XC // text color contains LightGreen.
-BOOL is_user_interactive();
-WORD get_current_console_color(HANDLE hConsole);
-void print_info();
-#endif//!_WIN32
 #define _DELETE DELETE
 #undef DELETE
 typedef enum {
@@ -56,6 +35,8 @@ typedef enum {
 	RAW_SCRIPT	=	6,
 	UNKNOWN		=	-1
 }web_extension;
+int is_user_interactive();
+void print_info();
 void replace_back_slash(std::string&str);
 char *string_copy(char *str);
 const char* get_app_path();

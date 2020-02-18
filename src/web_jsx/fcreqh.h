@@ -10,12 +10,10 @@
 #endif//!_MSC_VER
 #if !defined(_fcreqh_h)
 #	define _fcreqh_h
-#	include "web_jsx_app_global.h"
 #if defined(FAST_CGI_APP)
+#	include <map>
+#	include <string>
 #	include "util.h"
-#	include <fcgi_stdio.h>
-#	include <fcgio.h>
-#	include <fcgi_config.h>  // HAVE_IOSTREAM_WITHASSIGN_STREAMBUF
 namespace web_jsx {
 	namespace fcgi_request {
 		const char * freq_env_c(const char* var_name, char **envp);

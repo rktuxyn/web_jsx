@@ -5,10 +5,13 @@
 * See the accompanying LICENSE file for terms.
 */
 #	include "js_compiler.h"
+#	include "v8_util.h"
 #	include <uv.h>
 #	include "runtime_compiler.h"
 #	include <libplatform/libplatform.h>
 #	include "native_wrapper.h"
+#	include "v8_engine.h"
+
 using namespace sow_web_jsx;
 using namespace sow_web_jsx::wrapper;
 using namespace sow_web_jsx::js_compiler;
@@ -120,6 +123,10 @@ int sow_web_jsx::js_compiler::run_script_x(const char* script_source, std::map<s
 		v8_ctx.Clear();
 		return -1;
 	}
+	/*v8::Local<v8::UnboundScript> uscript =  cscript.ToLocalChecked()->GetUnboundScript();
+	uscript->GetSourceMappingURL();
+	uscript->BindToCurrentContext();
+	uscript->GetId();*/
 	v8::TryCatch trycatch(isolate);
 	cscript.ToLocalChecked()->Run(v8_ctx);
 	if (trycatch.HasCaught()) {

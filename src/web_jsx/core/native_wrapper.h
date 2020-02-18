@@ -10,7 +10,9 @@
 #endif//!_MSC_VER
 #if !defined(_native_wrapper_h)
 #	define _native_wrapper_h
-#	include "v8_util.h"
+#	include <v8.h>
+#	include <sstream>
+#	include <map>
 #pragma warning (disable : 4231)
 #pragma warning(disable : 4996)
 

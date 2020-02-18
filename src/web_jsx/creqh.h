@@ -10,8 +10,9 @@
 #endif//!_MSC_VER
 #if !defined(_creqh_h)
 #	define _creqh_h
-#	include "web_jsx_app_global.h"
 #	include "util.h"
+#	include <map>
+#	include <string>
 //#if !defined(FAST_CGI_APP)
 namespace web_jsx {
 	namespace cgi_request {

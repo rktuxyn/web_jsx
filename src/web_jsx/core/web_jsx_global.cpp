@@ -183,7 +183,6 @@ int sow_web_jsx::process_is_running(DWORD dwPid) {
 	_close_handle(hProcess);
 	return ret;
 }
-
 int sow_web_jsx::terminate_process(DWORD dwPid) {
 	HANDLE explorer;
 	explorer = OpenProcess(PROCESS_ALL_ACCESS, false, dwPid);
@@ -200,7 +199,6 @@ int sow_web_jsx::terminate_process(DWORD dwPid) {
 	}
 	return ret == FALSE ? -1 : ret;
 }
-
 DWORD sow_web_jsx::current_process_id() {
 	return ::GetCurrentProcessId();
 }
