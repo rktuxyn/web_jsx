@@ -35,6 +35,8 @@
 #endif//_WIN32||_WIN64
 #endif//!_export_wjsx
 
+#	define _exported_wjsx
+
 #if !defined(__file_exists)
 #define __file_exists(fname)\
 _access(fname, 0)!=-1
@@ -57,9 +59,28 @@ _access(fname, 0)!=-1
 	isolate->ThrowException(v8::Exception::Error(v8_str(isolate, err)))
 #endif//!throw_js_error
 
+#if !defined(js_method_args)
+#define js_method_args const v8::FunctionCallbackInfo<v8::Value>& args
+#endif//!js_method_args
+
+#if !defined(V8_JS_METHOD)
+#define V8_JS_METHOD(name)\
+void name(js_method_args)
+#endif//!V8_JS_METHOD
+
+#if !defined(set_prototype)
+#define set_prototype(isolate, prototype, name, func)\
+prototype->Set(isolate, "release", v8::FunctionTemplate::New(isolate, func))
+#endif//!set_prototype
+
 #if !defined(wjsx_set_method)
+#if V8_MAJOR_VERSION < 8
 #define wjsx_set_method(isolate, target, name, func)\
 	target->Set(isolate->GetCurrentContext(), v8_str(isolate, name), v8::Function::New(isolate, func) )
+#else
+#define wjsx_set_method(isolate, target, name, func)\
+	target->Set(isolate->GetCurrentContext(), v8_str(isolate, name), v8::Function::New(isolate->GetCurrentContext(), func).ToLocalChecked() )
+#endif//!V8_MAJOR_VERSION
 #endif//!register_wjsx_module
 
 #if !defined(wjsx_set_object)
@@ -117,23 +138,23 @@ extern "C" {
 typedef void (*add_resource_func)();
 /*[/function pointers]*/
 namespace sow_web_jsx {
-	_export_wjsx void register_resource(add_resource_func func);
+	_exported_wjsx void register_resource(add_resource_func func);
 	namespace wrapper {
-		_export_wjsx void clear_cache(int clean_body, int clean_root);
-		_export_wjsx int is_cli();
-		_export_wjsx int is_flush();
-		_export_wjsx int set_flush_status(int flush);
-		_export_wjsx std::stringstream& get_body_stream();
-		_export_wjsx const char* get_root_dir();
-		_export_wjsx const char* get_app_dir();
-		_export_wjsx void add_header(const char*key, const char*value);
-		_export_wjsx int is_http_status_ok();
-		_export_wjsx int is_gzip_encoding();
-		_export_wjsx int flush_http_status();
-		_export_wjsx void flush_header();
-		_export_wjsx void flush_cookies();
-		_export_wjsx int set_binary_output();
-		_export_wjsx int set_binary_mode_in();
+		_exported_wjsx void clear_cache(int clean_body, int clean_root);
+		_exported_wjsx int is_cli();
+		_exported_wjsx int is_flush();
+		_exported_wjsx int set_flush_status(int flush);
+		_exported_wjsx std::stringstream& get_body_stream();
+		_exported_wjsx const char* get_root_dir();
+		_exported_wjsx const char* get_app_dir();
+		_exported_wjsx void add_header(const char*key, const char*value);
+		_exported_wjsx int is_http_status_ok();
+		_exported_wjsx int is_gzip_encoding();
+		_exported_wjsx int flush_http_status();
+		_exported_wjsx void flush_header();
+		_exported_wjsx void flush_cookies();
+		_exported_wjsx int set_binary_output();
+		_exported_wjsx int set_binary_mode_in();
 	}
 }
 
