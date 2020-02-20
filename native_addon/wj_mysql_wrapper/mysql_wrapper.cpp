@@ -41,7 +41,7 @@ void sow_web_jsx::mysql__export(v8::Isolate* isolate, v8::Handle<v8::Object> tar
 	appTemplate->SetClassName(v8_str(isolate, "MySql"));
 	appTemplate->InstanceTemplate()->SetInternalFieldCount(1);
 	v8::Local<v8::ObjectTemplate> prototype = appTemplate->PrototypeTemplate();
-	prototype->Set(isolate, "connect", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+	set_prototype(isolate, prototype, "connect", [](js_method_args) {
 		v8::Isolate* iso = args.GetIsolate();
 		try {
 			if (!args[0]->IsObject() || args[0]->IsNullOrUndefined()) {
@@ -54,31 +54,29 @@ void sow_web_jsx::mysql__export(v8::Isolate* isolate, v8::Handle<v8::Object> tar
 			native_string host(iso, config->Get(ctx, v8_str(iso, "host")).ToLocalChecked());
 			if (host.is_empty()) {
 				iso->ThrowException(v8::Exception::TypeError(
-					v8::String::NewFromUtf8(iso, "Database Host required!!!")));
+					v8_str(iso, "Database Host required!!!")));
 				return;
 			}
 			native_string database(iso, config->Get(ctx, v8_str(iso, "database")).ToLocalChecked());
 			if (database.is_empty()) {
 				iso->ThrowException(v8::Exception::TypeError(
-					v8::String::NewFromUtf8(iso, "Database name required!!!")));
+					v8_str(iso, "Database name required!!!")));
 				return;
 			}
 			native_string user(iso, config->Get(ctx, v8_str(iso, "user")).ToLocalChecked());
 			if (user.is_empty()) {
 				iso->ThrowException(v8::Exception::TypeError(
-					v8::String::NewFromUtf8(iso, "User name required!!!")));
+					v8_str(iso, "User name required!!!")));
 				return;
 			}
 			native_string password(iso, config->Get(ctx, v8_str(iso, "password")).ToLocalChecked());
 			if (password.is_empty()) {
-				iso->ThrowException(v8::Exception::TypeError(
-					v8::String::NewFromUtf8(iso, "Password required!!!")));
+				iso->ThrowException(v8::Exception::TypeError(v8_str(iso, "Password required!!!")));
 				return;
 			}
 			v8::Local<v8::Value> port_v8 = config->Get(ctx, v8_str(iso, "port")).ToLocalChecked();
 			if (port_v8->IsNullOrUndefined() || !port_v8->IsNumber()) {
-				iso->ThrowException(v8::Exception::TypeError(
-					v8::String::NewFromUtf8(iso, "Database port number required!!!")));
+				iso->ThrowException(v8::Exception::TypeError(v8_str(iso, "Database port number required!!!")));
 				return;
 			}
 			my_sql* sql = sow_web_jsx::unwrap<my_sql>(args);
@@ -91,8 +89,7 @@ void sow_web_jsx::mysql__export(v8::Isolate* isolate, v8::Handle<v8::Object> tar
 			con->port = static_cast<int>(port_v8->ToNumber(ctx).ToLocalChecked()->Value());
 			con->clientflag = 0;
 			if (sql->connect(con) == connection_state::CLOSED) {
-				iso->ThrowException(v8::Exception::Error(
-					v8::String::NewFromUtf8(iso, sql->get_last_error())));
+				iso->ThrowException(v8::Exception::Error(v8_str(iso, sql->get_last_error())));
 				return;
 			};
 			args.GetReturnValue().Set(args.Holder());
@@ -107,8 +104,8 @@ void sow_web_jsx::mysql__export(v8::Isolate* isolate, v8::Handle<v8::Object> tar
 				v8_str(iso, "Unknown error...")));
 			return;
 		}
-	}));
-	prototype->Set(isolate, "switch_database", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+	});
+	set_prototype(isolate, prototype, "switch_database",[](js_method_args) {
 		v8::Isolate* iso = args.GetIsolate();
 		if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 			iso->ThrowException(v8::Exception::TypeError(
@@ -119,34 +116,31 @@ void sow_web_jsx::mysql__export(v8::Isolate* isolate, v8::Handle<v8::Object> tar
 		my_sql* sql = sow_web_jsx::unwrap<my_sql>(args);
 		if (sql->switch_database(database_name.c_str()) < 0) {
 			database_name.clear();
-			iso->ThrowException(v8::Exception::Error(
-				v8::String::NewFromUtf8(iso, sql->get_last_error())));
+			iso->ThrowException(v8::Exception::Error(v8_str(iso, sql->get_last_error())));
 			return;
 		}
 		database_name.clear();
 		args.GetReturnValue().Set(args.Holder());
-	}));
-	prototype->Set(isolate, "re_connect", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+	});
+	set_prototype(isolate, prototype, "re_connect", [](js_method_args) {
 		v8::Isolate* iso = args.GetIsolate();
 		my_sql* sql = sow_web_jsx::unwrap<my_sql>(args);
 		if (sql->connect() == connection_state::CLOSED) {
-			iso->ThrowException(v8::Exception::Error(
-				v8::String::NewFromUtf8(iso, sql->get_last_error())));
+			iso->ThrowException(v8::Exception::Error(v8_str(iso, sql->get_last_error())));
 			return;
 		};
 		args.GetReturnValue().Set(args.Holder());
-	}));
-	prototype->Set(isolate, "close_all_connection", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+	});
+	set_prototype(isolate, prototype, "close_all_connection",[](js_method_args) {
 		v8::Isolate* iso = args.GetIsolate();
 		my_sql* sql = sow_web_jsx::unwrap<my_sql>(args);
 		sql->close_all_connection();
 		args.GetReturnValue().Set(args.Holder());
-	}));
-	prototype->Set(isolate, "exec", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+	});
+	set_prototype(isolate, prototype, "exec", [](js_method_args) {
 		v8::Isolate* iso = args.GetIsolate();
 		if (args[0]->IsNullOrUndefined() || !args[0]->IsString()) {
-			iso->ThrowException(v8::Exception::TypeError(
-				v8_str(iso, "Sql statement required...")));
+			iso->ThrowException(v8::Exception::TypeError(v8_str(iso, "Sql statement required...")));
 			return;
 		}
 		native_string query_str(iso, args[0]);
@@ -154,8 +148,7 @@ void sow_web_jsx::mysql__export(v8::Isolate* isolate, v8::Handle<v8::Object> tar
 		const char* result = sql->execute(query_str.c_str());
 		query_str.clear();
 		if (sql->has_error()) {
-			iso->ThrowException(v8::Exception::TypeError(
-				v8_str(iso, sql->get_last_error())));
+			iso->ThrowException(v8::Exception::TypeError(v8_str(iso, sql->get_last_error())));
 			return;
 		}
 		if (((result != NULL) && (result[0] == '\0')) || (result == NULL)) {
@@ -164,8 +157,8 @@ void sow_web_jsx::mysql__export(v8::Isolate* isolate, v8::Handle<v8::Object> tar
 		else {
 			args.GetReturnValue().Set(v8_str(iso, result));
 		}
-	}));
-	prototype->Set(isolate, "execute_query", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+	});
+	set_prototype(isolate, prototype, "execute_query", [](js_method_args) {
 		my_sql* sql = sow_web_jsx::unwrap<my_sql>(args);
 		v8::Isolate* iso = args.GetIsolate();
 		if (sql->state() == connection_state::CLOSED) {
@@ -207,15 +200,15 @@ void sow_web_jsx::mysql__export(v8::Isolate* isolate, v8::Handle<v8::Object> tar
 			return;
 		}
 		args.GetReturnValue().Set(v8::Number::New(iso, (double)rs));
-	}));
-	prototype->Set(isolate, "clear", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+		});
+	set_prototype(isolate, prototype, "clear", [](js_method_args) {
 		v8::Isolate* iso = args.GetIsolate();
 		my_sql* sql = sow_web_jsx::unwrap<my_sql>(args);
 		//v8::Isolate* iso = args.GetIsolate();
 		sql->exit_all();
 		/* Return this */
 		args.GetReturnValue().Set(args.Holder());
-	}));
+	});
 	v8::Local<v8::Context>context = isolate->GetCurrentContext();
 	target->Set(context, v8_str(isolate, "MySql"), appTemplate->GetFunction(context).ToLocalChecked());
 }

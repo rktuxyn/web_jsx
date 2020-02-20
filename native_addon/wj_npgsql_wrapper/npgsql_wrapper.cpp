@@ -4,10 +4,11 @@
 * Copyrights licensed under the New BSD License.
 * See the accompanying LICENSE file for terms.
 */
+#	include "npgsql_wrapper.h"
 #	include <npgsql.h>
 #	include <npgsql_pool.h>
 #	include <npgsql_tools.h>
-#	include "npgsql_wrapper.h"
+#	include <npgsql_query.h>
 #	include <web_jsx/web_jsx.h>
 //11:33 PM 12/13/2019
 using namespace sow_web_jsx;
@@ -169,7 +170,7 @@ int _npgsql_data_reader(
 //		@param ctx_str define the json string as stored procedure first param
 //		@param form_data_str define the json string as stored procedure second param
 //		@returns The first column of the first row as json string. e.g. {_ret_val number; _ret_msg string; _ret_data_table json string}
-void npgsql_execute_io(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(npgsql_execute_io) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		
@@ -214,7 +215,7 @@ void npgsql_execute_io(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	delete pgsql;
 
 }
-void npgsql_execute_scalar(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(npgsql_execute_scalar) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		throw_js_error(isolate, "Connection string required!!!");
@@ -251,7 +252,7 @@ void npgsql_execute_scalar(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	pgsql->close(); delete pgsql;
 	return;
 }
-void npgsql_execute_query(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(npgsql_execute_query) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		throw_js_error(isolate, "Connection string required!!!");
@@ -297,7 +298,7 @@ void npgsql_execute_query(const v8::FunctionCallbackInfo<v8::Value>& args) {
 //		@param con_str define the npgsql connection string
 //		@param query_str define the PgSQL query string
 //		@param func define the Function callback with param @param index is the number row and @param row is the data row array [columns]
-void npgsql_data_reader(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(npgsql_data_reader) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		throw_js_error(isolate, "Connection string required!!!");
@@ -348,12 +349,19 @@ npgsql_query* _create_query(v8::Isolate* isolate, npgsql_connection* pg_con) {
 	}
 	return new npgsql_query(cpool);
 }
+npgsql_connection* get_conn_instance(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	npgsql_connection* pg_conn = sow_web_jsx::unwrap<npgsql_connection>(args);
+	if (pg_conn == NULL) {
+		throw_js_error(args.GetIsolate(), "npgsql_connection object disposed...");
+		return NULL;
+	}
+	return pg_conn;
+}
 void sow_web_jsx::npgsql_export(v8::Isolate* isolate, v8::Handle<v8::Object> target) {
 	v8::Local<v8::FunctionTemplate> appTemplate = v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* iso = args.GetIsolate();
 		if (!args.IsConstructCall()) {
-			iso->ThrowException(v8::Exception::TypeError(
-				v8_str(iso, "Cannot call constructor as function!!!")));
+			iso->ThrowException(v8::Exception::TypeError(v8_str(iso, "Cannot call constructor as function!!!")));
 			return;
 		}
 		v8::Local<v8::Object> obj = args.This();
@@ -367,42 +375,43 @@ void sow_web_jsx::npgsql_export(v8::Isolate* isolate, v8::Handle<v8::Object> tar
 	appTemplate->SetClassName(v8_str(isolate, "PgSql"));
 	appTemplate->InstanceTemplate()->SetInternalFieldCount(1);
 	v8::Local<v8::ObjectTemplate> prototype = appTemplate->PrototypeTemplate();
-	prototype->Set(isolate, "connect", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		v8::Isolate* isolate = args.GetIsolate();
+	set_prototype(isolate, prototype, "connect", [](js_method_args) {
 		if (args[0]->IsNullOrUndefined() || !args[0]->IsString()) {
-			throw_js_error(isolate, "Connection string should not left blank!!!");
+			throw_js_error(args.GetIsolate(), "Connection string should not left blank!!!");
 			return;
 		}
+		npgsql_connection* pg_conn = get_conn_instance(args);
+		if (pg_conn == NULL)return;
+		v8::Isolate* isolate = args.GetIsolate();
 		native_string vcon(isolate, args[0]);
-		npgsql_connection* pg_conn = sow_web_jsx::unwrap<npgsql_connection>(args);
 		int rec = create_pgsql_connection(isolate, pg_conn, vcon.c_str());//pg_conn->connect(vcon.c_str());
 		vcon.clear();
 		if (rec < 0)return;
 		args.GetReturnValue().Set(args.Holder());
-	}));
-	prototype->Set(isolate, "re_connect", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		v8::Isolate* isolate = args.GetIsolate();
-		//native_string vcon(isolate, args[0]);
-		npgsql_connection* pg_conn = sow_web_jsx::unwrap<npgsql_connection>(args);
+	});
+	set_prototype(isolate, prototype, "re_connect", [](js_method_args) {
+		npgsql_connection* pg_conn = get_conn_instance(args);
+		if (pg_conn == NULL)return;
 		int rec = pg_conn->connect();
 		if (rec < 0) {
-			throw_js_error(isolate, pg_conn->get_last_error());
+			throw_js_error(args.GetIsolate(), pg_conn->get_last_error());
 			return;
 		}
 		args.GetReturnValue().Set(args.Holder());
-		}));
-	prototype->Set(isolate, "execute_scalar", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		v8::Isolate* isolate = args.GetIsolate();
+	});
+	set_prototype(isolate, prototype, "execute_scalar", [](js_method_args) {
 		if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
-			throw_js_error(isolate, "Stored procedure required!!!");
+			throw_js_error(args.GetIsolate(), "Stored procedure required!!!");
 			return;
 		}
 		if (!args[1]->IsArray() || args[1]->IsNullOrUndefined()) {
-			throw_js_error(isolate, "Param Array required!!!");
+			throw_js_error(args.GetIsolate(), "Param Array required!!!");
 			return;
 		}
-		npgsql_connection* pg_con = sow_web_jsx::unwrap<npgsql_connection>(args);
-		npgsql_query* pg_query = _create_query(isolate, pg_con);
+		npgsql_connection* pg_conn = get_conn_instance(args);
+		if (pg_conn == NULL)return;
+		v8::Isolate* isolate = args.GetIsolate();
+		npgsql_query* pg_query = _create_query(isolate, pg_conn);
 		if (pg_query == NULL)return;
 		int rec = 0;
 		native_string sp(isolate, args[0]);
@@ -416,15 +425,16 @@ void sow_web_jsx::npgsql_export(v8::Isolate* isolate, v8::Handle<v8::Object> tar
 		}
 		v8_result.Clear();
 		delete pg_query;
-	}));
-	prototype->Set(isolate, "execute_query", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		v8::Isolate* isolate = args.GetIsolate();
+	});
+	set_prototype(isolate, prototype, "execute_query", [](js_method_args) {
 		if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
-			throw_js_error(isolate, "Query string required!!!");
+			throw_js_error(args.GetIsolate(), "Query string required!!!");
 			return;
 		}
-		npgsql_connection* pg_con = sow_web_jsx::unwrap<npgsql_connection>(args);
-		npgsql_query* pg_query = _create_query(isolate, pg_con);
+		npgsql_connection* pg_conn = get_conn_instance(args);
+		if (pg_conn == NULL)return;
+		v8::Isolate* isolate = args.GetIsolate();
+		npgsql_query* pg_query = _create_query(isolate, pg_conn);
 		if (pg_query == NULL)return;
 		int rec = 0;
 		native_string query(isolate, args[0]);
@@ -435,7 +445,7 @@ void sow_web_jsx::npgsql_export(v8::Isolate* isolate, v8::Handle<v8::Object> tar
 			delete pg_query;
 			return;
 		};
-		if (((result != NULL) && (result[0] == '\0')) || (result == NULL)) {
+		if (result == NULL || strlen(result) == 0) {
 			args.GetReturnValue().Set(v8::Number::New(isolate, 1));
 			delete pg_query;
 			return;
@@ -443,20 +453,20 @@ void sow_web_jsx::npgsql_export(v8::Isolate* isolate, v8::Handle<v8::Object> tar
 		args.GetReturnValue().Set(v8_str(isolate, result));
 		delete pg_query;
 		return;
-	}));
-	prototype->Set(isolate, "data_reader", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		v8::Isolate* isolate = args.GetIsolate();
-
+	});
+	set_prototype(isolate, prototype, "data_reader", [](js_method_args) {
 		if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
-			throw_js_error(isolate, "Query string required!!!");
+			throw_js_error(args.GetIsolate(), "Query string required!!!");
 			return;
 		}
 		if (!args[1]->IsFunction()) {
-			throw_js_error(isolate, "Callback required!!!");
+			throw_js_error(args.GetIsolate(), "Callback required!!!");
 			return;
 		}
-		npgsql_connection* pg_con = sow_web_jsx::unwrap<npgsql_connection>(args);
-		npgsql_query* pg_query = _create_query(isolate, pg_con);
+		npgsql_connection* pg_conn = get_conn_instance(args);
+		if (pg_conn == NULL)return;
+		v8::Isolate* isolate = args.GetIsolate();
+		npgsql_query* pg_query = _create_query(isolate, pg_conn);
 		if (pg_query == NULL)return;
 		int rec = 0;
 		native_string query(isolate, args[0]);
@@ -472,23 +482,24 @@ void sow_web_jsx::npgsql_export(v8::Isolate* isolate, v8::Handle<v8::Object> tar
 		if (rec >= 0) {
 			args.GetReturnValue().Set(v8::Number::New(isolate, rec));
 		}
-	}));
-	prototype->Set(isolate, "execute_io", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		v8::Isolate* isolate = args.GetIsolate();
+	});
+	set_prototype(isolate, prototype, "execute_io", [](js_method_args) {
 		if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
-			throw_js_error(isolate, "Stored procedure required!!!");
+			throw_js_error(args.GetIsolate(), "Stored procedure required!!!");
 			return;
 		}
 		if (!args[1]->IsString() || args[1]->IsNullOrUndefined()) {
-			throw_js_error(isolate, "Authentication context required!!!");
+			throw_js_error(args.GetIsolate(), "Authentication context required!!!");
 			return;
 		}
 		if (!args[2]->IsString() || args[2]->IsNullOrUndefined()) {
-			throw_js_error(isolate, "form_data required!!!");
+			throw_js_error(args.GetIsolate(), "form_data required!!!");
 			return;
 		}
-		npgsql_connection* pg_con = sow_web_jsx::unwrap<npgsql_connection>(args);
-		npgsql_query* pg_query = _create_query(isolate, pg_con);
+		npgsql_connection* pg_conn = get_conn_instance(args);
+		if (pg_conn == NULL)return;
+		v8::Isolate* isolate = args.GetIsolate();
+		npgsql_query* pg_query = _create_query(isolate, pg_conn);
 		if (pg_query == NULL)return;
 		int rec = 0;
 		native_string sp(isolate, args[0]);
@@ -505,19 +516,19 @@ void sow_web_jsx::npgsql_export(v8::Isolate* isolate, v8::Handle<v8::Object> tar
 		if (rec < 0)return;
 		args.GetReturnValue().Set(v8_result);
 		v8_result.Clear();
-	}));
-	prototype->Set(isolate, "release_connection", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		v8::Isolate* isolate = args.GetIsolate();
-		npgsql_connection* pg_con = sow_web_jsx::unwrap<npgsql_connection>(args);
-		pg_con->close_all_connection();
+	});
+	set_prototype(isolate, prototype, "release_connection", [](js_method_args) {
+		npgsql_connection* pg_conn = get_conn_instance(args);
+		if (pg_conn == NULL)return;
+		pg_conn->close_all_connection();
 		args.GetReturnValue().Set(args.Holder());
-	}));
-	prototype->Set(isolate, "exit_nicely", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		v8::Isolate* isolate = args.GetIsolate();
-		npgsql_connection* pg_con = sow_web_jsx::unwrap<npgsql_connection>(args);
-		pg_con->exit_all();
+	});
+	set_prototype(isolate, prototype, "exit_nicely", [](js_method_args) {
+		npgsql_connection* pg_conn = get_conn_instance(args);
+		if (pg_conn == NULL)return;
+		pg_conn->exit_all();
 		args.GetReturnValue().Set(args.Holder());
-	}));
+	});
 	v8::Local<v8::Context>context = isolate->GetCurrentContext();
 	target->Set(context, v8_str(isolate, "PgSql"), appTemplate->GetFunction(context).ToLocalChecked());
 	v8::Handle<v8::Object> npgsql_object = v8::Object::New(isolate);

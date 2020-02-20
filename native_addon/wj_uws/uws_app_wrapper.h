@@ -115,7 +115,8 @@ void uWS_App_ws(const FunctionCallbackInfo<Value>& args) {
 			Local<Function>::New(isolate, messagePf)->Call(isolate->GetCurrentContext(), isolate->GetCurrentContext()->Global(), 3, argv).IsEmpty();
 
 			/* Important: we clear the ArrayBuffer to make sure it is not invalidly used after return */
-			messageArrayBuffer->Neuter();
+			//messageArrayBuffer->Neuter();
+			messageArrayBuffer->Detach();
 		};
 	}
 
@@ -161,7 +162,8 @@ void uWS_App_ws(const FunctionCallbackInfo<Value>& args) {
 		delete perSocketData->socketPf;
 
 		/* Again, here we clear the buffer to avoid strange bugs */
-		messageArrayBuffer->Neuter();
+		//messageArrayBuffer->Neuter();
+		messageArrayBuffer->Detach();
 	};
 
 	app->template ws<PerSocketData>(std::string(pattern.getString()), std::move(behavior));

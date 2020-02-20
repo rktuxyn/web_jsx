@@ -7,11 +7,16 @@
 */
 #	include "pdf_generator.h"
 #	include <web_jsx/std_wrapper.hpp>
-bool _store_resource = false;
+#	include <web_jsx/web_jsx.h>
+
+#if defined(FAST_CGI_APP)
+int _store_resource = FALSE;
 void on_resource_free() {
 	/* We will no longer be needing wkhtmltoimage funcionality */
 	wkhtmltopdf_deinit();
 }
+#endif//!FAST_CGI_APP
+
 pdf_ext::pdf_generator::pdf_generator() {
 	_status = -1; _disposed = false; _msg = NULL;
 	_wgs = NULL; _wos = NULL; _converter = NULL;
@@ -108,8 +113,8 @@ int pdf_ext::pdf_generator::init(int use_graphics) {
 		return -1;
 	}
 #if defined(FAST_CGI_APP)
-	if (_store_resource == false) {
-		_store_resource = true;
+	if (_store_resource == FALSE) {
+		_store_resource = TRUE;
 		sow_web_jsx::register_resource(on_resource_free);
 	}
 #endif//FAST_CGI_APP

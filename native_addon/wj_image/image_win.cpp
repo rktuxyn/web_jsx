@@ -151,10 +151,10 @@ private:
 	int _is_copy;
 	char* _internal_error;
 	__forceinline int panic(const char* error, int code) {
-		if (_internal_error != NULL)
-			delete[]_internal_error;
-		_internal_error = new char[strlen(error) + 1];
-		strcpy(_internal_error, error);
+		_free_char(_internal_error);
+		size_t len = strlen(error);
+		_internal_error = new char[len + 1];
+		strcpy_s(_internal_error, len, error);
 		_errc = code < 0 ? code : code * -1;
 		return _errc;
 	}
@@ -167,9 +167,9 @@ private:
 			_gd_is_init = TRUE;
 			return TRUE;
 		}
-		std::string err("Unable to init GDI+. Error reason:");
-		err.append(get_gdiplus_error_reason(stat));
-		this->panic(err.c_str(), TRUE);
+		std::string* err= new std::string("Unable to init GDI+. Error reason:");
+		err->append(get_gdiplus_error_reason(stat));
+		this->panic(err->c_str(), TRUE); _free_obj(err);
 		return _errc;
 	}
 public:
@@ -232,10 +232,10 @@ public:
 						_is_loaded = TRUE; _format = format;
 					}
 					else {
-						std::string err("Unable to create Bitmap from stream. Error reason:");
-						err.append(get_gdiplus_error_reason(stat));
-						ret = this->panic(err.c_str(), TRUE);
-						delete _bit_map; err.clear(); std::string().swap(err);
+						std::string* err=new std::string("Unable to create Bitmap from stream. Error reason:");
+						err->append(get_gdiplus_error_reason(stat));
+						ret = this->panic(err->c_str(), TRUE);
+						delete _bit_map; _free_obj(err);
 						_bit_map = NULL;
 					}
 				}
@@ -253,11 +253,11 @@ public:
 	__forceinline int load_from_base64(const char* data, image_format format = image_format::BMP) {
 		std::string* out = new std::string();
 		if (sow_web_jsx::base64::to_decode_str(data, *out) == false) {
-			delete out; out = NULL;
+			_free_obj(out);
 			return this->panic("Unablet to decode base64 data. Please try again.", TRUE);
 		}
 		int ret = this->load_from_buff(out->data(), static_cast<ULONG>(out->size()), format);
-		out->clear(); delete out; out = NULL;
+		_free_obj(out);
 		return ret;
 	}
 	__forceinline int create_canvas(const INT width, const INT height) {
@@ -330,6 +330,10 @@ public:
 		_pixels = reinterpret_cast<byte*>(_bitmap_data->Scan0);
 		return TRUE;
 	}
+	/*
+	* Get the rgba color from your given x, y ratio of image
+	* @return  rgb32 || NULL
+	*/
 	__forceinline rgb32* get_pixel(INT x, INT y) const {
 		if (_is_loaded == FALSE)return NULL;
 		if (_pixels == NULL)return NULL;
@@ -424,9 +428,9 @@ public:
 			delete encoder_parameters; encoder_parameters = NULL;
 		}
 		if (stat == Gdiplus::Status::Ok)return TRUE;
-		std::string err("Failed to save image. Error reason:");
-		err.append(get_gdiplus_error_reason(stat));
-		this->panic(err.c_str(), TRUE); err.clear(); std::string().swap(err);
+		std::string* err = new std::string("Failed to save image. Error reason:");
+		err->append(get_gdiplus_error_reason(stat));
+		this->panic(err->c_str(), TRUE); _free_obj(err);
 		return _errc;
 	}
 	//10:44 AM 1/20/2020
@@ -510,7 +514,7 @@ public:
 		if (is_error_code(ret) == FALSE) {
 			ret = sow_web_jsx::base64::to_encode_str(*data, out) == true ? TRUE : FALSE;
 		}
-		data->clear(); delete data;
+		_free_obj(data);
 		return ret;
 	}
 	__forceinline UINT get_width() const {
@@ -534,9 +538,7 @@ public:
 		if (_bitmap_data != NULL) {
 			::DeleteObject(_bitmap_data); _bitmap_data = NULL;
 		}
-		if (_internal_error != NULL) {
-			delete[]_internal_error; _internal_error = NULL;
-		}
+		_free_char(_internal_error);
 		if (_pixels != NULL) {
 			::DeleteObject(_pixels); _pixels = NULL;
 		}
@@ -563,13 +565,21 @@ int v8_object_get_number(v8::Isolate* isolate, v8::Local<v8::Context> ctx, v8::L
 	}
 	return val->Int32Value(ctx).FromMaybe(0);
 }
+image* get_image_instance(js_method_args) {
+	image* img = sow_web_jsx::unwrap<image>(args);
+	if (img == NULL) {
+		throw_js_error(args.GetIsolate(), "Image object disposed...");
+		return NULL;
+	}
+	return img;
+}
 void image_export(v8::Isolate* isolate, v8::Handle<v8::Object> target){
 	v8::Local<v8::FunctionTemplate> image_tpl = v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		v8::Isolate* isolate = args.GetIsolate();
 		if (!args.IsConstructCall()) {
-			throw_js_error(isolate, "Cannot call constructor as function!!!");
+			throw_js_error(args.GetIsolate(), "Cannot call constructor as function!!!");
 			return;
 		}
+		v8::Isolate* isolate = args.GetIsolate();
 		image* img = new image();
 		v8::Local<v8::Object> obj = args.This();
 		obj->SetInternalField(0, v8::External::New(isolate, img));
@@ -581,17 +591,14 @@ void image_export(v8::Isolate* isolate, v8::Handle<v8::Object> target){
 	image_tpl->SetClassName(v8_str(isolate, "Image"));
 	image_tpl->InstanceTemplate()->SetInternalFieldCount(1);
 	v8::Local<v8::ObjectTemplate> prototype = image_tpl->PrototypeTemplate();
-	prototype->Set(v8::String::NewFromUtf8(isolate, "load", v8::NewStringType::kNormal).ToLocalChecked(), v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		v8::Isolate* isolate = args.GetIsolate();
+	set_prototype(isolate, prototype, "load",  [](js_method_args) {
 		if (!args[0]->IsString()) {
-			throw_js_error(isolate, "File Path Required required....");
+			throw_js_error(args.GetIsolate(), "File Path Required required....");
 			return;
 		}
-		image* img = sow_web_jsx::unwrap<image>(args);
-		if (img == NULL) {
-			throw_js_error(isolate, "Image object disposed...");
-			return;
-		}
+		image* img = get_image_instance(args);
+		if (img == NULL)return;
+		v8::Isolate* isolate = args.GetIsolate();
 		native_string utf_abs_path_str(isolate, args[0]);
 		std::string* abspath = new std::string(utf_abs_path_str.c_str());
 		format__path(*abspath);
@@ -602,42 +609,33 @@ void image_export(v8::Isolate* isolate, v8::Handle<v8::Object> target){
 			return;
 		}
 		args.GetReturnValue().Set(v8::Integer::New(isolate, ret));
-	}));
-	prototype->Set(isolate, "release", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		image* img = sow_web_jsx::unwrap<image>(args);
+	});
+	set_prototype(isolate, prototype, "release", [](js_method_args) {
+		image* img = get_image_instance(args);
 		if (img == NULL)return;
 		img->release_all();
 		delete img; img = NULL;
 		args.Holder()->SetAlignedPointerInInternalField(0, nullptr);
-	}));
-	prototype->Set(isolate, "reset", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		image* img = sow_web_jsx::unwrap<image>(args);
-		if (img == NULL) {
-			throw_js_error(args.GetIsolate(), "Image object disposed...");
-			return;
-		}
+	});
+	set_prototype(isolate, prototype, "reset", [](js_method_args) {
+		image* img = get_image_instance(args);
+		if (img == NULL)return;
 		if (img->is_loaded() == FALSE) {
 			throw_js_error(args.GetIsolate(), "Image does not loaded yet...");
 			return;
 		}
 		img->reset_rgb();
 		args.GetReturnValue().Set(args.Holder());
-	}));
-	prototype->Set(isolate, "release_mem", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		image* img = sow_web_jsx::unwrap<image>(args);
-		if (img == NULL) {
-			throw_js_error(args.GetIsolate(), "Image object disposed...");
-			return;
-		}
+	});
+	set_prototype(isolate, prototype, "release_mem", [](js_method_args) {
+		image* img = get_image_instance(args);
+		if (img == NULL)return;
 		img->release_all();
 		args.GetReturnValue().Set(args.Holder());
-	}));
-	prototype->Set(isolate, "get_data", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		image* img = sow_web_jsx::unwrap<image>(args);
-		if (img == NULL) {
-			throw_js_error(args.GetIsolate(), "Image object disposed...");
-			return;
-		}
+	});
+	set_prototype(isolate, prototype, "get_data", [](js_method_args) {
+		image* img = get_image_instance(args);
+		if (img == NULL)return;
 		if (img->is_loaded() == FALSE) {
 			throw_js_error(args.GetIsolate(), "Image does not loaded yet...");
 			return;
@@ -658,17 +656,14 @@ void image_export(v8::Isolate* isolate, v8::Handle<v8::Object> target){
 			args.GetReturnValue().Set(v8_str(args.GetIsolate(), out->c_str()));
 		}
 		out->clear(); delete out;
-	}));
-	prototype->Set(isolate, "get_datac", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+	});
+	set_prototype(isolate, prototype, "get_datac", [](js_method_args) {
 		if (!args[0]->IsFunction()) {
 			throw_js_error(args.GetIsolate(), "Callback required...");
 			return;
 		}
-		image* img = sow_web_jsx::unwrap<image>(args);
-		if (img == NULL) {
-			throw_js_error(args.GetIsolate(), "Image object disposed...");
-			return;
-		}
+		image* img = get_image_instance(args);
+		if (img == NULL)return;
 		if (img->is_loaded() == FALSE) {
 			throw_js_error(args.GetIsolate(), "Image does not loaded yet...");
 			return;
@@ -700,13 +695,10 @@ void image_export(v8::Isolate* isolate, v8::Handle<v8::Object> target){
 		else {
 			args.GetReturnValue().Set(args.Holder());
 		}
-	}));
-	prototype->Set(isolate, "to_base64", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		image* img = sow_web_jsx::unwrap<image>(args);
-		if (img == NULL) {
-			throw_js_error(args.GetIsolate(), "Image object disposed...");
-			return;
-		}
+	});
+	set_prototype(isolate, prototype, "to_base64", [](js_method_args) {
+		image* img = get_image_instance(args);
+		if (img == NULL)return;
 		if (img->is_loaded() == FALSE) {
 			throw_js_error(args.GetIsolate(), "Image does not loaded yet...");
 			return;
@@ -726,20 +718,16 @@ void image_export(v8::Isolate* isolate, v8::Handle<v8::Object> target){
 		else {
 			args.GetReturnValue().Set(v8_str(args.GetIsolate(), out->c_str()));
 		}
-		
-		out->clear(); delete out;
-	}));
-	prototype->Set(isolate, "load_from_data", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		v8::Isolate* isolate = args.GetIsolate();
+		_free_obj(out);
+	});
+	set_prototype(isolate, prototype, "load_from_data", [](js_method_args) {
 		if (!args[0]->IsString()) {
-			throw_js_error(isolate, "base64 Data required....");
+			throw_js_error(args.GetIsolate(), "base64 Data required....");
 			return;
 		}
-		image* img = sow_web_jsx::unwrap<image>(args);
-		if (img == NULL) {
-			throw_js_error(args.GetIsolate(), "Image object disposed...");
-			return;
-		}
+		image* img = get_image_instance(args);
+		if (img == NULL)return;
+		v8::Isolate* isolate = args.GetIsolate();
 		image_format format = image_format::BMP;
 		if (args.Length() > 1) {
 			if (args[1]->IsNumber()) {
@@ -756,18 +744,15 @@ void image_export(v8::Isolate* isolate, v8::Handle<v8::Object> target){
 			return;
 		}
 		args.GetReturnValue().Set(v8::Integer::New(isolate, ret));
-	}));
-	prototype->Set(isolate, "load_from_base64", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		v8::Isolate* isolate = args.GetIsolate();
+	});
+	set_prototype(isolate, prototype, "load_from_base64", [](js_method_args) {
 		if (!args[0]->IsString()) {
-			throw_js_error(isolate, "base64 Data required....");
+			throw_js_error(args.GetIsolate(), "base64 Data required....");
 			return;
 		}
-		image* img = sow_web_jsx::unwrap<image>(args);
-		if (img == NULL) {
-			throw_js_error(args.GetIsolate(), "Image object disposed...");
-			return;
-		}
+		image* img = get_image_instance(args);
+		if (img == NULL)return;
+		v8::Isolate* isolate = args.GetIsolate();
 		image_format format = image_format::BMP;//get_image_format(*abspath);
 		if (args.Length() > 1) {
 			if (args[1]->IsNumber()) {
@@ -783,17 +768,14 @@ void image_export(v8::Isolate* isolate, v8::Handle<v8::Object> target){
 			return;
 		}
 		args.GetReturnValue().Set(v8::Integer::New(isolate, ret));
-	}));
-	prototype->Set(isolate, "save", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+	});
+	set_prototype(isolate, prototype, "save", [](js_method_args) {
 		if (!args[0]->IsString()) {
 			throw_js_error(args.GetIsolate(), "File Path required....");
 			return;
 		}
-		image* img = sow_web_jsx::unwrap<image>(args);
-		if (img == NULL) {
-			throw_js_error(args.GetIsolate(), "Image object disposed...");
-			return;
-		}
+		image* img = get_image_instance(args);
+		if (img == NULL)return;
 		if (img->is_loaded() == FALSE) {
 			throw_js_error(args.GetIsolate(), "Image does not loaded yet...");
 			return;
@@ -816,39 +798,30 @@ void image_export(v8::Isolate* isolate, v8::Handle<v8::Object> target){
 			return;
 		}
 		args.GetReturnValue().Set(v8::Integer::New(isolate, ret));
-	}));
-	prototype->Set(isolate, "get_width", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		image* img = sow_web_jsx::unwrap<image>(args);
-		if (img == NULL) {
-			throw_js_error(args.GetIsolate(), "Image object disposed...");
-			return;
-		}
+	});
+	set_prototype(isolate, prototype, "get_width", [](js_method_args) {
+		image* img = get_image_instance(args);
+		if (img == NULL)return;
 		if (img->is_loaded() == FALSE) {
 			throw_js_error(args.GetIsolate(), "Image does not loaded yet...");
 			return;
 		}
 		UINT width = img->get_width();
 		args.GetReturnValue().Set(v8::Integer::New(args.GetIsolate(), static_cast<int>(width)));
-	}));
-	prototype->Set(isolate, "get_height", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		image* img = sow_web_jsx::unwrap<image>(args);
-		if (img == NULL) {
-			throw_js_error(args.GetIsolate(), "Image object disposed...");
-			return;
-		}
+	});
+	set_prototype(isolate, prototype, "get_height", [](js_method_args) {
+		image* img = get_image_instance(args);
+		if (img == NULL)return;
 		if (img->is_loaded() == FALSE) {
 			throw_js_error(args.GetIsolate(), "Image does not loaded yet...");
 			return;
 		}
 		UINT height = img->get_height();
 		args.GetReturnValue().Set(v8::Integer::New(args.GetIsolate(), static_cast<int>(height)));
-	}));
-	prototype->Set(isolate, "resize", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		image* img = sow_web_jsx::unwrap<image>(args);
-		if (img == NULL) {
-			throw_js_error(args.GetIsolate(), "Image object disposed...");
-			return;
-		}
+	});
+	set_prototype(isolate, prototype, "resize", [](js_method_args) {
+		image* img = get_image_instance(args);
+		if (img == NULL)return;
 		if (img->is_loaded() == FALSE) {
 			throw_js_error(args.GetIsolate(), "Image does not loaded yet...");
 			return;
@@ -876,13 +849,10 @@ void image_export(v8::Isolate* isolate, v8::Handle<v8::Object> target){
 		else {
 			args.GetReturnValue().Set(args.Holder());
 		}
-	}));
-	prototype->Set(isolate, "create_canvas", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		image* img = sow_web_jsx::unwrap<image>(args);
-		if (img == NULL) {
-			throw_js_error(args.GetIsolate(), "Image object disposed...");
-			return;
-		}
+	});
+	set_prototype(isolate, prototype, "create_canvas", [](js_method_args) {
+		image* img = get_image_instance(args);
+		if (img == NULL)return;
 		if (args.Length() < 2) {
 			throw_js_error(args.GetIsolate(), "Height and Width required...");
 			return;
@@ -906,37 +876,32 @@ void image_export(v8::Isolate* isolate, v8::Handle<v8::Object> target){
 		else {
 			args.GetReturnValue().Set(args.Holder());
 		}
-	}));
-	prototype->Set(isolate, "lock_bits", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		image* img = sow_web_jsx::unwrap<image>(args);
-		if (img == NULL) {
-			throw_js_error(args.GetIsolate(), "Image object disposed...");
-			return;
-		}
+	});
+	set_prototype(isolate, prototype, "lock_bits", [](js_method_args) {
+		image* img = get_image_instance(args);
+		if (img == NULL)return;
 		if (img->is_loaded() == FALSE) {
 			throw_js_error(args.GetIsolate(), "Image does not loaded yet...");
 			return;
 		}
-		_mood mood = _mood::READ;
+
+		_mood mood = READ;
 		if (args.Length() >= 1) {
 			if (args[0]->IsNumber()) {
 				v8::Local<v8::Context>ctx = args.GetIsolate()->GetCurrentContext();
 				mood = (_mood)args[0]->ToInteger(ctx).ToLocalChecked()->Value();
 			}
 		}
-		int ret = img->lock_bits(mood == _mood::READ ? Gdiplus::ImageLockModeRead : Gdiplus::ImageLockModeWrite);
+		int ret = img->lock_bits(mood == READ ? Gdiplus::ImageLockModeRead : Gdiplus::ImageLockModeWrite);
 		if (is_error_code(ret) == TRUE) {
 			throw_js_error(args.GetIsolate(), img->get_last_error());
 			return;
 		}
 		args.GetReturnValue().Set(args.Holder());
-	}));
-	prototype->Set(isolate, "get_pixel", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		image* img = sow_web_jsx::unwrap<image>(args);
-		if (img == NULL) {
-			throw_js_error(args.GetIsolate(), "Image object disposed...");
-			return;
-		}
+	});
+	set_prototype(isolate, prototype, "get_pixel", [](js_method_args) {
+		image* img = get_image_instance(args);
+		if (img == NULL)return;
 		if (img->is_loaded() == FALSE) {
 			throw_js_error(args.GetIsolate(), "Image does not loaded yet...");
 			return;
@@ -964,13 +929,10 @@ void image_export(v8::Isolate* isolate, v8::Handle<v8::Object> target){
 		v8_result->Set(ctx, v8_str(isolate, "b"), v8::Integer::New(isolate, static_cast<int>(pixel->b)));
 		v8_result->Set(ctx, v8_str(isolate, "a"), v8::Integer::New(isolate, static_cast<int>(pixel->a)));
 		args.GetReturnValue().Set(v8_result); v8_result.Clear();
-	}));
-	prototype->Set(isolate, "set_pixel", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		image* img = sow_web_jsx::unwrap<image>(args);
-		if (img == NULL) {
-			throw_js_error(args.GetIsolate(), "Image object disposed...");
-			return;
-		}
+	});
+	set_prototype(isolate, prototype, "set_pixel", [](js_method_args) {
+		image* img = get_image_instance(args);
+		if (img == NULL)return;
 		if (img->is_loaded() == FALSE) {
 			throw_js_error(args.GetIsolate(), "Image does not loaded yet...");
 			return;
@@ -1013,33 +975,27 @@ void image_export(v8::Isolate* isolate, v8::Handle<v8::Object> target){
 			//std::cout << "rgb(" << (int)pixel->b << "," << (int)pixel->g << "," << (int)pixel->r << ") " << std::endl;
 			args.GetReturnValue().Set(args.Holder());
 		}
-	}));
-	prototype->Set(isolate, "unlock_bits", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		image* img = sow_web_jsx::unwrap<image>(args);
-		if (img == NULL) {
-			throw_js_error(args.GetIsolate(), "Image object disposed...");
-			return;
-		}
+	});
+	set_prototype(isolate, prototype, "unlock_bits", [](js_method_args) {
+		image* img = get_image_instance(args);
+		if (img == NULL)return;
 		if (img->is_loaded() == FALSE) {
 			throw_js_error(args.GetIsolate(), "Image does not loaded yet...");
 			return;
 		}
 		img->unlock_bits();
 		args.GetReturnValue().Set(args.Holder());
-	}));
-	prototype->Set(isolate, "dump_data", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		image* img = sow_web_jsx::unwrap<image>(args);
-		if (img == NULL) {
-			throw_js_error(args.GetIsolate(), "Image object disposed...");
-			return;
-		}
+	});
+	set_prototype(isolate, prototype, "dump_data", [](js_method_args) {
+		image* img = get_image_instance(args);
+		if (img == NULL)return;
 		if (img->is_loaded() == FALSE) {
 			throw_js_error(args.GetIsolate(), "Image does not loaded yet...");
 			return;
 		}
 		img->dump_data();
 		args.GetReturnValue().Set(args.Holder());
-	}));
+	});
 	v8::Local<v8::Context>context = isolate->GetCurrentContext();
 	{
 		v8::Local<v8::Object>image_format_object = v8::Object::New(isolate);

@@ -425,26 +425,19 @@ namespace smtp_client {
 		return rec;
 	}
 	const char* smtp_request::get_last_error()const {
+		if (_internal_error == NULL)return "No error found in current context.";
 		return const_cast<const char*>(_internal_error);
 	}
 	void smtp_request::set_error(const char* error) {
-		if (_internal_error != NULL)
-			delete[]_internal_error;
+		_free_char(_internal_error);
 		size_t len = strlen(error);
 		_internal_error = new char[len + 1];
 		strcpy_s(_internal_error, len, error);
 		_has_error = true;
 	}
 	smtp_request::~smtp_request() {
-		delete _internal_error;
-		if (_headers) {
-			_headers->clear();
-			delete _headers; _headers = NULL;
-		}
-		if (_attachments) {
-			_attachments->clear();
-			delete _attachments; _attachments = NULL;
-		}
+		_free_char(_internal_error);
+		_free_obj(_headers); _free_obj(_attachments);
 		if (_recipients != NULL) {
 			curl_slist_free_all(_recipients);
 			_recipients = NULL;

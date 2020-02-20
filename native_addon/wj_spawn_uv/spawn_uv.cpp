@@ -114,7 +114,8 @@ int spawn_uv_child_process(
 	return TRUE;
 }
 using namespace sow_web_jsx;
-void spawn_uv_child_process(const v8::FunctionCallbackInfo<v8::Value>& args) {
+
+V8_JS_METHOD(spawn_uv_child_process) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (args.Length() <= 2) {
 		throw_js_error(isolate, "argument length should be 3");

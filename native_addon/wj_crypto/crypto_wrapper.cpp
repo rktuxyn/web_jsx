@@ -10,7 +10,7 @@
 #	include <web_jsx/v8_util.h>
 #	include "crypto.h"
 using namespace sow_web_jsx;
-void generate_key_iv(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(generate_key_iv) {
 	v8::Isolate* isolate = args.GetIsolate();
 	std::string key, iv, error;
 	if (crypto::generate_key_iv(key, iv, error) == FALSE) {
@@ -34,7 +34,7 @@ void generate_key_iv(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	args.GetReturnValue().Set(v8_result);
 	key.clear(); iv.clear();
 }
-void encrypt_decrypt_file(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(encrypt_decrypt_file) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (args.Length() < 5) {
 		isolate->ThrowException(v8::Exception::TypeError(
@@ -106,7 +106,7 @@ void encrypt_decrypt_file(const v8::FunctionCallbackInfo<v8::Value>& args) {
 			v8_str(isolate, error_str.c_str())));
 	}
 }
-void encrypt_str(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(encrypt_str) {
 	v8::Isolate* isolate = args.GetIsolate();
 
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
@@ -140,7 +140,7 @@ void encrypt_str(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	utf_plain_text.clear();
 	dest.clear(); std::stringstream().swap(dest);
 }
-void decrypt_str(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(decrypt_str) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
@@ -168,12 +168,11 @@ void decrypt_str(const v8::FunctionCallbackInfo<v8::Value>& args) {
 			sow_web_jsx::concat_msg(isolate, "Unable to decrypt encrypted text.==>", dest.str().c_str())));
 	}
 	else {
-		args.GetReturnValue().Set(v8::String::NewFromUtf8(isolate, dest.str().c_str(), v8::NewStringType::kNormal).ToLocalChecked());
+		args.GetReturnValue().Set(v8_str(isolate, dest.str().c_str()));
 	}
 	utf_encrypted_text.clear();
 	dest.clear(); std::stringstream().swap(dest);
 }
-
 void cypto_export(v8::Isolate* isolate, v8::Handle<v8::Object> target){
 	v8::Local<v8::Object>crypto_object = v8::Object::New(isolate);
 	wjsx_set_method(isolate, crypto_object, "generate_key_iv", generate_key_iv);

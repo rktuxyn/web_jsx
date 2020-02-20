@@ -8,8 +8,8 @@
 #	include "stdout_w.h"
 #	include <web_jsx/web_jsx.h>
 #	include <web_jsx/v8_util.h>
-#	include "zgzip.h"
 #	include <iostream>
+#	include "zgzip.h"
 using namespace sow_web_jsx;
 class std_out {
 public:
@@ -59,14 +59,10 @@ int std_out::is_gzip() {
 }
 void std_out::clear() {
 	if (_is_flush == TRUE)return;
-	if (_internal_error != NULL) {
-		delete[]_internal_error;
-		_internal_error = NULL;
-	}
+	_free_char(_internal_error);
 }
 int std_out::panic(const char* error, int error_code) {
-	if (_internal_error != NULL)
-		delete[]_internal_error;
+	_free_char(_internal_error);
 	size_t len = strlen(error);
 	_internal_error = new char[len + 1];
 	strcpy_s(_internal_error, len, error);
@@ -152,7 +148,7 @@ void stdout_export(v8::Isolate* isolate, v8::Handle<v8::Object> target){
 	tpl->SetClassName(v8_str(isolate, "stdout"));
 	tpl->InstanceTemplate()->SetInternalFieldCount(1);
 	v8::Local<v8::ObjectTemplate> prototype = tpl->PrototypeTemplate();
-	prototype->Set(isolate, "flush_header", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+	set_prototype(isolate, prototype, "flush_header",  [](js_method_args) {
 		v8::Isolate* isolate = args.GetIsolate();
 		if (sow_web_jsx::wrapper::is_flush() == TRUE) {
 			throw_js_error(isolate, "Headers already been flushed...");
@@ -164,7 +160,7 @@ void stdout_export(v8::Isolate* isolate, v8::Handle<v8::Object> target){
 			delete cout;
 			return;
 		}
-		if (sow_web_jsx::wrapper::flush_http_status() == FALSE)return;
+		if (wrapper::flush_http_status() == FALSE)return;
 		if (sow_web_jsx::wrapper::set_binary_output() == FALSE)return;
 		sow_web_jsx::wrapper::set_flush_status(TRUE);
 		int is_gzip = sow_web_jsx::wrapper::is_gzip_encoding();
@@ -179,8 +175,8 @@ void stdout_export(v8::Isolate* isolate, v8::Handle<v8::Object> target){
 		}
 		sow_web_jsx::wrapper::clear_cache(TRUE, FALSE);
 		fflush(stdout);
-	}));
-	prototype->Set(isolate, "write_gzip_header", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+	});
+	set_prototype(isolate, prototype, "write_gzip_header", [](js_method_args) {
 		v8::Isolate* isolate = args.GetIsolate();
 		if (sow_web_jsx::wrapper::is_flush() == FALSE) {
 			throw_js_error(isolate, "Headers did not flushed yet...");
@@ -192,8 +188,8 @@ void stdout_export(v8::Isolate* isolate, v8::Handle<v8::Object> target){
 			return;
 		}
 		gzip::write_magic_header(std::cout);
-	}));
-	prototype->Set(isolate, "write", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+	});
+	set_prototype(isolate, prototype, "write", [](js_method_args) {
 		v8::Isolate* isolate = args.GetIsolate();
 		if (sow_web_jsx::wrapper::is_flush() == FALSE) {
 			throw_js_error(isolate, "Headers did not flushed yet...");
@@ -216,8 +212,8 @@ void stdout_export(v8::Isolate* isolate, v8::Handle<v8::Object> target){
 			return;
 		}
 		args.GetReturnValue().Set(v8::Number::New(isolate, (double)ret));
-	}));
-	prototype->Set(isolate, "write_from_file", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+	});
+	set_prototype(isolate, prototype, "write_from_file", [](js_method_args) {
 		v8::Isolate* isolate = args.GetIsolate();
 		if (sow_web_jsx::wrapper::is_flush() == FALSE) {
 			throw_js_error(isolate, "Headers did not flushed yet...");
@@ -242,8 +238,8 @@ void stdout_export(v8::Isolate* isolate, v8::Handle<v8::Object> target){
 			return;
 		}
 		args.GetReturnValue().Set(v8::Number::New(isolate, (double)ret));
-	}));
-	prototype->Set(isolate, "flush", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
+	});
+	set_prototype(isolate, prototype, "flush", [](js_method_args) {
 		v8::Isolate* isolate = args.GetIsolate();
 		if (sow_web_jsx::wrapper::is_flush() == FALSE) {
 			throw_js_error(isolate, "Headers did not flushed yet...");
@@ -257,6 +253,6 @@ void stdout_export(v8::Isolate* isolate, v8::Handle<v8::Object> target){
 		cout->flush(std::cout); delete cout;
 		args.Holder()->SetAlignedPointerInInternalField(0, nullptr);
 		sow_web_jsx::wrapper::clear_cache(TRUE, TRUE);
-	}));
+	});
 	target->Set(isolate->GetCurrentContext(), v8_str(isolate, "stdout"), tpl->GetFunction(isolate->GetCurrentContext()).ToLocalChecked());
 }

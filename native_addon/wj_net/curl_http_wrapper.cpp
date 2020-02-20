@@ -10,7 +10,7 @@
 #	include <web_jsx/v8_util.h>
 #	include "http_request.h"
 using namespace sow_web_jsx;
-void http_request(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(http_request) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsObject() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(

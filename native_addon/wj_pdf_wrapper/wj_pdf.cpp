@@ -25,7 +25,7 @@ void v8_object_loop(v8::Isolate* isolate, const v8::Local<v8::Object>v8_obj, std
 		}
 	}
 }
-void generate_pdf(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(generate_pdf) {
 	//11:14 PM 12/4/2018
 	v8::Isolate* isolate = args.GetIsolate();
 	try {
@@ -151,7 +151,7 @@ void generate_pdf(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		args.GetReturnValue().Set(v8_str(isolate, e.what()));
 	}
 }
-void generate_pdf_from_body(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(generate_pdf_from_body) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (sow_web_jsx::wrapper::is_http_status_ok() == FALSE) {
 		args.GetReturnValue().Set(v8::Number::New(isolate, -1));
