@@ -58,7 +58,7 @@ namespace sow_web_jsx {
 	}
 	// The callback that is invoked by v8 whenever the JavaScript 'read_line'
 	// function is called. Reads a string from standard input and returns.
-	void sow_web_jsx::read_line(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	V8_JS_METHOD(sow_web_jsx::read_line) {
 		if (args.Length() > 0) {
 			args.GetIsolate()->ThrowException(v8_str(args.GetIsolate(), "Unexpected arguments"));
 			return;
@@ -259,6 +259,7 @@ namespace sow_web_jsx {
 	}*/
 	const char* native_string::c_str() {
 		return _length == 0 ? "" : get_string().data();
+		//return _length == 0 ? "" : get_string().c_str();
 	}
 	bool native_string::is_empty(){
 		return _length == 0;

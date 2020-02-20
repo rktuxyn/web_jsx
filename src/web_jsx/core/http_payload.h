@@ -11,9 +11,13 @@
 #if !defined( _http_payload_h)
 #	define _http_payload_h
 #	include <v8.h>
+#if !defined(v8_js_method)
+#define V8_JS_METHOD(name)\
+void name(const v8::FunctionCallbackInfo<v8::Value>& args)
+#endif//!v8_js_method
 namespace sow_web_jsx {
-	void read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value>& args);
-	void read_payload(const v8::FunctionCallbackInfo<v8::Value>& args);
-	void write_file_from_payload(const v8::FunctionCallbackInfo<v8::Value>& args);
+	V8_JS_METHOD(read_http_posted_file);
+	V8_JS_METHOD(read_payload);
+	V8_JS_METHOD(write_file_from_payload);
 }
 #endif//!_http_payload_h

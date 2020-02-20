@@ -129,6 +129,7 @@ int web_jsx::fcgi_request::request_handler(
 	aei->ex_dir->append("\\");
 	sow_web_jsx::js_compiler::create_engine(aei->ex_dir->c_str());
 	const char* env_path = get_env_c("path");
+	
 	while (FCGX_Accept_r(&request) == 0) {
 		// Note that the default bufsize (0) will cause the use of iostream
 		// methods that require positioning (such as peek(), seek(),
@@ -136,6 +137,9 @@ int web_jsx::fcgi_request::request_handler(
 		fcgi_streambuf cin_fcgi_streambuf(request.in);
 		fcgi_streambuf cout_fcgi_streambuf(request.out);
 		fcgi_streambuf cerr_fcgi_streambuf(request.err);
+		/*std::istream in_stream(&cin_fcgi_streambuf);
+		std::ostream out_stream(&cout_fcgi_streambuf);
+		std::ostream err_stream(&cerr_fcgi_streambuf);*/
 #if HAVE_IOSTREAM_WITHASSIGN_STREAMBUF
 		std::cin = &cin_fcgi_streambuf;
 		std::cout = &cout_fcgi_streambuf;

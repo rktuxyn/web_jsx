@@ -15,6 +15,7 @@
 using namespace sow_web_jsx;
 using namespace sow_web_jsx::wrapper;
 using namespace sow_web_jsx::js_compiler;
+
 typedef struct {
 	std::map<std::string, std::map<std::string, std::string>>* ctx;
 	const char* exec_path;
@@ -26,21 +27,44 @@ typedef struct {
 	const char* script_source;
 	std::map<std::string, std::string>* ctx;
 }cja_func_arg;
+
 typedef struct {
 	void* args;
 	uv_async_t* asyncRequest;
 	uv_work_t* work_t;
 }wja_ctx;
-//typedef struct {
-//	void*args;
-//	uv_async_t*asyncRequest;
-//	uv_work_t*work_t;
-//}cja_ctx;
+
 v8_engine* _v8eng;
-#if defined(FAST_CGI_APP)
-//bool _is_create_context = false;
-#endif//FAST_CGI_APP
-int sow_web_jsx::js_compiler::run_script(std::map<std::string, std::map<std::string, std::string>>& ctx, template_result& tr) {
+
+void test(v8::Isolate* isolate1) {
+	//https://chromium.googlesource.com/v8/v8.git/+/4.5.56/test/cctest/test-api.cc#21090
+	const char* source_c = "Math.sqrt(4)";
+	const char* origin_c = "code cache test";
+	v8::ScriptCompiler::CachedData* cache;
+	v8::Isolate::Scope iscope(isolate1);
+	v8::HandleScope scope(isolate1);
+	v8::Local<v8::Context> context = v8::Context::New(isolate1);
+	v8::Context::Scope cscope(context);
+	v8::Local<v8::String> source_string = v8_str(isolate1, source_c);
+	v8::ScriptOrigin script_origin(v8_str(isolate1, origin_c));
+	v8::ScriptCompiler::Source source(source_string, script_origin);
+	v8::MaybeLocal<v8::Script> cscript = v8::ScriptCompiler::Compile(context, &source, v8::ScriptCompiler::kNoCompileOptions).ToLocalChecked();
+	int length = source.GetCachedData()->length;
+	unsigned char* cache_data = new unsigned char[length];
+	memcpy(cache_data, source.GetCachedData()->data, length);
+	//std::stringstream strm;
+	//reinterpret_cast<char*>(cache_data);
+	//strm.write((char*)&cache_data[0], length);
+	cache = new v8::ScriptCompiler::CachedData(cache_data, length, v8::ScriptCompiler::CachedData::BufferOwned);
+	delete[]cache_data;
+	cscript.ToLocalChecked()->Run(context);
+	/*v8::ScriptCompiler::CompileOptions option = v8::ScriptCompiler::kConsumeCodeCache;
+	v8::ScriptCompiler::Source sources(source_string, script_origin, cache);*/
+}
+int js_compiler::run_script(
+	std::map<std::string, std::map<std::string, std::string>>& ctx,
+	template_result& tr
+) {
 	v8::Isolate* isolate = _v8eng->get_current_isolate();
 	if (isolate == NULL) {
 		tr.is_error = true;
@@ -71,6 +95,7 @@ int sow_web_jsx::js_compiler::run_script(std::map<std::string, std::map<std::str
 	}
 	// Compile the source code.
 	v8::MaybeLocal<v8::Script> cscript = v8::Script::Compile(v8_ctx, source);
+	//v8::internal::wasm::NativeModule
 	if (cscript.IsEmpty()) {
 		tr.is_error = true;
 		tr.err_msg = "Unable to compile script. Check your script than try again.\r\n";
@@ -96,7 +121,9 @@ int sow_web_jsx::js_compiler::run_script(std::map<std::string, std::map<std::str
 	v8_ctx.Clear(); source.Clear();
 	return 1;
 }
-int sow_web_jsx::js_compiler::run_script_x(const char* script_source, std::map<std::string, std::string>& ctx) {
+int js_compiler::run_script_x(
+	const char* script_source, std::map<std::string, std::string>& ctx
+) {
 	v8::Isolate* isolate = _v8eng->get_current_isolate();
 	if (isolate->IsDead()) {
 		std::cout << "ISOLATE IS DEAD.\r\n";
@@ -105,7 +132,7 @@ int sow_web_jsx::js_compiler::run_script_x(const char* script_source, std::map<s
 	//v8::Locker				locker(isolate);
 	v8::Isolate::Scope					isolate_scope(isolate);
 	v8::HandleScope						handle_scope(isolate);
-	v8::Local<v8::ObjectTemplate> ctx_object = sow_web_jsx::wrapper::get_console_context(isolate, ctx);
+	v8::Local<v8::ObjectTemplate> ctx_object = wrapper::get_console_context(isolate, ctx);
 	ctx_object->Set(isolate, "runtime_compiler", v8::FunctionTemplate::New(isolate, sow_web_jsx::runtime_compiler));
 	v8::Local<v8::Context> v8_ctx = v8::Context::New(isolate, nullptr, ctx_object/*v8::MaybeLocal<v8::ObjectTemplate>()*/);
 	v8::Context::Scope					context_scope(v8_ctx);
@@ -146,18 +173,11 @@ int sow_web_jsx::js_compiler::run_script_x(const char* script_source, std::map<s
 void run_v8_async_wja(void* args) {
 	wja_func_arg* arg = (wja_func_arg*)args;
 	template_result& rsinf = *arg->rsinf;
-	try {
-		if (_v8eng == NULL)
-			_v8eng = new v8_engine(arg->exec_path);
-		js_compiler::run_script(*arg->ctx, rsinf);
-	}
-	catch (std::exception & e) {
-		rsinf.err_msg = e.what();
-		rsinf.is_error = true;
-		return;
-	}
+	if (_v8eng == NULL)
+		_v8eng = new v8_engine(arg->exec_path);
+	js_compiler::run_script(*arg->ctx, rsinf);
 }
-void sow_web_jsx::js_compiler::run_async(
+void js_compiler::run_async(
 	std::map<std::string, std::map<std::string, std::string>>& ctx,
 	const char* exec_path,
 	template_result& rsinf
@@ -193,57 +213,39 @@ void sow_web_jsx::js_compiler::run_async(
 	uv_run(loop, UV_RUN_DEFAULT);
 	uv_loop_close(loop);
 #if !defined(FAST_CGI_APP)
-	sow_web_jsx::wrapper::clear_cache();
-	_v8eng->dispose();
+	wrapper::clear_cache();
+	js_compiler::dispose_engine();
 #endif//!FAST_CGI_APP
 	if (rsinf.is_error == true) return;
-	sow_web_jsx::wrapper::response_body_flush(false);
+	wrapper::response_body_flush(false);
 	return;
 }
-void sow_web_jsx::js_compiler::run_script(
+void js_compiler::run_script(
 	std::map<std::string, std::map<std::string, std::string>>& ctx,
 	const char* exec_path, template_result& rsinf
 ) {
-	try {
-		if (_v8eng == NULL)
-			_v8eng = new v8_engine(exec_path);
-		js_compiler::run_script(ctx, rsinf);
-		sow_web_jsx::wrapper::response_body_flush(false);
-		//sow_web_jsx::wrapper::clear_cache();
-	}
-	catch (std::exception & e) {
-		rsinf.err_msg = e.what();
-		rsinf.is_error = true;
-		return;
-	}
+	if (_v8eng == NULL)
+		_v8eng = new v8_engine(exec_path);
+	js_compiler::run_script(ctx, rsinf);
+	sow_web_jsx::wrapper::response_body_flush(false);
 }
-void sow_web_jsx::js_compiler::create_engine(const char* exec_path) {
+void js_compiler::create_engine(const char* exec_path) {
 	if (_v8eng == NULL)
 		_v8eng = new v8_engine(exec_path);
 }
-v8::Isolate* sow_web_jsx::js_compiler::get_isolate() {
+v8::Isolate* js_compiler::get_isolate() {
 	if (_v8eng == NULL) throw new std::runtime_error("You should not call this method before initialize engine.");
 	return _v8eng->get_current_isolate();
 }
 int run_v8_async_cja(void* args) {
 	cja_func_arg* arg = (cja_func_arg*)args;
-	try {
-		if (_v8eng == NULL)
-			_v8eng = new v8_engine(arg->exec_path);
-		js_compiler::run_script_x(arg->script_source, *arg->ctx);
-		return 1;
-	}
-	catch (std::exception & e) {
-		std::cout << e.what() << "\r\n";
-		/*std::cout << "------------------------\r\n";
-		std::cout << "Source:\r\n";
-		std::cout << arg->script_source;
-		std::cout << "------------------------";*/
-		return -1;
-	}
+	if (_v8eng == NULL)
+		_v8eng = new v8_engine(arg->exec_path);
+	js_compiler::run_script_x(arg->script_source, *arg->ctx);
+	return TRUE;
 }
 //Served CLI Request
-void sow_web_jsx::js_compiler::run_async(
+void js_compiler::run_async(
 	const char* exec_path, const char* script_source, std::map<std::string, std::string>& ctx
 ) {
 	wja_ctx* context = new wja_ctx();
@@ -263,41 +265,27 @@ void sow_web_jsx::js_compiler::run_async(
 		_v8eng->get_current_isolate()->Exit();
 		uv_close((uv_handle_t*)handle, [](uv_handle_t* handles) {
 			delete reinterpret_cast<uv_async_t*>(handles);
-			});
 		});
+	});
 	uv_run(loop, UV_RUN_DEFAULT);
 	uv_loop_close(loop);
 	sow_web_jsx::wrapper::clear_cache();
-	//sow_web_jsx::wrapper::response_body_flush();
-	//_v8eng->get_current_isolate()->Exit();
-	//std::cout << "Waiting...." << std::endl;
-	_v8eng->wait_for_pending_task();//NOW
-	//std::cout << "Disposing...." << std::endl;
-	_v8eng->dispose();
+	_v8eng->wait_for_pending_task();
+	js_compiler::dispose_engine();
 }
-int sow_web_jsx::js_compiler::run_script(
-	const char* exec_path, const char* script_source, std::map<std::string, std::string>& ctx
+int js_compiler::run_script(
+	const char* exec_path, const char* script_source,
+	std::map<std::string, std::string>& ctx
 ) {
-	try {
-		if (_v8eng == NULL)
-			_v8eng = new v8_engine(exec_path);
-		js_compiler::run_script_x(script_source, ctx);
-		//_v8eng->get_current_isolate()->LowMemoryNotification();
-		_v8eng->dispose();
-		sow_web_jsx::wrapper::clear_cache();
-		return 1;
-	}
-	catch (std::exception & e) {
-		std::cout << e.what() << "\r\n";
-		/*std::cout << "------------------------\r\n";
-		std::cout << "Source:\r\n";
-		std::cout << script_source;
-		std::cout << "------------------------";*/
-		return -1;
-	}
+	if (_v8eng == NULL)
+		_v8eng = new v8_engine(exec_path);
+	js_compiler::run_script_x(script_source, ctx);
+	js_compiler::dispose_engine();
+	sow_web_jsx::wrapper::clear_cache();
+	return TRUE;
 }
 #include "module_store.h"
-void sow_web_jsx::js_compiler::dispose_engine() {
+void js_compiler::dispose_engine() {
 	swjsx_module::clean_native_module();
 	if (_v8eng != NULL) {
 		_v8eng->dispose();

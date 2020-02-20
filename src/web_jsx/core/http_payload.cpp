@@ -23,6 +23,8 @@ public:
 		const char* file_name,
 		const char* c_type
 	);
+	http_posted_file(const http_posted_file&) = delete;
+	http_posted_file& operator=(const http_posted_file&) = delete;
 	~http_posted_file();
 	void store(const char* path);
 	double save_as(const char* path);
@@ -53,6 +55,8 @@ typedef struct POSTED_FILES {
 class http_payload {
 public:
 	explicit http_payload(const std::string& content_type, size_t content_length);
+	http_payload(const http_payload&) = delete;
+	http_payload& operator=(const http_payload&) = delete;
 	~http_payload();
 	int read_all();
 	int read_all(const char* temp_dir);
@@ -686,7 +690,7 @@ v8::Local<v8::Object> get_file_obj(v8::Isolate* isolate, http_posted_file* pf) {
 	}, v8::WeakCallbackType::kParameter);
 	return exports;
 }
-void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(sow_web_jsx::read_http_posted_file) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsNumber() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(v8_str(isolate, "Contenent length required!!!")));
@@ -847,7 +851,7 @@ void sow_web_jsx::read_http_posted_file(const v8::FunctionCallbackInfo<v8::Value
 	}
 	args.GetReturnValue().Set(localApp);
 }
-void sow_web_jsx::write_file_from_payload(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(sow_web_jsx::write_file_from_payload) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsNumber() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::Error(v8_str(isolate, "Contenent length required!!!")));
@@ -882,7 +886,7 @@ void sow_web_jsx::write_file_from_payload(const v8::FunctionCallbackInfo<v8::Val
 	}
 	app->clear(); delete app; ctype.clear(); upload_dir.clear();
 }
-void sow_web_jsx::read_payload(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(sow_web_jsx::read_payload) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsNumber() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::Error(v8_str(isolate, "Contenent length required!!!")));

@@ -157,7 +157,7 @@ void jsx_file_bind(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx) {
 	ctx->Set(isolate, "mood", file_mood_enum);
 	ctx->Set(isolate, "file", jsx_file_tmplate);
 }
-void v8_gc(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(v8_gc) {
 	args.GetIsolate()->LowMemoryNotification();
 }
 ///Open new process and forget
@@ -165,7 +165,7 @@ void v8_gc(const v8::FunctionCallbackInfo<v8::Value>& args) {
 ///@param arg process argument
 ///@throws Process not found
 ///@returns {process_id}
-void native_open_process(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(native_open_process) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (_is_cli == false) {
 		isolate->ThrowException(v8::Exception::TypeError(
@@ -258,7 +258,7 @@ int spawn_uv_process(const process_info pi) {
 ///@param process_name e.g. web_jsx.exe
 ///@throws Permission denied
 ///@returns {-1|0}
-void native_kill_process_by_name(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(native_kill_process_by_name) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(v8_str(isolate, "App name required!!!")));
@@ -277,7 +277,7 @@ void native_kill_process_by_name(const v8::FunctionCallbackInfo<v8::Value>& args
 ///param title -> Process title not required
 ///param arg -> Process argument not required
 ///param wait_for_exit -> If you need to wait untill Process exit, than set true default false
-void native_create_process(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(native_create_process) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsObject() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
@@ -362,7 +362,7 @@ void native_create_process(const v8::FunctionCallbackInfo<v8::Value>& args) {
 ///@param arg process argument
 ///@throws Process not found
 ///@returns {1}
-void native_create_child_process(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(native_create_child_process) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (_is_cli == false) {
 		isolate->ThrowException(v8::Exception::TypeError(
@@ -396,7 +396,7 @@ void native_create_child_process(const v8::FunctionCallbackInfo<v8::Value>& args
 ///@param pid process id
 ///@throws Permission denied
 ///@returns {if process found 1 or 0}
-void native_terminate_process(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(native_terminate_process) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsNumber() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
@@ -417,7 +417,7 @@ void native_terminate_process(const v8::FunctionCallbackInfo<v8::Value>& args) {
 ///Check given process id is running
 ///@param pid define Process Id
 ///@returns {true|false}
-void native_process_is_running(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(native_process_is_running) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsNumber() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
@@ -435,7 +435,7 @@ void native_process_is_running(const v8::FunctionCallbackInfo<v8::Value>& args) 
 #endif//_WINDOWS_
 	args.GetReturnValue().Set(v8::Number::New(isolate, rec));
 }
-void native_current_process_id(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(native_current_process_id) {
 	v8::Isolate* isolate = args.GetIsolate();
 	int rec = 0;
 #if defined(_WIN32)||defined(_WIN64)
@@ -446,7 +446,7 @@ void native_current_process_id(const v8::FunctionCallbackInfo<v8::Value>& args) 
 	args.GetReturnValue().Set(v8::Number::New(isolate, rec));
 }
 //[FileSystem]
-void native_exists_file(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(native_exists_file) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
@@ -461,7 +461,7 @@ void native_exists_file(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	_free_obj(abs_path); utf_abs_path_str.clear();
 	args.GetReturnValue().Set(v8::Boolean::New(isolate, ret > 0));
 }
-void native_write_file(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(native_write_file) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
@@ -482,7 +482,7 @@ void native_write_file(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8_result.Clear(); _free_obj(abs_path);
 	utf_abs_path_str.clear(); utf_data_str.clear();
 }
-void native_read_file(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(native_read_file) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
@@ -533,7 +533,7 @@ void native_read_file(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	std::stringstream().swap(ssstream);
 	return;
 }
-void native_write_from_file(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(native_write_from_file) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
@@ -550,7 +550,7 @@ void native_write_from_file(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	_free_obj(abs_path);
 	return;
 }
-void exists_directory(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(exists_directory) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
@@ -565,7 +565,7 @@ void exists_directory(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	utf_abs_path_str.clear();
 	args.GetReturnValue().Set(v8::Number::New(isolate, (double)rec));
 }
-void read_directory_regx(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(read_directory_regx) {
 	//3:21 PM 12/24/2018
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
@@ -625,7 +625,7 @@ void read_directory_regx(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	directory_v8_array.Clear();
 	args.GetReturnValue().Set(v8_result);
 }
-void read_directory(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(read_directory) {
 	//3:21 PM 12/24/2018
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
@@ -684,7 +684,7 @@ void read_directory(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	directory_v8_array.Clear();
 	args.GetReturnValue().Set(v8_result);
 }
-void native_delete_directory(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(native_delete_directory) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		throw_js_error(isolate, "Directory required!!!");
@@ -702,7 +702,7 @@ void native_delete_directory(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	return;
 
 }
-void native_create_directory(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(native_create_directory) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		throw_js_error(isolate, "Server path required!!!");
@@ -730,7 +730,7 @@ void native_create_directory(const v8::FunctionCallbackInfo<v8::Value>& args) {
 //[/FileSystem]
 //8:53 PM 12/6/2019
 //[Asynchronous]
-void async_func(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(async_func) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsFunction()) {
 		isolate->ThrowException(v8::Exception::Error(
@@ -773,7 +773,7 @@ void async_func(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	callback.Clear();
 	args.GetReturnValue().Set(v8::Number::New(isolate, rec));
 }
-void sleep_func(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(sleep_func) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsNumber() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
@@ -792,7 +792,7 @@ void sleep_func(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	//	sleep(reinterpret_cast<unsigned int*>(milliseconds));
 	//#endif//!_WINDOWS_
 }
-void set_time_out_func(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(set_time_out_func) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsFunction() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
@@ -810,14 +810,14 @@ void set_time_out_func(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	int rec = sow_web_jsx::set_time_out(isolate, sow_web_jsx::async_callback, afa, milliseconds);
 	args.GetReturnValue().Set(v8::Number::New(isolate, rec));
 }
-void async_t(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(async_t) {
 	v8::Isolate* isolate = args.GetIsolate();
 	async_func_arg* afa = new async_func_arg();
 	afa->cb.Reset(isolate, v8::Local<v8::Function>::Cast(args[0]));
 	sow_web_jsx::acync_init(isolate, sow_web_jsx::async_callback, afa);
 	args.GetReturnValue().Set(v8_str(isolate, "START"));
 }
-void _async_thread(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(_async_thread) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsArray() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
@@ -829,7 +829,7 @@ void _async_thread(const v8::FunctionCallbackInfo<v8::Value>& args) {
 }
 //[/Asynchronous]
 //2:08 AM 11/25/2019
-void response_redirect(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(response_redirect) {
 	v8::Isolate* isolate = args.GetIsolate();
 #if defined(FAST_CGI_APP)
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
@@ -862,7 +862,7 @@ void response_redirect(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	_free_obj(desc); url_str.clear();
 }
 //[Encryption/Decryption]
-void encrypt_source(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(encrypt_source) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
@@ -895,7 +895,7 @@ void encrypt_source(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	return;
 #endif//!WEB_JSX_CLIENT_BUILD
 }
-void decrypt_source(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(decrypt_source) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
@@ -928,7 +928,7 @@ void decrypt_source(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	return;
 #endif//!WEB_JSX_CLIENT_BUILD
 }
-void base64_encode(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(base64_encode) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
@@ -942,7 +942,7 @@ void base64_encode(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	args.GetReturnValue().Set(v8_str(isolate, bas64str->c_str()));
 	_free_obj(bas64str); utf_plain_text.clear();
 }
-void base64_decode(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(base64_decode) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
@@ -956,8 +956,7 @@ void base64_decode(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	args.GetReturnValue().Set(v8_str(isolate, plain_str->c_str()));
 	_free_obj(plain_str); utf_base64_text.clear();
 }
-
-void hex_to_string_js(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(hex_to_string_js) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(v8_str(isolate, "Hex string required!!!")));
@@ -972,7 +971,7 @@ void hex_to_string_js(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	_free_obj(plain_str);
 	return;
 }
-void string_to_hex_js(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(string_to_hex_js) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(v8_str(isolate, "Plain string required!!!")));
@@ -989,7 +988,7 @@ void string_to_hex_js(const v8::FunctionCallbackInfo<v8::Value>& args) {
 }
 //[/Encryption/Decryption]
 //12:09 PM 8/27/2019
-void set_cookie(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(set_cookie) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (args[0]->IsNullOrUndefined() || !args[0]->IsString()) {
 		isolate->ThrowException(v8::Exception::TypeError(
@@ -1004,7 +1003,7 @@ void set_cookie(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	}
 	_cookies->push_back(cook_val);
 }
-void http_status(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(http_status) {
 	v8::Isolate* isolate = args.GetIsolate();
 #if defined(FAST_CGI_APP)
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
@@ -1049,7 +1048,7 @@ void http_status(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	_free_obj(desc); status_code_str.clear();
 	return;
 }
-void response_write_header(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(response_write_header) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
@@ -1066,14 +1065,14 @@ void response_write_header(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	n_help::add_header(*_headers, key_str.c_str(), description_str.c_str());
 	return;
 }
-void response_write(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(response_write) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (args[0]->IsNullOrUndefined())return;
 	v8::String::Utf8Value utf8_str(isolate, args[0]);
 	_body_stream << *utf8_str;
 	return;
 }
-void response_throw_error(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(response_throw_error) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString()) {
 		throw_js_error(isolate, "Error Description required....");
@@ -1107,16 +1106,16 @@ void response_throw_error(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	}
 	return;
 }
-void response_clear(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(response_clear) {
 	//v8::Isolate* isolate = args.GetIsolate();
 	_body_stream.clear();
 	std::stringstream().swap(_body_stream);
 	args.GetReturnValue().Set(args.Holder());
 }
-void get_response_body(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(get_response_body) {
 	args.GetReturnValue().Set(v8_str(args.GetIsolate(), _body_stream.str().c_str()));
 }
-void server_map_path(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(server_map_path) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
@@ -1551,7 +1550,7 @@ void SetEngineInformation(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> v8
 	v8_global->Set(isolate, "engine", js_engine_object);
 }
 //9:32 PM 11/22/2018
-void require(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(require) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
@@ -1664,7 +1663,7 @@ void require(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8_global.Clear();
 	return;
 }
-void implimant_native_module(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(implimant_native_module) {
 	if (_is_flush == true)return;
 	swjsx_module::implimant_native_module(args, _app_dir_c, _root_dir_c);
 }
@@ -1800,7 +1799,7 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_context(v8::Isolate* iso
 // The callback that is invoked by v8 whenever the JavaScript 'print'
 // function is called.  Prints its arguments on stdout separated by
 // spaces and ending with a newline.
-void Print(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(Print) {
 	bool first = true;
 	v8::Isolate* isolate = args.GetIsolate();
 	//v8::HandleScope handle_scope(args.GetIsolate());

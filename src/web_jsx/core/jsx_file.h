@@ -34,6 +34,8 @@ namespace sow_web_jsx {
 		int panic(const char* error);
 	public:
 		explicit jsx_file(const char*, const char*);
+		jsx_file(const jsx_file&) = delete;
+		jsx_file& operator=(const jsx_file&) = delete;
 		int is_flush()const;
 		size_t open(const char* path, const char* mode);
 		size_t read(int len, std::string&out);

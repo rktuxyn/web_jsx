@@ -44,6 +44,15 @@
 #endif//!_export_wjsx
 #endif//__WJSX_SHARED
 
+#if !defined(js_method_args)
+#define js_method_args const v8::FunctionCallbackInfo<v8::Value>& args
+#endif//!js_method_args
+
+#if !defined(V8_JS_METHOD)
+#define V8_JS_METHOD(name)\
+void name(js_method_args)
+#endif//!v8_js_method
+
 namespace sow_web_jsx {
 	typedef struct {
 		int is_flush;
@@ -58,7 +67,7 @@ namespace sow_web_jsx {
 	const char* _toCharStr(const v8::String::Utf8Value& value);
 #define T_CHAR _toCharStr
 	const char* to_char_str(v8::Isolate* isolate, v8::Local<v8::Value> x);
-	void read_line(const v8::FunctionCallbackInfo<v8::Value>& args);
+	V8_JS_METHOD(read_line);
 	//v8::Local<v8::String> v8_str(v8::Isolate* isolate, const char* x);
 	void set__exception(
 		v8::Isolate * isolate, 
