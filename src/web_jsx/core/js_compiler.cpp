@@ -11,7 +11,7 @@
 #	include <libplatform/libplatform.h>
 #	include "native_wrapper.h"
 #	include "v8_engine.h"
-
+#	include "wjsx_env.h"
 using namespace sow_web_jsx;
 using namespace sow_web_jsx::wrapper;
 using namespace sow_web_jsx::js_compiler;
@@ -19,11 +19,13 @@ using namespace sow_web_jsx::js_compiler;
 typedef struct {
 	std::map<std::string, std::map<std::string, std::string>>* ctx;
 	const char* exec_path;
+	const char* script_path;
 	template_result* rsinf;
 }wja_func_arg;
 
 typedef struct {
 	const char* exec_path;
+	const char* script_path;
 	const char* script_source;
 	std::map<std::string, std::string>* ctx;
 }cja_func_arg;
@@ -48,6 +50,7 @@ void test(v8::Isolate* isolate1) {
 	v8::Local<v8::String> source_string = v8_str(isolate1, source_c);
 	v8::ScriptOrigin script_origin(v8_str(isolate1, origin_c));
 	v8::ScriptCompiler::Source source(source_string, script_origin);
+	
 	v8::MaybeLocal<v8::Script> cscript = v8::ScriptCompiler::Compile(context, &source, v8::ScriptCompiler::kNoCompileOptions).ToLocalChecked();
 	int length = source.GetCachedData()->length;
 	unsigned char* cache_data = new unsigned char[length];
@@ -95,7 +98,7 @@ int js_compiler::run_script(
 	}
 	// Compile the source code.
 	v8::MaybeLocal<v8::Script> cscript = v8::Script::Compile(v8_ctx, source);
-	//v8::internal::wasm::NativeModule
+	//v8::ScriptCompiler::CreateCodeCache(cscript.ToLocalChecked()->GetUnboundScript());
 	if (cscript.IsEmpty()) {
 		tr.is_error = true;
 		tr.err_msg = "Unable to compile script. Check your script than try again.\r\n";
@@ -232,10 +235,6 @@ void js_compiler::run_script(
 void js_compiler::create_engine(const char* exec_path) {
 	if (_v8eng == NULL)
 		_v8eng = new v8_engine(exec_path);
-}
-v8::Isolate* js_compiler::get_isolate() {
-	if (_v8eng == NULL) throw new std::runtime_error("You should not call this method before initialize engine.");
-	return _v8eng->get_current_isolate();
 }
 int run_v8_async_cja(void* args) {
 	cja_func_arg* arg = (cja_func_arg*)args;

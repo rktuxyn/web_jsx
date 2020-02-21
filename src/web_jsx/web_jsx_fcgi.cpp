@@ -16,11 +16,8 @@
 #	include <fcgio.h>
 #	include "web_jsx_cgi.h"
 #	include "core/native_wrapper.h"
-#pragma warning(disable: _STL_DISABLED_WARNINGS)
-_STL_DISABLE_CLANG_WARNINGS
-#pragma push_macro("new")
-#undef new
-using namespace std;
+#	include "core/wjsx_env.h"
+
 using namespace sow_web_jsx::js_compiler;
 int web_jsx::fcgi_request::request_process(
 	const app_ex_info aei, 
@@ -73,10 +70,13 @@ int web_jsx::fcgi_request::request_handler(
 	const char* execute_path, 
 	const char* path, int is_spath
 ) {
-	streambuf * cin_streambuf = cin.rdbuf();
-	streambuf * cout_streambuf = cout.rdbuf();
-	streambuf * cerr_streambuf = cerr.rdbuf();
-	//int is_self_req = path != NULL && strlen(path) != 0;
+
+#if !defined(WJMT)
+	std::streambuf * cin_streambuf = std::cin.rdbuf();
+	std::streambuf * cout_streambuf = std::cout.rdbuf();
+	std::streambuf * cerr_streambuf = std::cerr.rdbuf();
+#endif//!WJMT
+
 	if (is_spath == TRUE) {
 		std::cout << "Execute dir:" << execute_path << std::endl;
 	}
@@ -90,14 +90,22 @@ int web_jsx::fcgi_request::request_handler(
 		}
 		if (err != 0) {
 			if (is_spath == FALSE) {
+#if defined(WJMT)
+				wjsx_env* wj_env = new wjsx_env(std::cin, std::cout, std::cerr);
+#endif//!WJMT
 				app_ex_info* aei = new app_ex_info();
 				aei->ex_dir = new std::string();
 				aei->ex_name = new std::string();
 				aei->execute_path = execute_path;
 				::request_file_info(aei->execute_path, *aei->ex_dir, *aei->ex_name);
 				aei->ex_dir->append("\\");
+#if defined(WJMT)
+				::write_internal_server_error("text/html", aei->ex_dir->c_str(), 500, "Unable to initialize FastCGI module!!!", wj_env);
+				wj_env->free(); delete wj_env;
+#else
 				::write_internal_server_error("text/html", aei->ex_dir->c_str(), 500, "Unable to initialize FastCGI module!!!");
-				web_jsx::app_core::free_app_info(aei);
+#endif//!WJMT
+				_free_app_info(aei);
 			}
 			else {
 				fprintf(stderr, "%", "Unable to initialize FastCGI module!!!");
@@ -108,6 +116,7 @@ int web_jsx::fcgi_request::request_handler(
 	}
 	if (is_spath == TRUE) {
 		if (FCGX_OpenSocket(path, 1000) < 0) {
+			FCGI_puts("");
 			fprintf(stderr, "%=>%", "Unable to open socket to requested", path);
 			return EXIT_FAILURE;
 		}
@@ -119,7 +128,6 @@ int web_jsx::fcgi_request::request_handler(
 			return EXIT_SUCCESS;
 		}
 	}
-	
 	app_ex_info *aei = new app_ex_info();
 	aei->ex_dir = new std::string();
 	aei->ex_name = new std::string();
@@ -129,7 +137,6 @@ int web_jsx::fcgi_request::request_handler(
 	aei->ex_dir->append("\\");
 	sow_web_jsx::js_compiler::create_engine(aei->ex_dir->c_str());
 	const char* env_path = get_env_c("path");
-	
 	while (FCGX_Accept_r(&request) == 0) {
 		// Note that the default bufsize (0) will cause the use of iostream
 		// methods that require positioning (such as peek(), seek(),
@@ -137,9 +144,15 @@ int web_jsx::fcgi_request::request_handler(
 		fcgi_streambuf cin_fcgi_streambuf(request.in);
 		fcgi_streambuf cout_fcgi_streambuf(request.out);
 		fcgi_streambuf cerr_fcgi_streambuf(request.err);
-		/*std::istream in_stream(&cin_fcgi_streambuf);
+#if defined(WJMT)
+		std::istream in_stream(&cin_fcgi_streambuf);
 		std::ostream out_stream(&cout_fcgi_streambuf);
-		std::ostream err_stream(&cerr_fcgi_streambuf);*/
+		std::ostream err_stream(&cerr_fcgi_streambuf);
+		wjsx_env* wj_env = new wjsx_env(in_stream, out_stream, err_stream);
+		web_jsx::fcgi_request::request_process(*aei, env_path, request.envp);
+		out_stream.flush(); err_stream.flush();
+		in_stream.clear(); out_stream.clear(); err_stream.clear();
+#else
 #if HAVE_IOSTREAM_WITHASSIGN_STREAMBUF
 		std::cin = &cin_fcgi_streambuf;
 		std::cout = &cout_fcgi_streambuf;
@@ -150,21 +163,24 @@ int web_jsx::fcgi_request::request_handler(
 		std::cerr.rdbuf(&cerr_fcgi_streambuf);
 #endif
 		//print_fcgi_envp(request.envp);
+		wjsx_env* wj_env = new wjsx_env();
 		web_jsx::fcgi_request::request_process(*aei, env_path, request.envp);
+#endif//!WJMT
 		if (request.out->isClosed) {
 			sow_web_jsx::wrapper::clear_cache();
 		}
+		wj_env->free(); delete wj_env;
 	}
-	FCGX_Free(&request, 1);
+	FCGX_Free(&request, TRUE);
 	sow_web_jsx::js_compiler::dispose_engine();
 	// restore stdio streambufs
-	cin.rdbuf(cin_streambuf);
-	cout.rdbuf(cout_streambuf);
-	cerr.rdbuf(cerr_streambuf);
-	web_jsx::app_core::free_app_info(aei);
+#if !defined(WJMT)
+	std::cin.rdbuf(cin_streambuf);
+	std::cout.rdbuf(cout_streambuf);
+	std::cerr.rdbuf(cerr_streambuf);
+#endif//!WJMT
+	_free_app_info(aei);
 	sow_web_jsx::free_resource();
 	return EXIT_SUCCESS;
 }
-#pragma pop_macro("new")
-_STL_RESTORE_CLANG_WARNINGS
 #endif//FAST_CGI_APP

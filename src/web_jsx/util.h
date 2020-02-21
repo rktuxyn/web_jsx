@@ -13,6 +13,7 @@
 #	include <string>
 #	include <map>
 #	include <vector>
+#	include "core/wjsx_env.h"
 #define _DELETE DELETE
 #undef DELETE
 typedef enum {
@@ -72,12 +73,17 @@ void obj_insert(
 	const char* prop, 
 	std::map<std::string, std::map<std::string, std::string>>&to_obj
 );
-void write_header(const char* ct);
+void write_header(
+	const char* ct
+);
 void write_internal_server_error(
 	const char* content_type,
 	const char* ex_dir,
 	int error_code,
 	const char* error_msg
+#if defined(WJMT)
+	, wjsx_env* wj_env
+#endif//!WJMT
 );
 void json_obj_stringify(
 	std::map<std::string, std::string>& json_obj,

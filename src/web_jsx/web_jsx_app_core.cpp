@@ -365,9 +365,3 @@ void web_jsx::app_core::prepare_console_response(int argc, char *argv[], int is_
 	_free_obj(ex_dir); _free_obj(ex_name);
 	fflush(stdout);
 }
-void web_jsx::app_core::free_app_info(app_ex_info * aei) {
-	_free_obj(aei->ex_dir);
-	_free_obj(aei->ex_name);
-	aei->execute_path = NULL;
-	delete aei; aei = NULL;
-}

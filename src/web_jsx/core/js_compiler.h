@@ -12,14 +12,12 @@
 #	include "template_info.h"
 #	include <string>
 #	include <map>
-#	include <v8.h>
 namespace sow_web_jsx {
 	namespace js_compiler {
 		int run_script(std::map<std::string, std::map<std::string, std::string>>& ctx, template_result& tr);
 		int run_script_x(const char* script_source, std::map<std::string, std::string>& ctx);
 		void create_engine(const char* exec_path);
 		void dispose_engine();
-		v8::Isolate* get_isolate();
 		int run_script(const char* exec_path, const char* script_source, std::map<std::string, std::string>& ctx);
 		void run_script(std::map<std::string, std::map<std::string, std::string>>&, const char*, template_result&);
 		/*uv async*/

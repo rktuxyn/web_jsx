@@ -32,7 +32,7 @@ typedef struct {
 }script_tag;
 class js_parser {
 public:
-	js_parser() {
+	explicit js_parser() {
 		script_tag *tags = new script_tag();
 		this->regx_sts = new std::regex("(" + tags->sts + ")");
 		this->regx_ste = new std::regex("(" + tags->ste + ")");
@@ -43,15 +43,8 @@ public:
 		//this->result_key = "_nopr_";
 		delete tags;
 	}
-	js_parser(const js_parser& other) {
-		this->clear();
-		this->regx_sts = other.regx_sts;
-		this->regx_ste = other.regx_ste;
-		this->regx_rts = other.regx_rts;
-		this->regx_rte = other.regx_rte;
-		this->rep_str = other.rep_str;
-		this->rep_str_regex = other.rep_str_regex;
-	}
+	js_parser(const js_parser&) = delete;
+	js_parser& operator=(const js_parser&) = delete;
 	void clear() {
 		delete this->regx_sts;
 		delete this->regx_ste;

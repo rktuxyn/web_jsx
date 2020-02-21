@@ -95,7 +95,9 @@ namespace sow_web_jsx {
 		v8::String::Utf8Value* _utf8Value = nullptr;
 		bool _invalid = false;
 	public:
-		native_string(v8::Isolate* isolate, const v8::Local<v8::Value>& value);
+		explicit native_string(v8::Isolate* isolate, const v8::Local<v8::Value>& value);
+		native_string(const native_string&) = delete;
+		native_string& operator=(const native_string&) = delete;
 		bool is_invalid(v8::Isolate* isolate);
 		std::string_view get_string();
 		//std::string get_string();

@@ -7,6 +7,7 @@
 //2:46 AM 11/21/2018
 #	include "web_jsx_global.h"
 #	include "native_wrapper.h"
+#	include "wjsx_env.h"
 #	include "v8_util.h"
 #	include "directory_.h"
 #	include "zgzip.hpp"
@@ -28,6 +29,7 @@
 #	define DATA_READ_CHUNK 16384
 #endif//!DATA_READ_CHUNK
 #endif//!FAST_CGI_APP
+
 #define _set_srd(_str, str)\
 _free_obj(_str);\
 _str = new std::string(str);
@@ -38,6 +40,7 @@ std::string* _root_dir = NULL;
 const char* _root_dir_c = NULL;
 std::string* _app_dir = NULL;
 const char* _app_dir_c = NULL;
+
 void set_root_dir(const char* root_dir) {
 	_set_srd(_root_dir, root_dir);
 	_root_dir_c = _root_dir->c_str();
@@ -2019,6 +2022,7 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::create_v8_context_object(v8:
 	bitmap_export(isolate, v8_global);
 	/*[/bitmap]*/
 	SetEngineInformation(isolate, v8_global);
+	//v8_global->SetInternalFieldCount(1);
 	return v8_global;
 }
 //9:32 PM 11/22/2018

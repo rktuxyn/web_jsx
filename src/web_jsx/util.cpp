@@ -265,14 +265,23 @@ req_method determine_req_method(void) {
 	const char* request_method = get_env_c("REQUEST_METHOD");
 	return determine_req_method(request_method);
 }
-void write_headert(const char* ct) {
+#if defined(WJMT)
+void write_headert(
+	const char* ct, wjsx_env* wj_env
+) {
+	_WCOUT << "Content-Type:" << ct << H_N_L;
+	_WCOUT << "Accept-Ranges:bytes" << H_N_L;
+	_WCOUT << "X-Powered-By:safeonline.world" << H_N_L;
+	_WCOUT << "X-Process-By:web_jsx" << H_N_L;
+}
+#endif//!WJMT
+void write_header(
+	const char* ct
+) {
 	std::cout << "Content-Type:" << ct << H_N_L;
 	std::cout << "Accept-Ranges:bytes" << H_N_L;
 	std::cout << "X-Powered-By:safeonline.world" << H_N_L;
 	std::cout << "X-Process-By:web_jsx" << H_N_L;
-}
-void write_header(const char* ct) {
-	write_headert(ct);
 	std::cout << "Status:200" << H_N_L;
 
 }
@@ -293,11 +302,18 @@ void write_internal_server_error(
 	const char* ex_dir,
 	int error_code,
 	const char* error_msg
+#if defined(WJMT)
+	, wjsx_env* wj_env
+#endif//!WJMT
 ) {
-	write_headert(content_type);
-	std::cout << "Status:" << error_code << " " << get_server_error(error_code) << H_N_L;
-	std::cout << "WebJsx-Error-Code:" << error_code << H_N_L;
-	std::cout << "\r\n";
+#if defined(WJMT)
+	write_headert(content_type, wj_env);
+#else
+	write_header(content_type);
+#endif//!WJMT
+	_WCOUT << "Status:" << error_code << " " << get_server_error(error_code) << H_N_L;
+	_WCOUT << "WebJsx-Error-Code:" << error_code << H_N_L;
+	_WCOUT << "\r\n";
 	std::string* str = new std::string(ex_dir);
 	str->append("error\\");
 	str->append(std::to_string(error_code));
@@ -308,13 +324,13 @@ void write_internal_server_error(
 		std::string html_body = REGEX_REPLACE_MATCH(*body, std::regex("(<%(.+?)%>)"), [&error_msg](const std::smatch& m) {
 			return error_msg;
 		});
-		std::cout << html_body;
+		_WCOUT << html_body;
 		std::string().swap(html_body);
 	}
 	else {
-		std::cout << "No Error file found in /error/" << error_code << ".html<br/>";
-		std::cout << "Server root:" << ex_dir << "<br/><br/><br/>";
-		std::cout << error_msg;
+		_WCOUT << "No Error file found in /error/" << error_code << ".html<br/>";
+		_WCOUT << "Server root:" << ex_dir << "<br/><br/><br/>";
+		_WCOUT << error_msg;
 	}
 	body->clear(); delete body;
 	str->clear(); delete str;

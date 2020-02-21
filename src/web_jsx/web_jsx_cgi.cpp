@@ -38,6 +38,6 @@ int web_jsx::cgi_request::request_handler(const char*execute_path) {
 		aei->ex_dir->append("\\");
 	}
 	web_jsx::app_core::prepare_response(content_type, path_translated, *aei, method, get_env_c("PATH_INFO"));
-	web_jsx::app_core::free_app_info(aei);
+	_free_app_info(aei);
 	return EXIT_SUCCESS;
 }
