@@ -4,7 +4,7 @@
 #	include "pdf_generator.h"
 #	include <map>
 using namespace sow_web_jsx;
-void v8_object_loop(v8::Isolate* isolate, const v8::Local<v8::Object>v8_obj, std::map<const char*, const char*>& out_put) {
+void v8_object_loop(v8::Isolate* isolate, const v8::Local<v8::Object>v8_obj, std::map<std::string, std::string>& out_put) {
 	v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
 	v8::Local<v8::Array> property_names = v8_obj->GetOwnPropertyNames(ctx).ToLocalChecked();
 	uint32_t length = property_names->Length();
@@ -13,15 +13,10 @@ void v8_object_loop(v8::Isolate* isolate, const v8::Local<v8::Object>v8_obj, std
 		v8::Local<v8::Value> value = v8_obj->Get(ctx, key).ToLocalChecked();
 		if (value->IsNullOrUndefined())continue;
 		if (key->IsString() && value->IsString()) {
-			/*native_string native_key(isolate, key);
+			native_string native_key(isolate, key);
 			native_string native_value(isolate, value);
-			out_put[native_value.get_string().data()] = native_value.get_string().data();*/
-			v8::String::Utf8Value utf8_key(isolate, key);
-			v8::String::Utf8Value utf8_value(isolate, value);
-			std::string* key_str = new std::string(*utf8_key);
-			std::string* val_str = new std::string(*utf8_value);
-			out_put[key_str->data()] = val_str->data();
-			//free(key_str); free(val_str);
+			out_put[std::string(native_key.c_str())] = std::string(native_value.c_str());
+			native_key.clear(); native_value.clear();
 		}
 	}
 }
@@ -60,7 +55,7 @@ V8_JS_METHOD(generate_pdf) {
 		std::string* abs_path = new std::string(sow_web_jsx::wrapper::get_root_dir());
 		sow_web_jsx::get_server_map_path(utf8_path_str.c_str(), *abs_path);
 		v8::Local<v8::Value> v8_global_settings_str = config->Get(ctx, v8_str(isolate, "global_settings")).ToLocalChecked();
-		auto wgs_settings = new std::map<const char*, const char*>();
+		auto wgs_settings = new std::map<std::string, std::string>();
 		if (!v8_global_settings_str->IsNullOrUndefined() && v8_global_settings_str->IsObject()) {
 			v8::Local<v8::Object>v8_global_settings_object = v8::Local<v8::Object>::Cast(v8_global_settings_str);
 			v8_object_loop(isolate, v8_global_settings_object, *wgs_settings);
@@ -68,7 +63,7 @@ V8_JS_METHOD(generate_pdf) {
 			v8_global_settings_object.Clear();
 		}
 		v8::Local<v8::Value> v8_object_settings_str = config->Get(ctx, v8_str(isolate, "object_settings")).ToLocalChecked();
-		auto wos_settings = new std::map<const char*, const char*>();
+		auto wos_settings = new std::map<std::string, std::string>();
 		if (!v8_object_settings_str->IsNullOrUndefined() && v8_object_settings_str->IsObject()) {
 			v8::Local<v8::Object>v8_object_settings_object = v8::Local<v8::Object>::Cast(v8_object_settings_str);
 			v8_object_loop(isolate, v8_object_settings_object, *wos_settings);
@@ -175,7 +170,7 @@ V8_JS_METHOD(generate_pdf_from_body) {
 			return;
 		}
 		v8::Local<v8::Value> v8_global_settings_str = config->Get(ctx, v8_str(isolate, "global_settings")).ToLocalChecked();
-		auto wgs_settings = new std::map<const char*, const char*>();
+		auto wgs_settings = new std::map<std::string, std::string>();
 		if (!v8_global_settings_str->IsNullOrUndefined() && v8_global_settings_str->IsObject()) {
 			v8::Local<v8::Object>v8_global_settings_object = v8::Local<v8::Object>::Cast(v8_global_settings_str);
 			v8_object_loop(isolate, v8_global_settings_object, *wgs_settings);
@@ -183,7 +178,7 @@ V8_JS_METHOD(generate_pdf_from_body) {
 			v8_global_settings_object.Clear();
 		}
 		v8::Local<v8::Value> v8_object_settings_str = config->Get(ctx, v8_str(isolate, "object_settings")).ToLocalChecked();
-		auto wos_settings = new std::map<const char*, const char*>();
+		auto wos_settings = new std::map<std::string, std::string>();
 		if (!v8_object_settings_str->IsNullOrUndefined() && v8_object_settings_str->IsObject()) {
 			v8::Local<v8::Object>v8_object_settings_object = v8::Local<v8::Object>::Cast(v8_object_settings_str);
 			v8_object_loop(isolate, v8_object_settings_object, *wos_settings);
