@@ -489,12 +489,12 @@ V8_JS_METHOD(native_read_file) {
 			v8_str(isolate, "File absolute path required!!!")));
 		return;
 	}
-	v8::String::Utf8Value utf_abs_path_str(isolate, args[0]);
+	native_string utf_abs_path_str(isolate, args[0]);
 	auto abs_path = new std::string(_root_dir_c);
-	sow_web_jsx::get_server_map_path(*utf_abs_path_str, *abs_path);
+	sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
 	std::stringstream ssstream(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
 	size_t ret = sow_web_jsx::read_file(abs_path->c_str(), ssstream, true);
-	_free_obj(abs_path);
+	_free_obj(abs_path); utf_abs_path_str.clear();
 	//const char* cstr2 = ssstream.str().c_str();
 	//std::stringstream().swap(ssstream);
 	v8::Handle<v8::Object> v8_result = v8::Object::New(isolate);
@@ -540,10 +540,11 @@ V8_JS_METHOD(native_write_from_file) {
 			v8_str(isolate, "File absolute path required!!!")));
 		return;
 	}
-	v8::String::Utf8Value utf_abs_path_str(isolate, args[0]);
+	native_string utf_abs_path_str(isolate, args[0]);
 	auto abs_path = new std::string(_root_dir_c);
-	sow_web_jsx::get_server_map_path(*utf_abs_path_str, *abs_path);
+	sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
 	size_t ret = sow_web_jsx::read_file(abs_path->c_str(), _body_stream, true);
+	utf_abs_path_str.clear();
 	if (is_error_code(ret) == TRUE) {
 		isolate->ThrowException(v8::Exception::Error(sow_web_jsx::concat_msg(isolate, "No file foud!!! Server absolute path==>", abs_path->c_str())));
 	}
@@ -690,10 +691,11 @@ V8_JS_METHOD(native_delete_directory) {
 		throw_js_error(isolate, "Directory required!!!");
 		return;
 	}
-	v8::String::Utf8Value utf8_path_str(isolate, args[0]);
+	native_string utf8_path_str(isolate, args[0]);
 	auto abs_dir = new std::string(_root_dir_c);
-	sow_web_jsx::get_server_map_path(*utf8_path_str, *abs_dir);
+	sow_web_jsx::get_server_map_path(utf8_path_str.c_str(), *abs_dir);
 	int rec = sow_web_jsx::delete_dir(abs_dir->c_str());
+	utf8_path_str.clear();
 	if (rec > 0)
 		args.GetReturnValue().Set(v8_str(isolate, "Success"));
 	else
@@ -708,10 +710,11 @@ V8_JS_METHOD(native_create_directory) {
 		throw_js_error(isolate, "Server path required!!!");
 		return;
 	}
-	v8::String::Utf8Value utf8_path_str(isolate, args[0]);
+	native_string utf8_path_str(isolate, args[0]);
 	auto abs_dir = new std::string(_root_dir_c);
-	sow_web_jsx::get_server_map_path(*utf8_path_str, *abs_dir);
+	sow_web_jsx::get_server_map_path(utf8_path_str.c_str(), *abs_dir);
 	int rec = sow_web_jsx::create_directory(abs_dir->c_str());
+	utf8_path_str.clear();
 	if (rec > 0) {
 		args.GetReturnValue().Set(v8_str(isolate, "Success"));
 	}
@@ -1030,19 +1033,22 @@ V8_JS_METHOD(http_status) {
 			v8_str(isolate, "HTTP Status Code Required!!!")));
 		return;
 	}
-	v8::String::Utf8Value server_proto_str(isolate, args[0]);
-	v8::String::Utf8Value status_code_str(isolate, args[1]);
-	auto desc = new std::string(*server_proto_str);
+	native_string server_proto_str(isolate, args[0]);
+	native_string status_code_str(isolate, args[1]);
+	auto desc = new std::string(server_proto_str.c_str());
+	server_proto_str.clear(); status_code_str.clear();
 	desc->append(" ");
-	desc->append(*status_code_str);
+	desc->append(status_code_str.c_str());
 	desc->append(" ");
 	if (!args[2]->IsString() || args[2]->IsNullOrUndefined()) {
 		desc->append("Unspecified Description");
 	}
 	else {
-		v8::String::Utf8Value dec_str(isolate, args[2]);
-		desc->append(*dec_str);
+		native_string dec_str(isolate, args[2]);
+		desc->append(dec_str.c_str());
+		dec_str.clear();
 	}
+	
 #endif//!FAST_CGI_APP
 	n_help::add_http_status(*_http_status, *desc);
 	_free_obj(desc); status_code_str.clear();
@@ -1068,8 +1074,8 @@ V8_JS_METHOD(response_write_header) {
 V8_JS_METHOD(response_write) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (args[0]->IsNullOrUndefined())return;
-	v8::String::Utf8Value utf8_str(isolate, args[0]);
-	_body_stream << *utf8_str;
+	native_string utf8_str(isolate, args[0]);
+	_body_stream << utf8_str.c_str(); utf8_str.clear();
 	return;
 }
 V8_JS_METHOD(response_throw_error) {
@@ -1107,7 +1113,6 @@ V8_JS_METHOD(response_throw_error) {
 	return;
 }
 V8_JS_METHOD(response_clear) {
-	//v8::Isolate* isolate = args.GetIsolate();
 	_body_stream.clear();
 	std::stringstream().swap(_body_stream);
 	args.GetReturnValue().Set(args.Holder());

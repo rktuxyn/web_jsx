@@ -51,7 +51,7 @@
 #if !defined(V8_JS_METHOD)
 #define V8_JS_METHOD(name)\
 void name(js_method_args)
-#endif//!v8_js_method
+#endif//!V8_JS_METHOD
 
 namespace sow_web_jsx {
 	typedef struct {

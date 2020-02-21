@@ -4,19 +4,16 @@
 * Copyrights licensed under the New BSD License.
 * See the accompanying LICENSE file for terms.
 */
-//7:19 PM 1/20/2019
+//1:43 PM 2/21/2020
 #if defined(_MSC_VER)
 #pragma once
 #endif//!_MSC_VER
-#if !defined(_script_tag_parser_h)
-#	define _script_tag_parser_h
-#	include "template_info.h"
+#if !defined(_js_polyfill_h)
+#	define _js_polyfill_h
+#	include <sstream>
+#	include <string>
 namespace sow_web_jsx {
-	namespace script_tag_parser {
-		int parse(
-			template_result & tr,
-			std::string&html_body
-		);
-	};
+	void js_write_header(std::stringstream& js_stream);
+	void js_write_console_header(std::stringstream& js_stream);
 };
-#endif//!_script_tag_parser_h
+#endif//!_js_polyfill_h

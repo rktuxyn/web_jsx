@@ -12,6 +12,7 @@
 #	include "core/script_tag_parser.h"
 #	include "core/js_compiler.h"
 #	include "core/web_jsx_exp.h"
+#	include "core/js_polyfill.h"
 void web_jsx::app_core::run__js_scrip(
 	const char * content_type, 
 	std::string & root_dir, const app_ex_info aei, 
