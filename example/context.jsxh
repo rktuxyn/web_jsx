@@ -46,7 +46,7 @@ function infinity( prop, iobj ) {
 };
 let obj = {};
 for ( let p in this ) {
-    if ( p === "infinity" || p === "_print" || p === "_get_func_desc" ) continue;
+    if ( p === "infinity" || p === "_print" || p === "_get_func_desc" || p ==="extend_prototype" ) continue;
     if ( typeof ( this[p] ) === 'function' ) {
         obj[this[p].name || p] = _get_func_desc( ( this[p].name || p ), this[p] );
         continue;
