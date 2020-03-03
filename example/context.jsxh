@@ -4,27 +4,41 @@
 * Copyrights licensed under the New BSD License.
 * See the accompanying LICENSE file for terms.
 */
-context.response.header( "Content-Type", "application/json" );
+
 function _print( str ) {
     context.response.write( str );
-};
-function infinity( prop, obj ) {
-    let type = typeof ( obj );
+}
+function extend_prototype( func, iobj ) {
+    let this_proto = {};
+    infinity.call( this_proto, "prototype", func.prototype );
+    return this_proto;
+}
+function _get_func_desc( name, func, iobj ) {
+    if ( !func ) return name;
+    if ( Object.keys( func.prototype ).length > 0 ) return extend_prototype( func, iobj );
+    let tos = func.toString();
+    if ( tos.indexOf( "[native code]" ) > -1 ) return tos;
+    return `function ${name}() { [internal js function] }`;
+}
+context.response.header( "Content-Type", "application/json" );
+function infinity( prop, iobj ) {
+    let type = typeof ( iobj );
     if ( type === 'function' ) {
-        this[obj.name] = obj.toString();
+        this[iobj.name || prop] = _get_func_desc( ( iobj.name || prop ), iobj );
         return;
     }
-    if ( type === 'string' ) {
-        this[prop] = obj;
+    if ( type === 'string' || type === 'number' || type === 'boolean' ) {
+        this[prop] = iobj;
         return;
     }
     if ( type === 'object' ) {
         this[prop] = {};
-        for ( let p in obj ) {
-            if ( typeof ( obj[p] ) == 'string' ) {
-                this[prop][p] = obj[p]; continue;
+        for ( let p in iobj ) {
+            type = typeof ( iobj[p] );
+            if ( type == 'string' || type == 'number' || type === 'boolean' ) {
+                this[prop][p] = iobj[p]; continue;
             }
-            infinity.call( this[prop], p, obj[p] );
+            infinity.call( this[prop], p, iobj[p] );
         }
     }
     return;
@@ -32,9 +46,9 @@ function infinity( prop, obj ) {
 };
 let obj = {};
 for ( let p in this ) {
-    if ( p === "infinity" || p === "_print" ) continue;
+    if ( p === "infinity" || p === "_print" || p === "_get_func_desc" ) continue;
     if ( typeof ( this[p] ) === 'function' ) {
-        obj[this[p].name] = this[p].toString();
+        obj[this[p].name || p] = _get_func_desc( ( this[p].name || p ), this[p] );
         continue;
     }
     obj[p] = {};
