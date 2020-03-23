@@ -1798,6 +1798,13 @@ class V8_EXPORT ScriptCompiler {
     kConsumeCodeCache,
     kEagerCompile
   };
+  //enum CompileOptions {
+  //    kNoCompileOptions = 0,
+  //    kProduceParserCache,
+  //    kConsumeParserCache,
+  //    kProduceCodeCache,
+  //    kConsumeCodeCache
+  //};
 
   /**
    * The reason for which we are not requesting or providing a code cache.
