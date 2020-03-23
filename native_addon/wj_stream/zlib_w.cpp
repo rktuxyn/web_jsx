@@ -8,12 +8,13 @@
 #	include "zlib_w.h"
 #	include <web_jsx/web_jsx.h>
 #	include <web_jsx/v8_util.h>
+#	include <web_jsx/wjsx_env.h>
 #	include "zgzip.h"
 using namespace sow_web_jsx;
 void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target){
 	v8::Handle<v8::Object> gzip_object = v8::Object::New(isolate);
 	v8::Local<v8::Context>context = isolate->GetCurrentContext();
-	if (sow_web_jsx::wrapper::is_cli() == FALSE) {
+	if (::unwrap_wjsx_env(isolate)->is_cli() == FALSE) {
 		//[gzip_deflate]
 		v8::Local<v8::FunctionTemplate> tpl = v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 			v8::Isolate* isolate = args.GetIsolate();
@@ -40,32 +41,37 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 		//[Out Stream std::cout]
 		set_prototype(isolate, prototype, "flush_header", [](js_method_args) {
 			v8::Isolate* isolate = args.GetIsolate();
-			if (sow_web_jsx::wrapper::is_flush() == TRUE) {
+			wjsx_env* wj_env = ::unwrap_wjsx_env(isolate);
+			if (wj_env == NULL)return;
+			if (wj_env->is_available_out_stream() == FALSE)return;
+			if (wj_env->is_flush() == TRUE) {
 				throw_js_error(isolate, "Headers already been flushed...");
 				return;
 			}
-			gzip::gzip_deflate* deflate = sow_web_jsx::unwrap<gzip::gzip_deflate>(args);
+			gzip::gzip_deflate* deflate = ::unwrap<gzip::gzip_deflate>(args);
 			if (deflate->has_error() == TRUE) {
 				throw_js_error(isolate, deflate->get_last_error());
 				delete deflate;
 				return;
 			}
-			if (sow_web_jsx::wrapper::flush_http_status() == FALSE)return;
-			if (sow_web_jsx::wrapper::set_binary_output() == FALSE)return;
-			if (sow_web_jsx::wrapper::is_gzip_encoding() == FALSE) {
-				sow_web_jsx::wrapper::add_header("Content-Encoding", "gzip");
+			if (::wrapper::flush_http_status(wj_env) == FALSE)return;
+			if (::wrapper::is_gzip_encoding(wj_env) == FALSE) {
+				::wrapper::add_header(wj_env, "Content-Encoding", "gzip");
 			}
-			sow_web_jsx::wrapper::set_flush_status(TRUE);
-			sow_web_jsx::wrapper::flush_header();
-			sow_web_jsx::wrapper::flush_cookies();
-			std::cout << "\r\n";
-			sow_web_jsx::wrapper::clear_cache(TRUE, FALSE);
-			fflush(stdout);
-			deflate->write_header(std::cout);
-			});
+			wj_env->set_flush();
+			::wrapper::flush_header(wj_env);
+			::wrapper::flush_cookies(wj_env);
+			_WCOUT << "\r\n";
+			::wrapper::clear_cache(*wj_env);
+			_WFLUSH();
+			deflate->write_header(_WCOUT);
+		});
 		set_prototype(isolate, prototype, "write", [](js_method_args) {
 			v8::Isolate* isolate = args.GetIsolate();
-			if (sow_web_jsx::wrapper::is_flush() == FALSE) {
+			wjsx_env* wj_env = ::unwrap_wjsx_env(isolate);
+			if (wj_env == NULL)return;
+			if (wj_env->is_available_out_stream() == FALSE)return;
+			if (wj_env->is_flush() == FALSE) {
 				throw_js_error(isolate, "Headers did not flushed yet...");
 				return;
 			}
@@ -85,19 +91,18 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 					}
 				}
 			}
-
 			native_string str(isolate, args[0]);
 			//const char* data = str.c_str();
-			gzip::gzip_deflate* deflate = sow_web_jsx::unwrap<gzip::gzip_deflate>(args);
+			gzip::gzip_deflate* deflate = ::unwrap<gzip::gzip_deflate>(args);
 			size_t ret = 0; size_t len = str.size();
 			if (len > CHUNK) {
 				std::stringstream source_stream(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
 				source_stream.write(str.c_str(), len);
-				ret = deflate->write(std::cout, source_stream, do_flush, FALSE);
+				ret = deflate->write(_WCOUT, source_stream, do_flush, FALSE);
 				source_stream.clear(); std::stringstream().swap(source_stream);
 			}
 			else {
-				ret = deflate->write(std::cout, str.c_str(), do_flush);
+				ret = deflate->write(_WCOUT, str.c_str(), do_flush);
 			}
 			str.clear();
 			if (ret == FALSE) {
@@ -109,10 +114,13 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 				return;
 			}
 			args.GetReturnValue().Set(v8::Number::New(isolate, (double)ret));
-			});
+		});
 		set_prototype(isolate, prototype, "write_from_file", [](js_method_args) {
 			v8::Isolate* isolate = args.GetIsolate();
-			if (sow_web_jsx::wrapper::is_flush() == FALSE) {
+			wjsx_env* wj_env = ::unwrap_wjsx_env(isolate);
+			if (wj_env == NULL)return;
+			if (wj_env->is_available_out_stream() == FALSE)return;
+			if (wj_env->is_flush() == FALSE) {
 				throw_js_error(isolate, "Headers did not flushed yet...");
 				return;
 			}
@@ -121,8 +129,8 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 				return;
 			}
 			native_string utf_abs_path_str(isolate, args[0]);
-			std::string* abs_path = new std::string(sow_web_jsx::wrapper::get_root_dir());
-			sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
+			std::string* abs_path = new std::string(wj_env->get_root_dir());
+			::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
 			int do_flush = Z_NO_FLUSH;
 			//Z_FINISH : Z_NO_FLUSH
 			if (args.Length() > 1) {
@@ -135,8 +143,8 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 					}
 				}
 			}
-			gzip::gzip_deflate* deflate = sow_web_jsx::unwrap<gzip::gzip_deflate>(args);
-			size_t ret = deflate->write_file(std::cout, abs_path->c_str(), do_flush);
+			gzip::gzip_deflate* deflate = ::unwrap<gzip::gzip_deflate>(args);
+			size_t ret = deflate->write_file(_WCOUT, abs_path->c_str(), do_flush);
 			_free_obj(abs_path); utf_abs_path_str.clear();
 			if (ret == FALSE) {
 				throw_js_error(isolate, "Stream already flashed...");
@@ -147,14 +155,17 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 				return;
 			}
 			args.GetReturnValue().Set(v8::Number::New(isolate, (double)ret));
-			});
+		});
 		set_prototype(isolate, prototype, "flush", [](js_method_args) {
 			v8::Isolate* isolate = args.GetIsolate();
-			if (sow_web_jsx::wrapper::is_flush() == FALSE) {
+			wjsx_env* wj_env = ::unwrap_wjsx_env(isolate);
+			if (wj_env == NULL)return;
+			if (wj_env->is_available_out_stream() == FALSE)return;
+			if (wj_env->is_flush() == FALSE) {
 				throw_js_error(isolate, "Headers did not flushed yet...");
 				return;
 			}
-			gzip::gzip_deflate* deflate = sow_web_jsx::unwrap<gzip::gzip_deflate>(args);
+			gzip::gzip_deflate* deflate = ::unwrap<gzip::gzip_deflate>(args);
 			if (deflate == NULL) {
 				throw_js_error(isolate, "Stream already flashed...");
 				return;
@@ -169,12 +180,12 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 				return;
 			}
 			deflate->f_close_file();
-			deflate->write_footer(std::cout);
+			deflate->write_footer(_WCOUT);
 			delete deflate;
-			fflush(stdout);
+			_WFLUSH();
 			args.Holder()->SetAlignedPointerInInternalField(0, nullptr);
-			sow_web_jsx::wrapper::clear_cache(TRUE, TRUE);
-			});
+			sow_web_jsx::wrapper::clear_cache(*wj_env);
+		});
 		//[/Out Stream std::cout]
 		//[File Write]
 		set_prototype(isolate, prototype, "fs_open", [](js_method_args) {
@@ -183,10 +194,11 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 				throw_js_error(isolate, "File Path Required required....");
 				return;
 			}
+			wjsx_env* wj_env = ::unwrap_wjsx_env(isolate);
 			native_string utf_abs_path_str(isolate, args[0]);
-			std::string* abs_path = new std::string(sow_web_jsx::wrapper::get_root_dir());
-			sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
-			gzip::gzip_deflate* deflate = sow_web_jsx::unwrap<gzip::gzip_deflate>(args);
+			std::string* abs_path = new std::string(wj_env->get_root_dir());
+			::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
+			gzip::gzip_deflate* deflate = ::unwrap<gzip::gzip_deflate>(args);
 			size_t ret = deflate->f_open_file(abs_path->c_str());
 			_free_obj(abs_path); utf_abs_path_str.clear();
 			if (ret == FALSE) {
@@ -198,21 +210,22 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 				return;
 			}
 			args.GetReturnValue().Set(v8::Number::New(isolate, (double)ret));
-			});
+		});
 		set_prototype(isolate, prototype, "fs_write_gzip_header", [](js_method_args) {
 			v8::Isolate* isolate = args.GetIsolate();
-			gzip::gzip_deflate* deflate = sow_web_jsx::unwrap<gzip::gzip_deflate>(args);
+			gzip::gzip_deflate* deflate = ::unwrap<gzip::gzip_deflate>(args);
 			deflate->f_write_header();
-			});
+		});
 		set_prototype(isolate, prototype, "fs_write_from_file", [](js_method_args) {
 			v8::Isolate* isolate = args.GetIsolate();
 			if (!args[0]->IsString()) {
 				throw_js_error(isolate, "File Path Required required....");
 				return;
 			}
+			wjsx_env* wj_env = ::unwrap_wjsx_env(isolate);
 			native_string utf_abs_path_str(isolate, args[0]);
-			std::string* abs_path = new std::string(sow_web_jsx::wrapper::get_root_dir());
-			sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
+			std::string* abs_path = new std::string(wj_env->get_root_dir());
+			::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
 			int do_flush = Z_NO_FLUSH;
 			//Z_FINISH : Z_NO_FLUSH
 			if (args.Length() > 1) {
@@ -225,7 +238,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 					}
 				}
 			}
-			gzip::gzip_deflate* deflate = sow_web_jsx::unwrap<gzip::gzip_deflate>(args);
+			gzip::gzip_deflate* deflate = ::unwrap<gzip::gzip_deflate>(args);
 			size_t ret = deflate->f_write_file(abs_path->c_str(), do_flush);
 			_free_obj(abs_path); utf_abs_path_str.clear();
 			if (ret == FALSE) {
@@ -237,7 +250,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 				return;
 			}
 			args.GetReturnValue().Set(v8::Number::New(isolate, (double)ret));
-			});
+		});
 		set_prototype(isolate, prototype, "fs_write", [](js_method_args) {
 			v8::Isolate* isolate = args.GetIsolate();
 			if (!args[0]->IsString()) {
@@ -259,7 +272,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 
 			native_string str(isolate, args[0]);
 			const char* data = str.c_str();
-			gzip::gzip_deflate* deflate = sow_web_jsx::unwrap<gzip::gzip_deflate>(args);
+			gzip::gzip_deflate* deflate = ::unwrap<gzip::gzip_deflate>(args);
 			size_t ret = 0; size_t len = strlen(data);
 			if (len > CHUNK) {
 				std::stringstream source_stream(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
@@ -280,10 +293,10 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 				return;
 			}
 			args.GetReturnValue().Set(v8::Number::New(isolate, (double)ret));
-			});
+		});
 		set_prototype(isolate, prototype, "fs_flush", [](js_method_args) {
 			v8::Isolate* isolate = args.GetIsolate();
-			gzip::gzip_deflate* deflate = sow_web_jsx::unwrap<gzip::gzip_deflate>(args);
+			gzip::gzip_deflate* deflate = ::unwrap<gzip::gzip_deflate>(args);
 			int ret = deflate->f_flush();
 			if (ret == FALSE) {
 				throw_js_error(isolate, "Stream already flashed...");
@@ -293,13 +306,12 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 				throw_js_error(isolate, deflate->get_last_error());
 				return;
 			}
-
-			});
+		});
 		set_prototype(isolate, prototype, "fs_write_gzip_footer", [](js_method_args) {
 			v8::Isolate* isolate = args.GetIsolate();
-			gzip::gzip_deflate* deflate = sow_web_jsx::unwrap<gzip::gzip_deflate>(args);
+			gzip::gzip_deflate* deflate = ::unwrap<gzip::gzip_deflate>(args);
 			deflate->f_write_footer();
-			});
+		});
 		set_prototype(isolate, prototype, "fs_close_file", [](js_method_args) {
 			v8::Isolate* isolate = args.GetIsolate();
 			gzip::gzip_deflate* deflate = sow_web_jsx::unwrap<gzip::gzip_deflate>(args);
@@ -307,7 +319,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 		});
 		//[/File Write]
 		set_prototype(isolate, prototype, "release", [](js_method_args) {
-			gzip::gzip_deflate* deflate = sow_web_jsx::unwrap<gzip::gzip_deflate>(args);
+			::gzip::gzip_deflate* deflate = ::unwrap<gzip::gzip_deflate>(args);
 			if (deflate != NULL) {
 				delete deflate; deflate = NULL;
 				args.Holder()->SetAlignedPointerInInternalField(0, nullptr);
@@ -332,7 +344,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 			v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
 			int window_bits = args[0]->Int32Value(ctx).FromMaybe(0);
 			gzip::gzip_inflate* inflate = new gzip::gzip_inflate(window_bits);
-			if (!sow_web_jsx::wrapper::set_binary_mode_in()) {/*[Nothing to do when failed...]*/ }
+			//if (!sow_web_jsx::wrapper::set_binary_mode_in()) {/*[Nothing to do when failed...]*/ }
 			if (inflate->has_error() == TRUE) {
 				throw_js_error(isolate, inflate->get_last_error());
 				delete inflate;
@@ -351,32 +363,34 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 		//[Out Stream std::cout]
 		set_prototype(isolate, inflate_prototype, "flush_header", [](js_method_args) {
 			v8::Isolate* isolate = args.GetIsolate();
-			if (sow_web_jsx::wrapper::is_flush() == TRUE) {
+			wjsx_env* wj_env = ::unwrap_wjsx_env(isolate);
+			if (wj_env == NULL)return;
+			if (wj_env->is_flush() == TRUE) {
 				throw_js_error(isolate, "Headers already been flushed...");
 				return;
 			}
-			gzip::gzip_inflate* inflate = sow_web_jsx::unwrap<gzip::gzip_inflate>(args);
+			::gzip::gzip_inflate* inflate = ::unwrap<gzip::gzip_inflate>(args);
 			if (inflate->has_error() == TRUE) {
 				throw_js_error(isolate, inflate->get_last_error());
 				delete inflate;
 				return;
 			}
-			if (sow_web_jsx::wrapper::flush_http_status() == FALSE)return;
-			if (sow_web_jsx::wrapper::set_binary_output() == FALSE)return;
-			sow_web_jsx::wrapper::set_flush_status(TRUE);
-			if (sow_web_jsx::wrapper::is_gzip_encoding() == FALSE) {
-				sow_web_jsx::wrapper::add_header("Content-Encoding", "gzip");
+			if (::wrapper::flush_http_status(wj_env) == FALSE)return;
+			wj_env->set_flush();
+			if (::wrapper::is_gzip_encoding(wj_env) == FALSE) {
+				::wrapper::add_header(wj_env, "Content-Encoding", "gzip");
 			}
-			sow_web_jsx::wrapper::flush_header();
-			sow_web_jsx::wrapper::flush_cookies();
-			std::cout << "\r\n";
-			sow_web_jsx::wrapper::clear_cache(TRUE, FALSE);
-			sow_web_jsx::wrapper::set_flush_status(TRUE);
-			fflush(stdout);
-			});
+			::wrapper::flush_header(wj_env);
+			::wrapper::flush_cookies(wj_env);
+			_WCOUT << "\r\n";
+			::wrapper::clear_cache(*wj_env);
+			_WFLUSH();
+		});
 		set_prototype(isolate, inflate_prototype, "write", [](js_method_args) {
 			v8::Isolate* isolate = args.GetIsolate();
-			if (sow_web_jsx::wrapper::is_flush() == FALSE) {
+			wjsx_env* wj_env = ::unwrap_wjsx_env(isolate);
+			if (wj_env == NULL)return;
+			if (wj_env->is_flush() == FALSE) {
 				throw_js_error(isolate, "Headers did not flushed yet...");
 				return;
 			}
@@ -386,16 +400,16 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 			}
 			native_string str(isolate, args[0]);
 			const char* data = str.c_str();
-			gzip::gzip_inflate* inflate = sow_web_jsx::unwrap<gzip::gzip_inflate>(args);
+			gzip::gzip_inflate* inflate = ::unwrap<gzip::gzip_inflate>(args);
 			size_t ret = 0; size_t len = strlen(data);
 			if (len > CHUNK) {
 				std::stringstream source_stream(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
 				source_stream.write(data, len);
-				ret = inflate->write(std::cout, source_stream, FALSE);
+				ret = inflate->write(_WCOUT, source_stream, FALSE);
 				source_stream.clear(); std::stringstream().swap(source_stream);
 			}
 			else {
-				ret = inflate->write(std::cout, data);
+				ret = inflate->write(_WCOUT, data);
 			}
 			str.clear();
 			if (ret == FALSE) {
@@ -407,10 +421,12 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 				return;
 			}
 			args.GetReturnValue().Set(v8::Number::New(isolate, (double)ret));
-			});
+		});
 		set_prototype(isolate, inflate_prototype, "write_from_file", [](js_method_args) {
 			v8::Isolate* isolate = args.GetIsolate();
-			if (sow_web_jsx::wrapper::is_flush() == FALSE) {
+			wjsx_env* wj_env = ::unwrap_wjsx_env(isolate);
+			if (wj_env == NULL)return;
+			if (wj_env->is_flush() == FALSE) {
 				throw_js_error(isolate, "Headers did not flushed yet...");
 				return;
 			}
@@ -419,10 +435,10 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 				return;
 			}
 			native_string utf_abs_path_str(isolate, args[0]);
-			std::string* abs_path = new std::string(sow_web_jsx::wrapper::get_root_dir());
-			sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
-			gzip::gzip_inflate* inflate = sow_web_jsx::unwrap<gzip::gzip_inflate>(args);
-			size_t ret = inflate->write_file(std::cout, abs_path->c_str());
+			std::string* abs_path = new std::string(wj_env->get_root_dir());
+			::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
+			gzip::gzip_inflate* inflate = ::unwrap<gzip::gzip_inflate>(args);
+			size_t ret = inflate->write_file(_WCOUT, abs_path->c_str());
 			_free_obj(abs_path); utf_abs_path_str.clear();
 			if (ret == FALSE) {
 				throw_js_error(isolate, "Stream already flashed...");
@@ -433,19 +449,21 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 				return;
 			}
 			args.GetReturnValue().Set(v8::Number::New(isolate, (double)ret));
-			});
+		});
 		set_prototype(isolate, inflate_prototype, "flush", [](js_method_args) {
 			v8::Isolate* isolate = args.GetIsolate();
-			if (sow_web_jsx::wrapper::is_flush() == FALSE) {
+			wjsx_env* wj_env = ::unwrap_wjsx_env(isolate);
+			if (wj_env == NULL)return;
+			if (wj_env->is_flush() == FALSE) {
 				throw_js_error(isolate, "Headers did not flushed yet...");
 				return;
 			}
-			gzip::gzip_inflate* inflate = sow_web_jsx::unwrap<gzip::gzip_inflate>(args);
+			gzip::gzip_inflate* inflate = ::unwrap<gzip::gzip_inflate>(args);
 			if (inflate == NULL) {
 				throw_js_error(isolate, "Stream already flashed...");
 				return;
 			}
-			int ret = inflate->flush(std::cout);
+			int ret = inflate->flush(_WCOUT);
 			if (ret == FALSE) {
 				throw_js_error(isolate, "Stream already flashed...");
 				return;
@@ -456,10 +474,10 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 			}
 			inflate->f_close_file();
 			delete inflate;
-			fflush(stdout);
+			_WFLUSH();
 			args.Holder()->SetAlignedPointerInInternalField(0, nullptr);
-			sow_web_jsx::wrapper::clear_cache(TRUE, TRUE);
-			});
+			::wrapper::clear_cache(*wj_env);
+		});
 		//[/Out Stream std::cout]
 		//[File Write]
 		set_prototype(isolate, inflate_prototype, "fs_open", [](js_method_args) {
@@ -468,10 +486,11 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 				throw_js_error(isolate, "File Path Required required....");
 				return;
 			}
+			wjsx_env* wj_env = ::unwrap_wjsx_env(isolate);
 			native_string utf_abs_path_str(isolate, args[0]);
-			std::string* abs_path = new std::string(sow_web_jsx::wrapper::get_root_dir());
-			sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
-			gzip::gzip_inflate* inflate = sow_web_jsx::unwrap<gzip::gzip_inflate>(args);
+			std::string* abs_path = new std::string(wj_env->get_root_dir());
+			::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
+			gzip::gzip_inflate* inflate = ::unwrap<gzip::gzip_inflate>(args);
 			size_t ret = inflate->f_open_file(abs_path->c_str());
 			_free_obj(abs_path); utf_abs_path_str.clear();
 			if (ret == FALSE) {
@@ -490,10 +509,11 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 				throw_js_error(isolate, "File Path Required required....");
 				return;
 			}
+			wjsx_env* wj_env = ::unwrap_wjsx_env(isolate);
 			native_string utf_abs_path_str(isolate, args[0]);
-			std::string* abs_path = new std::string(sow_web_jsx::wrapper::get_root_dir());
-			sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
-			gzip::gzip_inflate* inflate = sow_web_jsx::unwrap<gzip::gzip_inflate>(args);
+			std::string* abs_path = new std::string(wj_env->get_root_dir());
+			::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
+			gzip::gzip_inflate* inflate = ::unwrap<gzip::gzip_inflate>(args);
 			size_t ret = inflate->f_write_file(abs_path->c_str());
 			_free_obj(abs_path); utf_abs_path_str.clear();
 			if (ret == FALSE) {
@@ -505,7 +525,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 				return;
 			}
 			args.GetReturnValue().Set(v8::Number::New(isolate, (double)ret));
-			});
+		});
 		set_prototype(isolate, inflate_prototype, "fs_write", [](js_method_args) {
 			v8::Isolate* isolate = args.GetIsolate();
 			if (!args[0]->IsString()) {
@@ -514,7 +534,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 			}
 			native_string str(isolate, args[0]);
 			const char* data = str.c_str();
-			gzip::gzip_inflate* inflate = sow_web_jsx::unwrap<gzip::gzip_inflate>(args);
+			gzip::gzip_inflate* inflate = ::unwrap<gzip::gzip_inflate>(args);
 			size_t ret = 0; size_t len = strlen(data);
 			if (len > CHUNK) {
 				std::stringstream source_stream(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
@@ -552,12 +572,12 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 		});
 		set_prototype(isolate, inflate_prototype, "fs_close_file", [](js_method_args) {
 			v8::Isolate* isolate = args.GetIsolate();
-			gzip::gzip_inflate* inflate = sow_web_jsx::unwrap<gzip::gzip_inflate>(args);
+			gzip::gzip_inflate* inflate = ::unwrap<gzip::gzip_inflate>(args);
 			inflate->f_close_file();
 		});
 		//[/File Write]
 		set_prototype(isolate, inflate_prototype, "release", [](js_method_args) {
-			gzip::gzip_inflate* inflate = sow_web_jsx::unwrap<gzip::gzip_inflate>(args);
+			gzip::gzip_inflate* inflate = ::unwrap<gzip::gzip_inflate>(args);
 			if (inflate != NULL) {
 				delete inflate; inflate = NULL;
 				args.Holder()->SetAlignedPointerInInternalField(0, nullptr);
@@ -581,13 +601,15 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 			throw_js_error(isolate, "Output file path required....");
 			return;
 		}
+		wjsx_env* wj_env = ::unwrap_wjsx_env(isolate);
+		const char* root_dir = wj_env->get_root_dir();
 		native_string utf_input_path_str(isolate, args[0]);
-		std::string* input_path = new std::string(sow_web_jsx::wrapper::get_root_dir());
-		sow_web_jsx::get_server_map_path(utf_input_path_str.c_str(), *input_path);
+		std::string* input_path = new std::string(root_dir);
+		::get_server_map_path(utf_input_path_str.c_str(), *input_path);
 
 		native_string utf_output_path_str(isolate, args[1]);
-		std::string* output_path = new std::string(sow_web_jsx::wrapper::get_root_dir());
-		sow_web_jsx::get_server_map_path(utf_output_path_str.c_str(), *output_path);
+		std::string* output_path = new std::string(root_dir);
+		::get_server_map_path(utf_output_path_str.c_str(), *output_path);
 		std::string error;
 		int ret = gzip::inflate_file(input_path->c_str(), output_path->c_str(), error);
 		_free_obj(input_path); _free_obj(output_path);
@@ -599,19 +621,19 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 		args.GetReturnValue().Set(v8::Number::New(isolate, (double)ret));
 	});
 	wjsx_set_method(isolate, gzip_object, "deflate", [](const v8::FunctionCallbackInfo<v8::Value>& args) {
-		v8::Isolate* isolate = args.GetIsolate();
 		if (args.Length() <= 1) {
-			throw_js_error(isolate, "Input file and output file path required....");
+			throw_js_error(args.GetIsolate(), "Input file and output file path required....");
 			return;
 		}
 		if (!args[0]->IsString()) {
-			throw_js_error(isolate, "Input file path required....");
+			throw_js_error(args.GetIsolate(), "Input file path required....");
 			return;
 		}
 		if (!args[1]->IsString()) {
-			throw_js_error(isolate, "Output file path required....");
+			throw_js_error(args.GetIsolate(), "Output file path required....");
 			return;
 		}
+		v8::Isolate* isolate = args.GetIsolate();
 		int comp_level = Z_BEST_SPEED;
 		//Z_FINISH : Z_NO_FLUSH
 		if (args.Length() > 2) {
@@ -627,13 +649,15 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 				}
 			}
 		}
+		wjsx_env* wj_env = ::unwrap_wjsx_env(isolate);
+		const char* root_dir = wj_env->get_root_dir();
 		native_string utf_input_path_str(isolate, args[0]);
-		std::string* input_path = new std::string(sow_web_jsx::wrapper::get_root_dir());
-		sow_web_jsx::get_server_map_path(utf_input_path_str.c_str(), *input_path);
+		std::string* input_path = new std::string(root_dir);
+		::get_server_map_path(utf_input_path_str.c_str(), *input_path);
 
 		native_string utf_output_path_str(isolate, args[1]);
-		std::string* output_path = new std::string(sow_web_jsx::wrapper::get_root_dir());
-		sow_web_jsx::get_server_map_path(utf_output_path_str.c_str(), *output_path);
+		std::string* output_path = new std::string(root_dir);
+		::get_server_map_path(utf_output_path_str.c_str(), *output_path);
 		std::string error;
 		int ret = gzip::deflate_file(input_path->c_str(), output_path->c_str(), comp_level, error);
 		_free_obj(input_path); _free_obj(output_path);

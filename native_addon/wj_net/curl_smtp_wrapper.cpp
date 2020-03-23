@@ -29,7 +29,7 @@ V8_JS_METHOD(smtp_request) {
 	v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
 	v8::Local<v8::Object> config = v8::Handle<v8::Object>::Cast(args[0]);
 	v8::Local<v8::Value> v8_val;
-	if (sow_web_jsx::wrapper::is_cli() == FALSE) {
+	if (::unwrap_wjsx_env(isolate)->is_cli() == FALSE) {
 		smtp->read_debug_information(false);
 	}
 	else {

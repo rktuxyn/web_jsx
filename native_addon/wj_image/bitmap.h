@@ -4,14 +4,12 @@
 * Copyrights licensed under the New BSD License.
 * See the accompanying LICENSE file for terms.
 */
-//10:42 PM 12/13/2019
+//12:42 AM 1/11/2020
 #if defined(_MSC_VER)
 #pragma once
 #endif//!_MSC_VER
-#if !defined(_npgsql_wrapper_h)
-#	define _npgsql_wrapper_h
+#if !defined(_bitmap_h)
+#	define _bitmap_h
 #	include <v8.h>
-namespace sow_web_jsx {
-	void npgsql_export(v8::Isolate* isolate, v8::Handle<v8::Object> target);
-}
-#endif//!_npgsql_wrapper_h
+void bitmap_export(v8::Isolate* isolate, v8::Handle<v8::Object> target);
+#endif//!_bitmap_h

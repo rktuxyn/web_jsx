@@ -7,6 +7,7 @@
 #	include "mysql_wrapper.h"
 #	include <my_sql.h>
 #	include <web_jsx/web_jsx.h>
+#	include <web_jsx/v8_util.h>
 #	include <sstream>
 void json_array_stringify_s(std::vector<char*>& json_array_obj, std::string& json_str) {
 	std::stringstream* ss = new std::stringstream();

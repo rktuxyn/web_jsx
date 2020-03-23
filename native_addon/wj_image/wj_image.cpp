@@ -11,8 +11,11 @@
 #else
 #	include "image_unix.h"
 #endif//!_WIN32||_WIN64
+#	include "bitmap.h"
+
 void web_jsx_native_module(v8::Handle<v8::Object> target) {
 	v8::Isolate* isolate = v8::Isolate::GetCurrent();
-	image_export(v8::Isolate::GetCurrent(), target);
+	image_export(isolate, target);
+	bitmap_export(isolate, target);
 	return;
 }

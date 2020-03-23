@@ -10,6 +10,7 @@
 #	include <npgsql_tools.h>
 #	include <npgsql_query.h>
 #	include <web_jsx/web_jsx.h>
+#	include <web_jsx/v8_util.h>
 //11:33 PM 12/13/2019
 using namespace sow_web_jsx;
 template<class _pg_connection>

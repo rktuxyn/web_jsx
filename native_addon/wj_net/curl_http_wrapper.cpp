@@ -82,7 +82,7 @@ V8_JS_METHOD(http_request) {
 		cookies->clear(); delete cookies;
 		v8_cookie_str.Clear();
 	}
-	if (sow_web_jsx::wrapper::is_cli() == FALSE) {
+	if (::unwrap_wjsx_env(isolate)->is_cli() == FALSE) {
 		http->read_debug_information(false);
 	}
 	else {

@@ -202,12 +202,12 @@ public:
 			return panic("ERROR: File not found...", TRUE);
 		}
 		_format = get_image_format(path);
-		if (_format == image_format::UNKNOWN || _format == image_format::NO_EXT) {
+		if (_format == UNKNOWN || _format == NO_EXT) {
 			return panic("ERROR: Unsupported image format...", TRUE);
 		}
 		int ret = this->gd_init();
 		if (is_error_code(ret) == TRUE)return ret;
-		wchar_t* wpath = ccr2ws(path);
+		wchar_t* wpath = ::ccr2ws(path);
 		_bit_map = new Gdiplus::Bitmap(const_cast<const wchar_t*>(wpath));
 		delete[]wpath;
 		_height = _bit_map->GetHeight();
@@ -232,7 +232,7 @@ public:
 						_is_loaded = TRUE; _format = format;
 					}
 					else {
-						std::string* err=new std::string("Unable to create Bitmap from stream. Error reason:");
+						std::string* err = new std::string("Unable to create Bitmap from stream. Error reason:");
 						err->append(get_gdiplus_error_reason(stat));
 						ret = this->panic(err->c_str(), TRUE);
 						delete _bit_map; _free_obj(err);
@@ -252,7 +252,7 @@ public:
 	}
 	__forceinline int load_from_base64(const char* data, image_format format = image_format::BMP) {
 		std::string* out = new std::string();
-		if (sow_web_jsx::base64::to_decode_str(data, *out) == false) {
+		if (::base64::to_decode_str(data, *out) == false) {
 			_free_obj(out);
 			return this->panic("Unablet to decode base64 data. Please try again.", TRUE);
 		}
@@ -407,8 +407,8 @@ public:
 		const char* cmime_type = get_mime_type(format);
 		if (cmime_type == NULL) return this->panic("Unsupported Image format.\nSupported .bmp, .png, .jpeg, .jpg, .gif, .tiff, .tif", TRUE);
 		CLSID encoder_clsid;
-		wchar_t* mime_type = ccr2ws(cmime_type);
-		int ret = get_encoder_clsid(const_cast<const wchar_t*>(mime_type), &encoder_clsid);
+		wchar_t* mime_type = ::ccr2ws(cmime_type);
+		int ret = ::get_encoder_clsid(const_cast<const wchar_t*>(mime_type), &encoder_clsid);
 		delete[]mime_type;
 		if (ret < 0)return this->panic("Unable to create mime type.", TRUE);
 		wchar_t* wpath = ccr2ws(path);
@@ -512,7 +512,7 @@ public:
 		std::string* data = new std::string();
 		int ret = this->get_image_buff(*data, format);
 		if (is_error_code(ret) == FALSE) {
-			ret = sow_web_jsx::base64::to_encode_str(*data, out) == true ? TRUE : FALSE;
+			ret = ::base64::to_encode_str(*data, out) == true ? TRUE : FALSE;
 		}
 		_free_obj(data);
 		return ret;
@@ -551,20 +551,6 @@ public:
 		return;
 	}
 };
-int v8_object_get_number(v8::Isolate* isolate, v8::Local<v8::Context> ctx, v8::Local<v8::Object> obj, const char* prop) {
-	v8::MaybeLocal<v8::Value> mval;
-	mval = obj->Get(ctx, v8_str(isolate, prop));
-	if (mval.IsEmpty()) {
-		throw_js_error(isolate, "Value should be number...");
-		return -500;
-	}
-	v8::Local<v8::Value> val = mval.ToLocalChecked();
-	if (!val->IsNumber()) {
-		throw_js_error(isolate, "Value should be number...");
-		return -500;
-	}
-	return val->Int32Value(ctx).FromMaybe(0);
-}
 image* get_image_instance(js_method_args) {
 	image* img = sow_web_jsx::unwrap<image>(args);
 	if (img == NULL) {
@@ -738,7 +724,7 @@ void image_export(v8::Isolate* isolate, v8::Handle<v8::Object> target){
 		native_string utf_base64(isolate, args[0]);
 		std::string* img_data = new std::string(utf_base64.c_str(), utf_base64.size());
 		int ret = img->load_from_buff(img_data->data(), static_cast<ULONG>(img_data->size()), format);
-		utf_base64.clear(); img_data->clear(); delete img_data;
+		utf_base64.clear(); _free_obj(img_data);
 		if (is_error_code(ret) == TRUE) {
 			throw_js_error(isolate, img->get_last_error());
 			return;
@@ -786,13 +772,13 @@ void image_export(v8::Isolate* isolate, v8::Handle<v8::Object> target){
 		format__path(*abspath);
 		image_format format = get_image_format(*abspath);
 		if (format == image_format::UNKNOWN || format == image_format::NO_EXT) {
-			utf_abs_path_str.clear(); abspath->clear(); delete abspath;
+			utf_abs_path_str.clear(); _free_obj(abspath);
 			throw_js_error(args.GetIsolate(), "Unsupported Image format defined...");
 			return;
 		}
 		int ret = TRUE;
 		ret = img->save_as(abspath->c_str(), format);
-		utf_abs_path_str.clear(); abspath->clear(); delete abspath;
+		utf_abs_path_str.clear(); _free_obj(abspath);
 		if (is_error_code(ret) == TRUE) {
 			throw_js_error(isolate, img->get_last_error());
 			return;
@@ -953,16 +939,16 @@ void image_export(v8::Isolate* isolate, v8::Handle<v8::Object> target){
 		v8::Local<v8::Object> rgba = v8::Handle<v8::Object>::Cast(args[0]);
 		v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
 		rgb32* pixel = new rgb32();
-		int val = v8_object_get_number(isolate, ctx, rgba, "r");
+		int val = ::v8_object_get_number(isolate, ctx, rgba, "r");
 		if (val == -500) { delete pixel; return; }
 		pixel->r = (uint8_t)val;
-		val = v8_object_get_number(isolate, ctx, rgba, "g");
+		val = ::v8_object_get_number(isolate, ctx, rgba, "g");
 		if (val == -500) { delete pixel; return; }
 		pixel->g = (uint8_t)val;
-		val = v8_object_get_number(isolate, ctx, rgba, "b");
+		val = ::v8_object_get_number(isolate, ctx, rgba, "b");
 		if (val == -500) { delete pixel; return; }
 		pixel->b = (uint8_t)val;
-		val = v8_object_get_number(isolate, ctx, rgba, "a");
+		val = ::v8_object_get_number(isolate, ctx, rgba, "a");
 		if (val == -500) { delete pixel; return; }
 		pixel->a = (uint8_t)val;
 		int x = args[1]->Int32Value(ctx).FromMaybe(0);

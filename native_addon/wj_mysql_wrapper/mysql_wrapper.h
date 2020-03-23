@@ -10,7 +10,7 @@
 #endif//!_MSC_VER
 #if !defined(_mysql_wrapper_h)
 #	define _mysql_wrapper_h
-#	include <web_jsx/v8_util.h>
+#	include <v8.h>
 namespace sow_web_jsx {
 	void mysql__export(v8::Isolate* isolate, v8::Handle<v8::Object> target);
 }

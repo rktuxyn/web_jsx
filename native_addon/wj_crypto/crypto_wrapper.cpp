@@ -76,7 +76,9 @@ V8_JS_METHOD(encrypt_decrypt_file) {
 	}
 	native_string utf_source_path(isolate, args[2]);
 	native_string utf_dest_path(isolate, args[3]);
-	std::string* source_path = new std::string(sow_web_jsx::wrapper::get_root_dir());
+	wjsx_env* wj_env = ::unwrap_wjsx_env(isolate);
+	const char* root_dir = wj_env->get_root_dir();
+	std::string* source_path = new std::string(root_dir);
 	sow_web_jsx::get_server_map_path(utf_source_path.c_str(), *source_path);
 	if (__file_exists(source_path->c_str()) == false) {
 		_free_obj(source_path);
@@ -85,7 +87,7 @@ V8_JS_METHOD(encrypt_decrypt_file) {
 		return;
 	}
 	std::string* dest_path = new std::string();
-	dest_path->append(sow_web_jsx::wrapper::get_root_dir());
+	dest_path->append(root_dir);
 	sow_web_jsx::get_server_map_path(utf_dest_path.c_str(), *dest_path);
 
 	native_string utf_key(isolate, args[0]);
