@@ -11,22 +11,21 @@
 
 #if !defined(_glb_r_h)
 #	define _glb_r_h
-#if defined(__WJSX_SHARED)
-#if !defined(_export_wjsx)
-#	define _export_wjsx __declspec(dllexport)
-#endif//!jsx_export
+
+#if !defined(EXPORT_WJSX)
+#if (defined(_WIN32)||defined(_WIN64))
+#	define EXPORT_WJSX __declspec(dllexport)
 #else
-#if !defined(_export_wjsx)
-#	define _export_wjsx
-#endif//!_export_wjsx
-#endif//__WJSX_SHARED
+#	define EXPORT_WJSX
+#endif//_WIN32||_WIN64
+#endif//!EXPORT_WJSX
 
 namespace sow_web_jsx {
 	/*[function pointers]*/
 	typedef void (*add_resource_func)();
 	/*[/function pointers]*/
 	void free_resource();
-	_export_wjsx void register_resource(add_resource_func func);
+	EXPORT_WJSX void register_resource(add_resource_func func);
 }
 
 #endif//_glb_r_h

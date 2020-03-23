@@ -91,8 +91,8 @@ public:
 				}
 				//<js::context.response.write('JS Object==>');::js> BUG
 				//<js:: context.response.write("JS Object==>");::js> WORK
-				matchstr = std::regex_replace(matchstr, *this->regx_sts, this->rep_str + ", true);\r\n");
-				matchstr = std::regex_replace(matchstr, *this->regx_ste, "\r\ncontext.response.write(" + this->rep_str);
+				matchstr = std::regex_replace(matchstr, *this->regx_sts, this->rep_str + ", true);\n");
+				matchstr = std::regex_replace(matchstr, *this->regx_ste, "\ncontext.response.write(" + this->rep_str);
 				return matchstr;
 			});
 			break;
@@ -101,7 +101,7 @@ public:
 				info.is_tag_end = false;
 				//info.line = std::regex_replace(info.line, std::regex("'"), " " + this->rep_str);
 				info.line = std::regex_replace(info.line, regx, "");
-				info.line.append(this->rep_str + ");\r\ncontext.response.write(");
+				info.line.append(this->rep_str + ");\ncontext.response.write(");
 				break;
 			}
 			info.is_tag_end = true;
@@ -143,12 +143,12 @@ public:
 			case e_tag::ste/*::js>*/:
 				info.is_tag_end = true;
 				info.is_tag_start = false;
-				info.line = std::regex_replace(info.line, regx, "\r\ncontext.response.write(" + this->rep_str);
+				info.line = std::regex_replace(info.line, regx, "\ncontext.response.write(" + this->rep_str);
 				break;
 			case e_tag::rte/*=js>*/:
 				info.is_tag_end = true;
 				info.is_tag_start = false;
-				info.line = std::regex_replace(info.line, regx, ");\r\ncontext.response.write(" + this->rep_str);
+				info.line = std::regex_replace(info.line, regx, ");\ncontext.response.write(" + this->rep_str);
 				break;
 			default:break;
 			}
@@ -163,11 +163,11 @@ int script_tag_parser::parse(template_result & tr, std::string&html_body) {
 	if (REGEX_IS_MATCH(html_body, *regx_sts) == 0) {
 		delete regx_sts;
 		if (REGEX_IS_MATCH(html_body, *regx_str) == 0) {
-			if (tr.remove_new_line) {
+			if (tr.remove_new_line==1) {
 				//Normalize
-				html_body = std::regex_replace (html_body, std::regex("\\n\\s*\\n"), "\r\n");
+				html_body = std::regex_replace (html_body, std::regex("\\n\\s*\\n"), "\n");
 			}
-			tr.is_script_template = false;
+			tr.is_script_template = 0;
 			return 0;
 		}
 		delete regx_str;
@@ -176,7 +176,7 @@ int script_tag_parser::parse(template_result & tr, std::string&html_body) {
 		delete regx_sts;
 		delete regx_str;
 	}
-	tr.is_script_template = true;
+	tr.is_script_template = 1;
 	std::regex* rgx = new std::regex("(?:\\r\\n|\\r|\\n)");
 	std::regex* qu = new std::regex("'");
 	parser_info* info = new parser_info();
@@ -216,18 +216,18 @@ int script_tag_parser::parse(template_result & tr, std::string&html_body) {
 		js_stream << info->line;
 		std::string().swap(info->line);
 	}
-	std::string().swap(html_body);
+	//std::string().swap(html_body);
 	delete info; delete rgx;
 	delete qu; delete jsp;
-	html_body = js_stream.str();
+	js_stream.str().swap(html_body);
 	std::stringstream().swap(js_stream);
 	html_body = std::regex_replace(html_body, std::regex("(?:context.response.write\\(''\\);)"), "");
 	html_body = std::regex_replace(html_body, std::regex("(?:context.response.write\\(' '\\);)"), "");
 	//html_body = std::regex_replace(html_body, std::regex("(?:context.response.write\\('  '\\);)"), "");
-	/*if (tr.remove_new_line) {
-		//html_body = std::regex_replace (html_body, std::regex("\\n\\s*\\n"), "\r\n");
-		//html_body = std::regex_replace (html_body, std::regex("\\r\\n\\s*\\r\\n"), "\n");
-	}*/
+	if (tr.remove_new_line) {
+		html_body = std::regex_replace (html_body, std::regex("\\n\\s*\\n"), "\n");
+		html_body = std::regex_replace (html_body, std::regex("\\r\\n\\s*\\r\\n"), "\n");
+	}
 	//sow_web_jsx::js_write_footer(html_body);
 
 	return 1;

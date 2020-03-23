@@ -13,6 +13,7 @@
 #	include <sstream>
 #	include <string>
 namespace sow_web_jsx {
+	void create_wj_core_extend_script(std::stringstream& js_stream, int is_cli);
 	void js_write_header(std::stringstream& js_stream);
 	void js_write_console_header(std::stringstream& js_stream);
 };

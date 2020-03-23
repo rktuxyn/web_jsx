@@ -6,23 +6,24 @@
 */
 #	include "core/web_jsx_global.h"
 #	include "creqh.h"
-void web_jsx::cgi_request::get_global_obj(std::map<std::string, std::string>& global, std::string&root_dir, const char*app_path) {
+using namespace sow_web_jsx;
+void cgi_request::get_global_obj(std::map<std::string, std::string>& global, std::string&root_dir, const char*app_path) {
 	replace_back_slash(root_dir);
 	global["root_dir"] = root_dir;
-	global["host"] = get_env_c("HTTP_HOST");
-	global["remote_addr"] = get_env_c("REMOTE_ADDR");
-	global["server_protocol"] = get_env_c("SERVER_PROTOCOL");
-	global["https"] = get_env_c("HTTPS");
-	global["app_path"] = app_path;//get_app_path();
-	global["env_path"] = get_env_c("path");
+	get_env_c("HTTP_HOST", global["host"]);
+	get_env_c("REMOTE_ADDR", global["remote_addr"]);
+	get_env_c("SERVER_PROTOCOL", global["server_protocol"]);
+	get_env_c("HTTPS", global["https"]);
+	get_env_c("path", global["env_path"]);
+	global["app_path"] = app_path;
 }
-void web_jsx::cgi_request::get_request_object(
-	std::map<std::string, std::string>&request, std::map<std::string, std::string>&query_string, 
-	req_method&method
+void cgi_request::get_request_object(
+	std::map<std::string, std::string>& request, std::map<std::string, std::string>& query_string,
+	const req_method method
 ) {
 	request["method"] = method == req_method::GET ? "GET" : "POST";
 	if (method == req_method::POST) {
-		request["content_length"] = get_env_c("CONTENT_LENGTH");
+		get_env_c("CONTENT_LENGTH", request["content_length"]);
 	}
 	else {
 		request["pay_load"] = "[]";
@@ -37,14 +38,16 @@ void web_jsx::cgi_request::get_request_object(
 	else {
 		request["query_string"] = "{}";
 	}
-	request["page_path"] = get_env_c("PATH_INFO");
-	request["content_type"] = get_content_type();
-	request["cookie"] = get_env_c("HTTP_COOKIE");
-	request["user_agent"] = get_env_c("HTTP_USER_AGENT");
-	request["accept"] = get_env_c("HTTP_ACCEPT");
-	request["accept_encoding"] = get_env_c("HTTP_ACCEPT_ENCODING");
+	get_env_c("PATH_INFO", request["page_path"]);
+	get_env_c("HTTP_COOKIE", request["cookie"]);
+	get_env_c("HTTP_USER_AGENT", request["user_agent"]);
+	get_env_c("HTTP_ACCEPT", request["accept"]);
+	get_env_c("HTTP_ACCEPT_ENCODING", request["accept_encoding"]);
+	std::string content_type;
+	if (get_env_c("CONTENT_TYPE", content_type) == FALSE)content_type = "text/html";
+	request["content_type"] = content_type;
 }
-void web_jsx::cgi_request::not_found_response(const char* content_type) {
+void cgi_request::not_found_response(const char* content_type) {
 	std::cout << "Content-Type:" << content_type << H_N_L;
 	std::cout << "Accept-Ranges:bytes" << H_N_L;
 	std::cout << "X-Powered-By:safeonline.world" << H_N_L;

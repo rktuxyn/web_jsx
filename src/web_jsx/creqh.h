@@ -14,11 +14,14 @@
 #	include <map>
 #	include <string>
 //#if !defined(FAST_CGI_APP)
-namespace web_jsx {
+namespace sow_web_jsx {
 	namespace cgi_request {
 		void get_global_obj(std::map<std::string, std::string>& global, std::string&root_dir, const char*app_path);
 		void not_found_response(const char* content_type);
-		void get_request_object(std::map<std::string, std::string>&request, std::map<std::string, std::string>&query_string, req_method&method);
+		void get_request_object(
+			std::map<std::string, std::string>&request, std::map<std::string, std::string>&query_string,
+			const req_method method
+		);
 	}
 }
 //#endif//!FAST_CGI_APP

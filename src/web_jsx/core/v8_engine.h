@@ -9,36 +9,37 @@
 #endif//!_MSC_VER
 #if !defined( _v8_engine_h)
 #	define _v8_engine_h
-//#	include "v8_util.h"
 #	include <v8.h>
-#	include <memory>
+#if defined(WEB_JSX_MULTI_THREAD)
+#	include <mutex>
+#endif//!WEB_JSX_MULTI_THREAD
+#if !defined(_MAX_ISOLATE)
+#	define _MAX_ISOLATE		50
+#	define _MIN_ISOLATE		10
+#endif//!_MAX_ISOLATE
+
+#if !defined(_dispose_isolate)
+#define _dispose_isolate(isolate)		\
+while(isolate){							\
+isolate->ContextDisposedNotification();	\
+isolate->Dispose();						\
+isolate = NULL;							\
+}
+#endif//!_dispose_isolate
 
 namespace sow_web_jsx {
-	namespace js_compiler {
-		typedef struct isolate_pool {
-			struct isolate_pool* next;  /* pointer to next member*/
-			int busy;                   /* connection busy flag*/
-			v8::Isolate* isolate;
-			int error_code;
-			const char* error_msg;
-		}ISOLATE_POOL;
-		class v8_engine {
-		private:
-			//v8::Isolate* _isolate;
-			std::shared_ptr<v8::Platform> _platform;
-			v8::ArrayBuffer::Allocator* _array_buffer_allocator;
-			int _disposed;
-			ISOLATE_POOL* _pools;
-			void create_engine(const char* exec_path);
-		public:
-			explicit v8_engine(const char* exec_path);
-			isolate_pool* create_isolate();
-			v8::Isolate* get_current_isolate();
-			v8::Isolate* get_global_isolate();
-			void wait_for_pending_task();
-			void dispose();
-			~v8_engine();
-		};
+	namespace v8_engine {
+		//11:04 PM 2/23/2020
+		void create_engine(const char* exec_path);
+		v8::Isolate* create_isolate();
+#if defined(WEB_JSX_MULTI_THREAD)
+		v8::Isolate* create_isolate(std::mutex&mutex);
+		void dispose_isolate(v8::Isolate* isolate, std::mutex& mutex);
+		void wait_for_pending_task(v8::Isolate* isolate, std::mutex& mutex);
+#endif//!WEB_JSX_MULTI_THREAD
+		void wait_for_pending_task(v8::Isolate* isolate);
+		void dispose_isolate(v8::Isolate* isolate);
+		void dispose_engine();
 	}
 }
 #endif//!_v8_engine_h

@@ -11,8 +11,9 @@ let ports = [
     { port: "9102", pid: void 0 },
     { port: "9103", pid: void 0 }
 ];
+//web_jsx fcgi "localhost:9100"
 ports.forEach( ( row ) => {
-    print( `Argument pass=>fcgi localhost:${row.port}` );
+    print( `Argument pass=>fcgi localhost:${row.port}\n` );
     row.pid = sys.create_process( {
         start_in: env.root_dir,
         process_name: env.app_path,
@@ -22,8 +23,8 @@ ports.forEach( ( row ) => {
         wait_for_exit: false
     } );
 } );
-print( JSON.stringify( ports ) );
-print( "Opening nginx..." );
+print( `${JSON.stringify( ports )}\n` );
+print( "Opening nginx...\n" );
 let pid = sys.create_process( {
     start_in: env.root_dir,
     process_name: "nginx",
@@ -32,4 +33,4 @@ let pid = sys.create_process( {
     arg: "",
     wait_for_exit: false
 } );
-print( `nginx pid=>${pid}` );
+print( `nginx pid=>${pid}\n` );

@@ -5,8 +5,10 @@
 * See the accompanying LICENSE file for terms.
 */
 //1:25 PM 1/20/2019
-#	include "web_jsx_global.h"
 #	include "template_reader.h"
+#	include "web_jsx_global.h"
+#	include "wjsx_env.h"
+#	include "std_wrapper.hpp"
 using namespace sow_web_jsx;
 int template_read(
 	std::string& cur_template_path,
@@ -22,9 +24,9 @@ int template_read(
 		//Ignore invalid template path
 		return -2;
 	}
-	size_t ret = sow_web_jsx::read_file(physicalpath.c_str(), body, true);
+	int ret = ::read_file(physicalpath.c_str(), body);
 	if (is_error_code(ret) == TRUE) {
-		tr.is_error = true;
+		tr.is_error = TRUE;
 		if (ret == -2) {
 			tr.err_msg += body.c_str();
 		}
@@ -34,7 +36,7 @@ int template_read(
 		return -1;
 	}
 	parent_template = cur_template_path.c_str();
-	std::string().swap(cur_template_path);
+	swap_obj(cur_template_path);
 	std::regex__str(body, pattern_regx, cur_template_path);
 	body = std::regex_replace(body, pattern_regx, "");
 	if (cur_template_path.empty() || cur_template_path == "INVALID" || cur_template_path.size() > _MAX_PATH) {
@@ -56,9 +58,9 @@ int ::template_reader::read_template(template_result& tr,
 		delete pattern_regx; delete cur_template_path;
 		return 0;
 	}
+	tr.has_wjsx_template = 1;
 	int count, error;
-	templates.push_back(source);
-	std::string().swap(source);
+	templates.push_back(source); swap_obj(source);
 	count = 1; error = 1;
 	std::string&cur = *cur_template_path;
 	while (count > 0) {
@@ -68,11 +70,10 @@ int ::template_reader::read_template(template_result& tr,
 		}
 		if (count > 0 || count == 0) {
 			templates.push_back(source);
-			std::string().swap(source); 
+			swap_obj(source);
 		}
 	}
-	std::string().swap(source);
-	delete cur_template_path;
-	delete pattern_regx;
+	swap_obj(source);
+	delete cur_template_path; delete pattern_regx;
 	return error;
 };

@@ -10,89 +10,27 @@
 #	include "web_jsx_global.h"
 //2:15 PM 1/14/2020
 
-#if !(defined(_WIN32)||defined(_WIN64)) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
+#if !(defined(_WIN32)||defined(_WIN64))
 typedef void* h_module;
 #else
 typedef HMODULE h_module;
 #endif//!_WIN32
 typedef void(*web_jsx_native_module)(v8::Handle<v8::Object>target);
 
-typedef enum {
-	LOCAL = 1,
-	WORKING = 2
-}typeof_storage;
-
-typedef struct native_modules {
-	struct native_modules* next;  /* pointer to next member*/
-	h_module wj_module;
-}wj_native_modules;
-
-#if !defined(n_wjm)
-#	define n_wjm new wj_native_modules
-#endif//!n_wjm
-
-#if !defined(_free_module)
-#	define _free_module(module_obj)\
-while(module_obj){\
-wj_native_modules* wjm = module_obj;\
-module_obj = module_obj->next;\
-FreeLibrary(wjm->wj_module);\
-delete wjm; wjm = NULL;\
-}
-#endif//!_free_module
-
-#if !defined(_store_module)
-#	define _store_module(module_obj, wj_module)\
-if(module_obj==NULL){\
-module_obj = n_wjm;\
-module_obj->wj_module = wj_module;\
-module_obj->next = NULL;\
-}else{\
-wj_native_modules* anm = n_wjm;\
-anm->wj_module = wj_module;\
-anm->next = module_obj;\
-module_obj = anm;\
-}
-#endif//!_store_module
-
-wj_native_modules* _working_modules = NULL;
-wj_native_modules* _local_modules = NULL;
-
-void store_module(h_module wj_module, typeof_storage st = LOCAL) {
-	if (st == LOCAL) {
-		_store_module(_local_modules, wj_module);
-	}
-	else {
-		_store_module(_working_modules, wj_module);
-	}
-}
-void sow_web_jsx::free_working_module() {
-	_free_module(_working_modules);
-}
-void sow_web_jsx::free_native_modules() {
-	_free_module(_local_modules);
-	_free_module(_working_modules);
-}
-//wchar_t* s2ws(const char* mbstr) {
-//	mbstate_t state;
-//	memset(&state, 0, sizeof state);
-//	size_t len = sizeof(wchar_t) + mbsrtowcs(NULL, &mbstr, 0, &state);
-//	wchar_t* buf = new wchar_t[len];
-//	mbsrtowcs(buf, &mbstr, len, &state);
-//	return buf;
-//}
 //UNICODE
 void* get_proc_address(h_module module_name, const char* name) {
-#if !(defined(_WIN32)||defined(_WIN64)) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
+#if !(defined(_WIN32)||defined(_WIN64))
 #error Not Implimented
 #else
 	return ::GetProcAddress(module_name, name);
 #endif//!_WIN32||_WIN64
 }
 void js_throw_error(v8::Isolate* isolate, const char* reason, const char* module_name) {
-	std::string error = reason; error += " Module#"; error += module_name;
-	isolate->ThrowException(v8::Exception::Error(v8::String::NewFromUtf8(isolate, error.c_str(), v8::NewStringType::kNormal).ToLocalChecked()));
-	error.clear(); std::string().swap(error);
+	std::string *error = new std::string(reason);
+	error->append(" Module#");
+	error->append(module_name);
+	throw_js_error(isolate, error->c_str());
+	_free_obj(error);
 }
 typeof_module sow_web_jsx::get_module_type(const std::string& path_str) {
 	size_t found = path_str.find_last_of(".");
@@ -137,6 +75,7 @@ void sow_web_jsx::require_native(
 	void* wjnef = get_proc_address(wj_module, "web_jsx_native_module");
 	if (wjnef == NULL) {
 		js_throw_error(isolate, "This is not valid web_jsx module..", module_name);
+		FreeLibrary(wj_module);
 	}
 	else {
 		web_jsx_native_module func = (web_jsx_native_module)wjnef;
@@ -144,18 +83,21 @@ void sow_web_jsx::require_native(
 		func(target);
 		args.GetReturnValue().Set(target);
 		func = NULL; wjnef = NULL; target.Clear();
+		wjsx_env* wj_env = ::unwrap_wjsx_env(isolate);
+		if (wj_env->has_native_data_structure() == TRUE) {
+			wj_env->get_native_data_structure(FALSE)->store_working_module(wj_module);
+		}
 	}
-	store_module(wj_module, WORKING);
+	//store_module(wj_module, WORKING);
 	return;
 }
 
-int sow_web_jsx::load_native_module(
+void* sow_web_jsx::load_native_module(
 	v8::Isolate* isolate,
 	v8::Handle<v8::Object> target, 
 	const char* path,
 	const char* app_dir
 ){
-	int result = FALSE;
 	h_module wj_module;
 #if !(defined(_WIN32)||defined(_WIN64)) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
 	wj_module = dlopen(path, RTLD_NOW);
@@ -165,14 +107,14 @@ int sow_web_jsx::load_native_module(
 	wj_module = LoadLibraryEx(wpath, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
 	delete[]wpath;
 #endif//!_WIN32||_WIN64
-	if (wj_module == NULL)return result;
+	if (wj_module == NULL)return NULL;
 	void* wjnef = get_proc_address(wj_module, "web_jsx_native_module");
 	if (wjnef != NULL) {
 		web_jsx_native_module func = (web_jsx_native_module)wjnef;
 		func(target);
 		func = NULL; wjnef = NULL;
-		result = TRUE;
+		return wj_module;
 	}
-	store_module(wj_module);
-	return result;
+	FreeLibrary(wj_module);
+	return NULL;
 }

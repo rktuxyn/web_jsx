@@ -5,27 +5,30 @@
 * See the accompanying LICENSE file for terms.
 */
 //9:11 PM 11/18/2018
-#	include "core/web_jsx_global.h"
-#	include "web_jsx_app_global.h"
 #	include "util.h"
-#if !defined(_WIN32) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
+#	include "web_jsx_app_global.h"
+#	include "core/wjsx_env.h"
+#	include "core/std_wrapper.hpp"
+#if !(defined(_WIN32) || defined(_WIN64))
 #	include <unistd.h>
 #	define get_current_dir getcwd
 bool is_user_interactive();
 void print_info();
 #else
 #	include <direct.h>
-#define get_current_dir _getcwd
-#if !defined(_WINCON_)
+#	define get_current_dir _getcwd
 #	include <Wincon.h>
-#endif//_WINCON_
 #define FOREGROUND_BLACK			0x0000 // text color contains black.
 #define FOREGROUND_YELLOW			0x0006 // text color contains Yellow.
 #define FOREGROUND_DARK_YELLOW		0x0007 // text color contains DarkYellow.
 #define FOREGROUND_LIGHT_GREEN		0XA // text color contains LightGreen.
 #define FOREGROUND_LIGHT_RED		0XC // text color contains LightGreen.
 #endif//!_WIN32
-#if !(defined(_WIN32) || defined(_WIN64)) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
+
+#define _DELETE DELETE
+#undef DELETE
+
+#if !(defined(_WIN32) || defined(_WIN64))
 bool is_user_interactive() {
 	return false;
 }
@@ -139,14 +142,27 @@ const char *get_env_c(const char* var_name) {
 	char *env_val;
 	size_t len;
 	errno_t err = _dupenv_s(&env_val, &len, var_name);
-	if (((env_val != NULL) && (env_val[0] == '\0')) || env_val == NULL) {
-		return "";
-	}
+	if (!(err == FALSE && len > 0 && env_val != nullptr))return "";
 	return const_cast<const char*>(env_val);
+}
+int get_env_c(const char* var_name, std::string& out_str) {
+	char* env_val;
+	size_t len;
+	errno_t err = _dupenv_s(&env_val, &len, var_name);
+	int rec = FALSE;
+	if ( err == FALSE && len > 0 && env_val != nullptr) {
+		out_str = std::string(env_val, len);
+		rec = TRUE; delete[] env_val;
+	}
+	return rec;
 }
 int get_env_path(std::string&path_str) {
 	path_str.clear();
-	std::istringstream tokenStream(get_env_c("path"));
+	char* env_val;
+	size_t len;
+	errno_t err = _dupenv_s(&env_val, &len, "path");
+	if (_dupenv_s(&env_val, &len, "path") != 0 || env_val == nullptr || len == 0)return -1;
+	std::istringstream tokenStream(env_val);
 	std::string line;
 	int rec = -1;
 	while (std::getline(tokenStream, line, ';')) {
@@ -156,6 +172,7 @@ int get_env_path(std::string&path_str) {
 		}
 	}
 	tokenStream.clear(); std::istringstream().swap(tokenStream);
+	delete[]env_val;
 	if (rec > 0) {
 		line.swap(path_str);
 	}
@@ -176,21 +193,28 @@ const char* get_app_path() {
 #error !TODO
 #endif//!GetModuleFileName
 }
-const char* get_current_working_dir(void) {
-	static char cwd[FILENAME_MAX];
-	if (get_current_dir(cwd, FILENAME_MAX) == NULL)
-		*cwd = '\x0';
-	return cwd;
+int get_current_working_dir(std::string& out) {
+	char* cwd = new char[FILENAME_MAX];
+	int ret = FALSE;
+	if (get_current_dir(cwd, FILENAME_MAX) != NULL) {
+		out.append(cwd, strlen(cwd));
+		ret = TRUE;
+		delete[]cwd;
+	}
+	return ret;
 }
+//const char* get_current_working_dir(void) {
+//	static char cwd[FILENAME_MAX];
+//	if (get_current_dir(cwd, FILENAME_MAX) == NULL)
+//		*cwd = '\x0';
+//	return cwd;
+//}
 void get_app_path(std::string&path) {
-#if defined(__WEB_JSX_PUBLISH)
 	if (get_env_path(path) < 0) {
 		throw std::runtime_error("Please add web_jsx bin path into 'Path' environment variable!!!");
 	}
-#else
-	path = get_env_c("web_jsx");
-#endif//!__WEB_JSX_PUBLISH
 }
+
 void print_envp_c(char **envp) {
 	int count = 0;
 	std::cout << "<PRE>\n";
@@ -201,15 +225,16 @@ void print_envp_c(char **envp) {
 	std::cout << "Total ENVP##" << count << "\n";
 	std::cout << "</PRE>\n";
 }
-void print_envp(char*envp[]) {
+void print_envp(wjsx_env&wj_env, char*envp[]) {
 	int count = 0;
-	std::cout << "<PRE>\n";
+	std::ostream& cout = wj_env.cout();
+	cout << "<PRE>\n";
 	for (++envp; *envp; ++envp) {
-		std::cout << *envp << "\n";
+		cout << *envp << "\n";
 		count++;
 	}
-	std::cout << "Total ENVP##" << count << "\n";
-	std::cout << "</PRE>\n";
+	cout << "Total ENVP##" << count << "\n";
+	cout << "</PRE>\n";
 }
 int print_env_var(char* val, const char* env) {
 	if (val != nullptr) {
@@ -227,19 +252,38 @@ void obj_insert(
 	to_obj[prop] = from_obj;
 }
 web_extension get_request_extension (const std::string& path_str) {
-	if (path_str.size() > MAX_PATH)return web_extension::RAW_SCRIPT;
+	if (path_str.size() > MAX_PATH)return RAW_SCRIPT;
 	//LOCALE_NAME_MAX_LENGTH
 	size_t found = path_str.find_last_of(".");
-	if (found == std::string::npos) return web_extension::RAW_SCRIPT;
+	if (found == std::string::npos) return RAW_SCRIPT;
 	std::string str_extension = path_str.substr(found + 1);
-	if (str_extension == "jsx") return web_extension::JSX;
-	if (str_extension == "jsxh") return web_extension::JSXH;
-	if (str_extension == "js") return web_extension::JS;
-	if (str_extension == "wjsx") return web_extension::WJSX;
-	if (str_extension == "wjsxh") return web_extension::WJSXH;
-	return web_extension::UNKNOWN;
+	if (str_extension == "jsx") return JSX;
+	if (str_extension == "jsxh") return JSXH;
+	if (str_extension == "js") return JS;
+	if (str_extension == "wjsx") return WJSX;
+	if (str_extension == "wjsxh") return WJSXH;
+	return UNKNOWN;
 }
-void request_file_info(const std::string& path_str, std::string& dir, std::string& file_name) {
+int this_wjx_env(const char* name) {
+	std::string wjcc;
+	if (get_env_c(name, wjcc) == FALSE)return FALSE;
+	int ic = std::atoi(wjcc.c_str()); wjcc.clear();
+	return ic > 0 ? TRUE : FALSE;
+}
+int is_compiled_cached() {
+	return this_wjx_env("WEB_JSX_COMPILED_CACHED");
+}
+int is_check_file_state() {
+	return this_wjx_env("WEB_JSX_CHECK_FILE_STATE");
+}
+void get_dir_path(const std::string& path_str, std::string& dir) {
+	size_t found = path_str.find_last_of("/\\");
+	dir = path_str.substr(0, found);
+}
+void request_file_info(
+	const std::string& path_str,
+	std::string& dir, std::string& file_name
+) {
 	size_t found = path_str.find_last_of("/\\");
 	dir = path_str.substr(0, found);
 	file_name = path_str.substr(found + 1);
@@ -250,44 +294,46 @@ void server_physical_path(const std::string& path_str, const std::string& path_i
 	p_i.clear();
 }
 req_method determine_req_method(const char* request_method) {
-	if (((request_method != NULL) && (request_method[0] == '\0')) || request_method == NULL) return req_method::UNSUPPORTED;
-	if (strcmp(request_method, "GET") == 0) return req_method::GET;
-	if (strcmp(request_method, "POST") == 0) return req_method::POST;
-	if (strcmp(request_method, "HEAD") == 0) return req_method::HEAD;
-	if (strcmp(request_method, "PUT") == 0) return req_method::PUT;
-	if (strcmp(request_method, "DELETE") == 0) return req_method::DELETE;
-	if (strcmp(request_method, "CONNECT") == 0) return req_method::CONNECT;
-	if (strcmp(request_method, "OPTIONS") == 0) return req_method::OPTIONS;
-	if (strcmp(request_method, "TRACE") == 0) return req_method::TRACE;
-	return req_method::UNSUPPORTED;
+	if (request_method == NULL || strlen(request_method) == 0) return UNSUPPORTED;
+	if (strcmp(request_method, "GET") == 0) return GET;
+	if (strcmp(request_method, "POST") == 0) return POST;
+	if (strcmp(request_method, "HEAD") == 0) return HEAD;
+	if (strcmp(request_method, "PUT") == 0) return PUT;
+	if (strcmp(request_method, "DELETE") == 0) return DELETE;
+	if (strcmp(request_method, "CONNECT") == 0) return CONNECT;
+	if (strcmp(request_method, "OPTIONS") == 0) return OPTIONS;
+	if (strcmp(request_method, "TRACE") == 0) return TRACE;
+	return UNSUPPORTED;
 }
+
 req_method determine_req_method(void) {
-	const char* request_method = get_env_c("REQUEST_METHOD");
-	return determine_req_method(request_method);
+	_NEW_STR(request_method);
+	req_method method = UNSUPPORTED;
+	if (get_env_c("REQUEST_METHOD", *request_method) == TRUE) {
+		method = determine_req_method(request_method->c_str());
+	}
+	_free_obj(request_method);
+	return method;
 }
-#if defined(WJMT)
 void write_headert(
-	const char* ct, wjsx_env* wj_env
+	const char* ct, wjsx_env& wj_env
 ) {
-	_WCOUT << "Content-Type:" << ct << H_N_L;
-	_WCOUT << "Accept-Ranges:bytes" << H_N_L;
-	_WCOUT << "X-Powered-By:safeonline.world" << H_N_L;
-	_WCOUT << "X-Process-By:web_jsx" << H_N_L;
+	wj_env << "Content-Type:" << ct << H_N_L;
+	wj_env << "Accept-Ranges:bytes" << H_N_L;
+	wj_env << "X-Powered-By:safeonline.world" << H_N_L;
+	wj_env << "X-Process-By:web_jsx" << H_N_L;
 }
-#endif//!WJMT
 void write_header(
-	const char* ct
+	const char* ct,
+	wjsx_env* wj_env
 ) {
-	std::cout << "Content-Type:" << ct << H_N_L;
-	std::cout << "Accept-Ranges:bytes" << H_N_L;
-	std::cout << "X-Powered-By:safeonline.world" << H_N_L;
-	std::cout << "X-Process-By:web_jsx" << H_N_L;
-	std::cout << "Status:200" << H_N_L;
+	write_headert(ct, *wj_env);
+	_WCOUT << "Status:200" << H_N_L;
 
 }
 const char* get_content_type(void) {
 	const char* content_type = get_env_c("CONTENT_TYPE");
-	if (((content_type != NULL) && (content_type[0] == '\0')) || content_type == NULL) {
+	if (content_type == NULL || strlen(content_type) == 0) {
 		return "text/html";
 	}
 	return content_type;
@@ -295,62 +341,59 @@ const char* get_content_type(void) {
 const char* get_server_error(int error_code) {
 	if (error_code == 500)return "Internal Server Error";
 	if (error_code == 404)return "File Not found";
-	return "Server Error";
+	return "Ok";
+}
+void write_h(const char* content_type, int error_code, wjsx_env* wj_env) {
+	std::ostream& cout = wj_env->cout();
+	//error_code = 200;
+	write_headert(content_type, *wj_env);
+	std::string error_code_str = std::to_string(error_code);
+	//Status:200 OK
+	cout << "Status:" << error_code_str << " " << ::get_server_error(error_code) << H_N_L;
+	cout << "WebJsx-Error-Code:" << error_code_str << H_N_L;
+	cout << "\r\n";
 }
 void write_internal_server_error(
 	const char* content_type,
 	const char* ex_dir,
 	int error_code,
-	const char* error_msg
-#if defined(WJMT)
-	, wjsx_env* wj_env
-#endif//!WJMT
+	const char* error_msg, 
+	wjsx_env* wj_env
 ) {
-#if defined(WJMT)
-	write_headert(content_type, wj_env);
-#else
-	write_header(content_type);
-#endif//!WJMT
-	_WCOUT << "Status:" << error_code << " " << get_server_error(error_code) << H_N_L;
-	_WCOUT << "WebJsx-Error-Code:" << error_code << H_N_L;
-	_WCOUT << "\r\n";
+	if (wj_env->is_available_out_stream() == FALSE)return;
+	std::ostream& cout = wj_env->cout();
 	std::string* str = new std::string(ex_dir);
 	str->append("error\\");
 	str->append(std::to_string(error_code));
 	str->append(".html");
 	std::string* body = new std::string();
-	size_t ret = sow_web_jsx::read_file(str->c_str(), *body, true);
-	if (ret != std::string::npos) {
+	int ret = ::read_file(str->c_str(), *body);
+	write_h(content_type, error_code, wj_env);
+	if (ret == TRUE) {
 		std::string html_body = REGEX_REPLACE_MATCH(*body, std::regex("(<%(.+?)%>)"), [&error_msg](const std::smatch& m) {
 			return error_msg;
 		});
-		_WCOUT << html_body;
+		
+		cout << html_body;
 		std::string().swap(html_body);
 	}
 	else {
-		_WCOUT << "No Error file found in /error/" << error_code << ".html<br/>";
-		_WCOUT << "Server root:" << ex_dir << "<br/><br/><br/>";
-		_WCOUT << error_msg;
+		cout << "No Error file found in /error/" << error_code << ".html<br/>";
+		cout << "Server root:" << ex_dir << "<br/><br/><br/>";
+		cout << error_msg;
 	}
-	body->clear(); delete body;
-	str->clear(); delete str;
-	fflush(stdout);
+	_free_obj(body); _free_obj(str);
+	cout.flush();
 }
 
-void read_query_string(std::map<std::string, std::string>&data, const char*query_string) {
-	if (((query_string != NULL) && (query_string[0] == '\0')) || query_string == NULL)return;
-	std::string* query = new std::string(query_string);
-	if (query->empty()) {
-		_free_obj(query);
-		return;
-	}
+void read_query_string(std::map<std::string, std::string>&data, const std::string& query) {
 	std::regex* pattern = new std::regex("([\\w+%]+)=([^&]*)");
-	std::sregex_iterator words_begin = std::sregex_iterator(query->begin(), query->end(), *pattern);
+	std::sregex_iterator words_begin = std::sregex_iterator(query.begin(), query.end(), *pattern);
 	std::sregex_iterator words_end = std::sregex_iterator();
 	for (auto i = words_begin; i != words_end; i++) {
 		data["\"" + (*i)[1].str() + "\""] = "\"" + (*i)[2].str() + "\"";
 	}
-	_free_obj(query); delete pattern;
+	delete pattern;
 	return;
 }
 void json_obj_stringify(std::map<std::string, std::string>& json_obj, std::string& json_str) {
@@ -383,8 +426,15 @@ void json_array_stringify_s(std::vector<char*>& json_array_obj, std::string& jso
 	}
 	copy << "]";
 	json_str = ss->str();
-	ss->clear(); delete ss;
+	_free_obj(ss);
 	return;
+}
+int get_thread_id() {
+	std::stringstream ss;
+	ss << std::this_thread::get_id();
+	uint64_t id = std::stoull(ss.str());
+	swap_obj(ss);
+	return (int)id;
 }
 /*std::string get_current_working_dir(void) {
 	char buff[FILENAME_MAX];

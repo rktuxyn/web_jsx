@@ -25,21 +25,12 @@ typedef struct {
 	uv_async_t* asyncRequest;
 	uv_work_t* work_t;
 }async_ctx;
-
-void extend_context(
-	v8::Isolate* isolate,
-	v8::Local<v8::Context> context,
-	v8::Local<v8::Value> js_ctx
-) {
-	v8::Local<v8::Object> js_this = context->Global()->GetPrototype().As<v8::Object>();
-	js_this->Set(context, v8_str(isolate, "context"), js_ctx);
-}
-void compile(
-	v8::Isolate* isolate, compaile_arg* wlf
-) noexcept {
+void compile(v8::Isolate* isolate, compaile_arg* wlf) noexcept {
 	v8::Isolate::Scope					isolate_scope(isolate);
 	v8::HandleScope						handle_scope(isolate);
-	v8::Local<v8::Context> context		= isolate->GetCurrentContext();
+	/*v8::Local<v8::ObjectTemplate> v8_global = sow_web_jsx::wrapper::create_v8_context_object(isolate);
+	v8_global->Set(isolate, "runtime_compiler", v8::FunctionTemplate::New(isolate, sow_web_jsx::runtime_compiler));*/
+	v8::Local<v8::Context> context		= isolate->GetCurrentContext();//v8::Context::New(isolate, nullptr, v8_global);
 	v8::Context::Scope					context_scope(context);
 	v8::MaybeLocal<v8::Script> script	= v8::Script::Compile(context, v8::Local<v8::String>::New(isolate, wlf->source));
 	v8::Local<v8::Promise::Resolver> resolver;
@@ -57,9 +48,24 @@ void compile(
 		}
 	}
 	else {
-		extend_context(isolate, context, v8::Local<v8::Value>::New(isolate, wlf->param));
 		// Run the script to get the result.
 		script.ToLocalChecked()->Run(context);
+		v8::Local<v8::Value>param = v8::Local<v8::Value>::New(isolate, wlf->param);
+		if (!param->IsNullOrUndefined() && param->IsObject()) {
+			v8::Local<v8::Object> jsGlobal =
+				context->Global()->GetPrototype().As<v8::Object>();
+			v8::Local<v8::Function> invoke = v8::Handle<v8::Function>::Cast(jsGlobal->Get(context, v8_str(isolate, "create_context")).ToLocalChecked());
+			if (invoke->IsNullOrUndefined() || !invoke->IsFunction()) {
+				jsGlobal.Clear();
+			}
+			else {
+				v8::Handle<v8::Value> arg[1];
+				arg[0] = { param };
+				invoke->Call(context, jsGlobal, 1, arg);
+				arg->Clear(); jsGlobal.Clear();
+			}
+			param.Clear();
+		}
 		script.ToLocalChecked().Clear();
 		if (wlf->is_async == true) {
 			resolver->Resolve(context, v8_str(isolate, "Success"));
@@ -88,9 +94,7 @@ void compile_async(v8::Isolate* isolate, compaile_arg* wlf) {
 		});
 	});
 }
-void sow_web_jsx::runtime_compiler(
-	const v8::FunctionCallbackInfo<v8::Value>& args
-) {
+void sow_web_jsx::runtime_compiler(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (args[0]->IsNullOrUndefined() || !args[0]->IsObject()) {
 		isolate->ThrowException(v8::Exception::TypeError(v8_str(isolate, "Config required....")));
@@ -137,7 +141,7 @@ void sow_web_jsx::runtime_compiler(
 				delete awlf; config.Clear();
 				return;
 			}
-			//source_str = "function create_context( context ) {\n" + source_str + "\n};";
+			source_str = "function create_context( context ) {\n" + source_str + "\n};";
 			awlf->source.Reset(isolate, v8_str(isolate, source_str.c_str()));
 			source_str.clear(); std::string().swap(source_str);
 		}
@@ -174,7 +178,7 @@ void sow_web_jsx::runtime_compiler(
 				delete tr; delete awlf; config.Clear();
 				return;
 			}
-			//tr->t_source = "function create_context( context ) {\n" + tr->t_source + "\n};";
+			tr->t_source = "function create_context( context ) {\n" + tr->t_source + "\n};";
 			awlf->source.Reset(isolate, v8_str(isolate, tr->t_source.c_str()));
 			tr->t_source.clear(); std::string().swap(tr->t_source);
 			delete tr;

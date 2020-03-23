@@ -5,8 +5,10 @@
 * See the accompanying LICENSE file for terms.
 */
 //1:17 PM 1/20/2019
-#	include "web_jsx_global.h"
 #	include "template_marger.h"
+#	include "web_jsx_global.h"
+#	include "wjsx_env.h"
+#	include "std_wrapper.hpp"
 using namespace sow_web_jsx;
 int parse_placeholder_node(
 	std::list<std::string>&ml, std::string& body, 
@@ -19,7 +21,7 @@ int parse_placeholder_node(
 		if (sk.empty())continue;
 		auto tmpl_id = REGEX_MATCH_STR(sk, id_regx);
 		if (tmpl_id.empty() || tmpl_id == "INVALID") {
-			tr.is_error = true;
+			tr.is_error = TRUE;
 			tr.err_msg.append("Invalid tag defnined==>");
 			tr.err_msg.append(sk + "<br/>");
 			continue;
@@ -41,7 +43,7 @@ int parse_placeholder_node(
 		delete own_regx;
 		std::string().swap(impl_str);
 	}
-	return tr.is_error == true ? -1 : 1;
+	return tr.is_error == TRUE ? -1 : 1;
 }
 /*template<typename T>
 std::ostream& operator<<(std::ostream& os, const std::vector<T>& vec) {
@@ -59,52 +61,53 @@ int sow_web_jsx::template_marger::implimant_attachment(
 	auto attach_regx = new std::regex("#attach (.*)");
 	REGEX_MATCH_LIST(*rml, html_body, *attach_regx);
 	delete attach_regx;
-	if (rml->size() <=0) {
-		rml->clear(); delete rml;
+	if (rml->size() == 0) {
+		_free_obj(rml);
 		return 0;
 	}
+	tr.has_wjsx_template = 1;
 	int error_foud = -1;
 	auto error_msg = new std::string();
 	for (auto s = rml->begin(); s != rml->end(); ++s) {
 		std::string itr = *s;
 		std::string path = std::regex_replace(itr, std::regex("#attach "), "");
-		std::string relativePath = root_dir; relativePath.append("\\").append(path);
-		if (relativePath.size() > _MAX_PATH)continue;
-		format__path(relativePath);
-		if (__file_exists(relativePath.c_str()) == false) {
-			error_msg->append("Unable to found this attachment=> " + path + " & realative full-path =>" + relativePath + ".<br/>");
+		std::string relative_path = root_dir; relative_path.append("\\").append(path);
+		if (relative_path.size() > _MAX_PATH)continue;
+		::format__path(relative_path);
+		if (__file_exists(relative_path.c_str()) == false) {
+			error_msg->append("Unable to found this attachment=> " + path + " & realative full-path =>" + relative_path + ".<br/>");
 			error_foud = 1; continue;
-		};
+		}
 		if (error_foud > 0)continue;
-		std::string part("");
-		size_t ret = sow_web_jsx::read_file(relativePath.c_str(), part, false);
-		if (is_error_code(ret) == TRUE) {
-			tr.is_error = true;
+		_NEW_STR(part);
+		int ret = ::read_file(relative_path.c_str(), *part);
+		if (::is_error_code(ret) == TRUE) {
+			tr.is_error = TRUE;
 			if (ret == -2L) {
 				error_msg->append("file=> " + path + " Error:");
-				error_msg->append(tr.err_msg += part.c_str());
+				error_msg->append(tr.err_msg += part->c_str());
 				error_msg->append("<br/>");
 			}
 			else {
-				error_msg->append("Unable to read this file=> " + path + " & realative full-path =>" + relativePath + ".<br/>");
+				error_msg->append("Unable to read this file=> " + path + " & realative full-path =>" + relative_path + ".<br/>");
 			}
 			goto _ERROR;
 		}
-		html_body = std::regex_replace(html_body, std::regex("#attach \\" + path), part);
-		std::string().swap(part);
-		std::string().swap(itr);  std::string().swap(path); std::string().swap(relativePath);
+		html_body = std::regex_replace(html_body, std::regex("#attach \\" + path), *part);
+		_free_obj(part); swap_obj(itr); swap_obj(path); swap_obj(relative_path);
 	}
-	rml->clear(); delete rml;
 	if (error_foud > 0)
 		goto _ERROR;
 	goto _SUCCESS;
 _ERROR:
-	tr.is_error = true;
+	_free_obj(rml);
+	tr.is_error = TRUE;
 	tr.err_msg = error_msg->c_str();
-	delete error_msg;
+	_free_obj(error_msg);
 	return -1;
 _SUCCESS:
-	delete error_msg;
+	_free_obj(rml);
+	_free_obj(error_msg);
 	return 1;
 }
 int sow_web_jsx::template_marger::marge_template(
@@ -146,7 +149,7 @@ int sow_web_jsx::template_marger::marge_template(
 	};
 	std::string().swap(parent_template);
 	delete nrgx; delete id_regx; delete is_regx; delete ie_regx;
-	if (tr.is_error == true) {
+	if (tr.is_error == TRUE) {
 		std::string().swap(html_body);
 		return -1;
 	}

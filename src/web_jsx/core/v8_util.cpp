@@ -9,6 +9,7 @@
 #	include <cstring>
 #	include "template_info.h"
 #	include "std_wrapper.hpp"
+#	include "wjsx_env.h"
 namespace sow_web_jsx {
 	bool sow_web_jsx::to_boolean(v8::Isolate* isolate, v8::Local<v8::Value> value) {
 #if V8_MAJOR_VERSION < 7 || (V8_MAJOR_VERSION == 7 && V8_MINOR_VERSION == 0)
@@ -67,24 +68,28 @@ namespace sow_web_jsx {
 	}
 	void add_stack_trace(v8::Isolate* isolate, v8::MaybeLocal<v8::Value> trace, std::string&error_str) {
 		if (trace.IsEmpty()) {
-			error_str.append("\r\nNo StackTrace found.");
+			error_str.append("\nNo StackTrace found.");
 			return;
 		}
 		native_string stackTrace(isolate, trace.ToLocalChecked());
-		error_str.append("\r\nStackTrace:\r\n");
+		error_str.append("\nStackTrace:\n");
 		error_str.append(stackTrace.c_str());
 		stackTrace.clear();
 	}
-	void sow_web_jsx::set__exception(v8::Isolate* isolate, v8::TryCatch* try_catch, template_result& tr) {
-		tr.is_error = true;
+	void sow_web_jsx::set__exception(
+		v8::Isolate* isolate, v8::TryCatch* try_catch, 
+		template_result& tr
+	) {
+		tr.is_error = TRUE;
 		native_string exception(isolate, try_catch->Exception());
 		v8::MaybeLocal<v8::Value> st = try_catch->StackTrace(isolate->GetCurrentContext());
 		if (exception.is_empty()) {
 			add_stack_trace(isolate, st, tr.err_msg);
 			return;
 		}
-		tr.err_msg = std::string(exception.c_str()); exception.clear();
-		add_stack_trace(isolate, st, tr.err_msg);
+		tr.err_msg = std::string(exception.c_str());
+		add_stack_trace(isolate, st, tr.err_msg); exception.clear();
+
 	}
 	
 	void sow_web_jsx::set__exception(
@@ -104,9 +109,9 @@ namespace sow_web_jsx {
 			error_str = std::string(exception.c_str()); exception.clear();
 		}
 		add_stack_trace(isolate, st, error_str);
-		if (error_str.empty()) {
-			error_str = "No Error Found...";
-		}
+		/*if (error_str.empty()) {
+			error_str = "Unable to caught v8 error...";
+		}*/
 		return;
 	}
 	void sow_web_jsx::get_server_map_path(const char* req_path, std::string& output) {
@@ -138,33 +143,96 @@ namespace sow_web_jsx {
 		}
 		return val->Int32Value(ctx).FromMaybe(0);
 	}
-	v8::Local<v8::String> sow_web_jsx::concat_msg(v8::Isolate* isolate, const char* a, const char* b) {
-		//char* msg = (char*)malloc(strlen(a) + strlen(b));
-		size_t length = strlen(a) + strlen(b);
-		char* msg = new char[length + sizeof(char)];
-		msg[length] = '\0';
-		sprintf(msg, "%s%s", a, b);
-		v8::Local<v8::String> val = v8::String::NewFromUtf8(isolate, *&msg, v8::NewStringType::kNormal, (int)length).ToLocalChecked();
-		//v8::Local<v8::String> val = v8_str(isolate, const_cast<const char*>(msg));
-		delete[] msg;
+
+	v8::Local<v8::String> sow_web_jsx::concat_msg(
+		v8::Isolate* isolate, 
+		const char* a, const char* b
+	) {
+		std::string*msg = ::concat_str(a, b);
+		v8::Local<v8::String> val = v8_str(isolate, msg->c_str());
+		_free_obj(msg);
 		return val;
 	}
-	v8::Handle<v8::Object> sow_web_jsx::native_write_filei(v8::Isolate* isolate, const char* abs_path, const char* buffer) {
+#if defined(WEB_JSX_MULTI_THREAD)
+	//https://stackoverflow.com/questions/3418231/replace-part-of-a-string-with-another-string
+	void replace_all(std::string& str, const std::string& from, const std::string& to) {
+		if (from.empty())
+			return;
+		size_t start_pos = 0;
+		while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
+			str.replace(start_pos, from.length(), to);
+			start_pos += to.length();
+		}
+	}
+#endif//!WEB_JSX_MULTI_THREAD
+	void sow_web_jsx::get_script_origin(const char* path_info, std::string& origin){
+#if defined(WEB_JSX_MULTI_THREAD)
+		replace_all(origin, "\\", "_");
+#else
+		std::regex* regx = new std::regex("(?:/)");
+		std::string str = std::regex_replace(path_info, *regx, "_");
+		str.swap(origin); delete regx;
+#endif//!WEB_JSX_MULTI_THREAD
+	}
+	std::unique_ptr<v8::ScriptCompiler::CachedData> sow_web_jsx::read_script_cached(
+		const char* script_path,
+		const char* cscript_path,
+		int check_file_state
+	){
+		if (check_file_state == TRUE) {
+			if (::file_has_changed(script_path, cscript_path) == TRUE) {
+				std::remove(cscript_path);
+				return nullptr;
+			}
+		}
+		
+		std::ifstream* file = new std::ifstream(cscript_path, std::ifstream::binary);
+		if (!file->is_open())return nullptr;
+		std::vector<char>* dest = new std::vector<char>();
+		int ret = ::load_file_to_vct(*file, *dest);
+		file->close(); delete file;
+		if (ret == FALSE) {
+			_free_obj(dest);
+			return nullptr;
+		}
+		std::unique_ptr<v8::ScriptCompiler::CachedData> cached_data;
+		cached_data.reset(new v8::ScriptCompiler::CachedData(
+			reinterpret_cast<const uint8_t*>(dest->data()),
+			(int)dest->size())
+		);
+		_free_obj(dest);
+		return cached_data;
+	}
+	int sow_web_jsx::create_script_cached_data(v8::MaybeLocal<v8::UnboundScript> unbound_script, const char* cscript_path){
+		if (unbound_script.IsEmpty())return FALSE;
+		v8::ScriptCompiler::CachedData* cdata = v8::ScriptCompiler::CreateCodeCache(unbound_script.ToLocalChecked());
+		int ret = ::write_file(cscript_path, reinterpret_cast<const char*>(cdata->data), cdata->length);
+		/*std::ofstream* file = new std::ofstream(cscript_path, std::ifstream::binary);
+		int ret = FALSE;
+		if (file->is_open()) {
+			file->write(reinterpret_cast<const char*>(cdata->data), cdata->length);
+			file->flush(); file->close();
+			ret = TRUE;
+		}delete file;*/
+		delete cdata;
+		return ret;
+	}
+	v8::Handle<v8::Object> sow_web_jsx::native_write_filei(
+		v8::Isolate* isolate, 
+		const char* abs_path, 
+		const char* buffer
+	) {
 		FILE* fstream;
 		errno_t err;
 		err = fopen_s(&fstream, abs_path, "w+");
 		v8::Handle<v8::Object> v8_result = v8::Object::New(isolate);
-		v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
+		v8::Local<v8::Context> ctx = isolate->GetCurrentContext();
 		if (err != 0 || fstream == NULL) {
 			v8_result->Set(
-				ctx,
-				v8_str(isolate, "staus_code"),
-				v8::Number::New(isolate, -1)
+				ctx, v8_str(isolate, "staus_code"), v8::Number::New(isolate, -1)
 			);
 			v8_result->Set(
-				ctx,
-				v8_str(isolate, "message"),
-				sow_web_jsx::concat_msg(isolate, "Unable to create file!!! Server absolute path==>", abs_path)
+				ctx, v8_str(isolate, "message"), sow_web_jsx::concat_msg(isolate, "Unable to create file!!! Server absolute path==>", abs_path)
 			);
 			return v8_result;
 		}
@@ -173,44 +241,23 @@ namespace sow_web_jsx {
 			fclose(fstream);
 			fstream = NULL;
 			v8_result->Set(
-				ctx,
-				v8_str(isolate, "staus_code"),
-				v8::Number::New(isolate, -1)
+				ctx, v8_str(isolate, "staus_code"), v8::Number::New(isolate, -1)
 			);
 			v8_result->Set(
-				ctx,
-				v8_str(isolate, "message"),
-				sow_web_jsx::concat_msg(isolate, "Unable to create file!!! Server absolute path==>", abs_path)
+				ctx, v8_str(isolate, "message"), sow_web_jsx::concat_msg(isolate, "Unable to create file!!! Server absolute path==>", abs_path)
 			);
 			return v8_result;
 		}
 		fclose(fstream);
 		fstream = NULL;
-		v8_result->Set(
-			ctx,
-			v8_str(isolate, "staus_code"),
-			v8::Number::New(isolate, static_cast<double>(len))
-		);
-		v8_result->Set(
-			ctx,
-			v8_str(isolate, "message"),
-			v8_str(isolate, "Success...")
-		);
+		v8_result->Set( ctx, v8_str(isolate, "staus_code"), v8::Integer::New(isolate, static_cast<int>(len)) );
+		v8_result->Set( ctx, v8_str(isolate, "message"), v8_str(isolate, "Success...") );
 		return v8_result;
 	}
-	v8::Local<v8::Context> sow_web_jsx::create_internal_context(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> v8_object) {
-		internal_global_ctx* js_ctx = new internal_global_ctx();
-		js_ctx->is_flush = 0;
-		js_ctx->headers = new std::map<std::string, std::string>();
-		js_ctx->cookies = new std::vector<std::string>();
-		js_ctx->http_status = new std::vector<std::string>();
-		js_ctx->root_dir = new std::string("");
-		js_ctx->body_stream = std::stringstream(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
-		v8_object->SetInternalFieldCount(1);
-		v8::Local<v8::Context> ctx = v8::Context::New(isolate, nullptr, v8_object/*v8::MaybeLocal<v8::ObjectTemplate>()*/);
-		v8::Local<v8::Object> global = ctx->Global();
-		global->SetInternalField(0, v8::External::New(isolate, js_ctx));
-		return ctx;
+	void clear_isolate_data(v8::Isolate* isolate, int index) {
+		//isolate->GetCurrentContext()->SetAlignedPointerInEmbedderData(1, nullptr);
+		isolate->SetData((isolate->GetNumberOfDataSlots() + index) - 1, NULL);  // Not really needed, just to be sure...
+		return;
 	}
 	/*[native_string 9:17 PM 12/5/2019]*/
 	native_string::native_string(v8::Isolate* isolate, const v8::Local<v8::Value>& value){
@@ -219,9 +266,11 @@ namespace sow_web_jsx {
 			_length = 0;
 		}
 		else if (value->IsString()) {
-			_utf8Value = new (_utf8ValueMemory) v8::String::Utf8Value(isolate, value);
+			_utf8Value = new v8::String::Utf8Value(isolate, value);
+			//char _utf8ValueMemory[sizeof(v8::String::Utf8Value)];
+			//_utf8Value = new (_utf8ValueMemory) v8::String::Utf8Value(isolate, value);
 			_data = (**_utf8Value);
-			_length = _utf8Value->length();
+			_length = (size_t)_utf8Value->length();
 		}
 		else if (value->IsTypedArray()) {
 			v8::Local<v8::ArrayBufferView> arrayBufferView = v8::Local<v8::ArrayBufferView>::Cast(value);
@@ -239,8 +288,6 @@ namespace sow_web_jsx {
 			_invalid = true;
 			_data = nullptr;
 			_length = 0;
-			/*isolate->ThrowException(v8::Exception::TypeError(
-				v8_str(isolate, "form_data required!!!")));*/
 		}
 	}
 	bool native_string::is_invalid(v8::Isolate* isolate) {
@@ -251,15 +298,10 @@ namespace sow_web_jsx {
 		return _invalid;
 	}
 	std::string_view native_string::get_string(){
-		//std::string(_data, _length);
 		return { _data, _length };
 	}
-	/*std::string native_string::get_string() {
-		return std::string(_data, _length);
-	}*/
 	const char* native_string::c_str() {
 		return _length == 0 ? "" : get_string().data();
-		//return _length == 0 ? "" : get_string().c_str();
 	}
 	bool native_string::is_empty(){
 		return _length == 0;

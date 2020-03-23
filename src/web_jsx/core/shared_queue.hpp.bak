@@ -1,0 +1,62 @@
+/**
+* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
+* @author {SOW}
+* Copyrights licensed under the New BSD License.
+* See the accompanying LICENSE file for terms.
+*/
+//11:42 AM 3/4/2020
+#if defined(_MSC_VER)
+#pragma once
+#endif//!_MSC_VER
+#if !defined( _shared_queue_h)
+#	define _shared_queue_h
+#if defined(WEB_JSX_MULTI_THREAD)
+#   include <condition_variable>
+#   include <mutex>
+#   include <queue>
+#   include <stdexcept>
+template <typename Type, typename Queue = std::queue<Type>>
+class shared_queue : Queue, std::mutex, std::condition_variable {
+    typename Queue::size_type capacity;
+
+public:
+    shared_queue(
+        typename Queue::size_type max_items_per_thread = 1,
+        unsigned int concurrency = std::thread::hardware_concurrency()
+    ) : capacity{ concurrency * max_items_per_thread } {
+        if (not concurrency)
+            throw std::invalid_argument("Concurrency must be non-zero");
+        if (not max_items_per_thread)
+            throw std::invalid_argument("Max items per thread must be non-zero");
+    }
+
+    shared_queue(shared_queue&&) = default;
+    shared_queue& operator=(shared_queue&&) = delete;
+
+    ~shared_queue() {  }
+    void try_queue(Type&& value) {
+        std::unique_lock<std::mutex> lock(*this);
+        while (Queue::size() == capacity) wait(lock);
+        Queue::push(std::forward<Type>(value));
+        notify_one();
+    }
+    template <typename Function>
+    void try_deque(Function process) {
+        std::unique_lock<std::mutex> lock(*this);
+        while (true) {
+            if (not Queue::empty()) {
+                Type item{ std::move(Queue::front()) };
+                Queue::pop();
+                notify_one();
+                lock.unlock();
+                process(item);
+                lock.lock();
+            }
+            else {
+                wait(lock);
+            }
+        }
+    }
+};
+#endif//!WEB_JSX_MULTI_THREAD
+#endif//!_shared_queue_h

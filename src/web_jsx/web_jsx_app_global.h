@@ -23,7 +23,7 @@
 #	include <cstdlib>
 #	include <sstream>
 #	include <future>
-#if !(defined(_WIN32)||defined(_WIN64)) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
+#if !(defined(_WIN32)||defined(_WIN64))
 #	include <io.h>
 #if !defined(SET_BINARY_MODE)
 #	define SET_BINARY_MODE(file) setmode(fileno(file), O_BINARY)
