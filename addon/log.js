@@ -28,6 +28,9 @@ var dfo = ( t ) => {
     return `${date.getFullYear()}-${dfm( date.getMonth() )}-${dfo( date.getDate() )} ${dfo( date.getHours() )}:${dfo( date.getMinutes() )}:${dfo( date.getSeconds() )}`;
 };
 const MAX_LINE = 100;//Maximum write line in memmory stream
+function get_instance( absolute ) {
+    return new fs.file( absolute, fs.mood.CREATE_OPEN_APPEND, true/*flush each line*/ );
+}
 class Log {
     constructor( dir, name, wd, tz ) {
         if ( !dir || "string" !== typeof ( dir ) )
@@ -45,15 +48,11 @@ class Log {
         sys.create_directory( dir );
         let absolute = dir + name;
         let is_new = fs.exists_file( absolute );
-        this.file = new fs.file( absolute, "a" ); //a+
+        this.file = get_instance( absolute ); //a+
         if ( is_new ) {
             this.file.write( `Log Genarte On ${getTime( tz )}\r\n-------------------------------------------------------------------\r\n` );
         }
         this.tz = tz;
-        this._line_count = 0;
-        this._reOpen = function () {
-            this.file = new fs.file( absolute, "a" );//a+
-        };
         this.dispose = function ( ) {
             delete this.file;
             this.is_dispose = true;
@@ -69,14 +68,8 @@ class Log {
     write( buffer ) {
         if ( this.is_dispose )
             throw new Error( "Instance already disposed!!!" );
-        buffer = `${getTime( this.tz )}\t${buffer}`;
-        this.file.write( `${buffer}\r\n` );
-        this._line_count++;
-        if ( this._line_count > MAX_LINE ) {
-            this.file.flush();
-            delete this.file;
-            this._reOpen();
-        }
+        buffer = `${getTime( this.tz )}\t${buffer}\n`;
+        this.file.write( buffer );
         return buffer;
     }
     close() {
