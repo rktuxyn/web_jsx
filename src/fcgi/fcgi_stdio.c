@@ -323,30 +323,27 @@ int FCGI_fflush(FCGI_FILE *fp) {
 		return fflush(NULL);
 	if (fp->stdio_stream)
 		return fflush(fp->stdio_stream);
-	else if (fp->fcgx_stream)
+	if (fp->fcgx_stream)
 		return FCGX_FFlush(fp->fcgx_stream);
 	return EOF;
 }
 
-FCGI_FILE *FCGI_freopen(const char *path, const char *mode,
-	FCGI_FILE *fp) {
+FCGI_FILE *FCGI_freopen(
+	const char *path, const char *mode,
+	FCGI_FILE *fp
+) {
 	if (fp->stdio_stream) {
-		if (freopen(path, mode, fp->stdio_stream) == NULL)
-			return NULL;
-		else
-			return fp;
+		if (freopen(path, mode, fp->stdio_stream) == NULL)return NULL;
+		return fp;	
 	}
-	else if (fp->fcgx_stream) {
+	if (fp->fcgx_stream) {
 		(void)FCGX_FClose(fp->fcgx_stream);
 		errno_t err = fopen_s(&fp->stdio_stream, path, mode);
 		//fp->stdio_stream = fopen(path, mode);
 		if (err != 0)return NULL;
-		if (fp->stdio_stream == NULL)
-			return NULL;
-		else {
-			fp->fcgx_stream = NULL;
-			return fp;
-		}
+		if (fp->stdio_stream == NULL)return NULL;
+		fp->fcgx_stream = NULL;
+		return fp;
 	}
 	return NULL;
 }
@@ -361,11 +358,8 @@ FCGI_FILE *FCGI_freopen(const char *path, const char *mode,
  *----------------------------------------------------------------------
  */
 int FCGI_setvbuf(FCGI_FILE *fp, char *buf, int bufmode, size_t size) {
-	if (fp->stdio_stream)
-		return setvbuf(fp->stdio_stream, buf, bufmode, size);
-	else {
-		return -1;
-	}
+	if (fp->stdio_stream)return setvbuf(fp->stdio_stream, buf, bufmode, size);
+	return -1;
 }
 
 void FCGI_setbuf(FCGI_FILE *fp, char *buf) {
@@ -383,21 +377,15 @@ void FCGI_setbuf(FCGI_FILE *fp, char *buf) {
  *----------------------------------------------------------------------
  */
 int FCGI_fseek(FCGI_FILE *fp, long offset, int whence) {
-	if (fp->stdio_stream)
-		return fseek(fp->stdio_stream, offset, whence);
-	else {
-		OS_SetErrno(ESPIPE);
-		return -1;
-	}
+	if (fp->stdio_stream)return fseek(fp->stdio_stream, offset, whence);
+	OS_SetErrno(ESPIPE);
+	return -1;
 }
 
 int FCGI_ftell(FCGI_FILE *fp) {
-	if (fp->stdio_stream)
-		return ftell(fp->stdio_stream);
-	else {
-		OS_SetErrno(ESPIPE);
-		return -1;
-	}
+	if (fp->stdio_stream)return ftell(fp->stdio_stream);
+	OS_SetErrno(ESPIPE);
+	return -1;
 }
 
 void FCGI_rewind(FCGI_FILE *fp) {
@@ -409,21 +397,15 @@ void FCGI_rewind(FCGI_FILE *fp) {
 
 #ifdef HAVE_FPOS
 int FCGI_fgetpos(FCGI_FILE *fp, fpos_t *pos) {
-	if (fp->stdio_stream)
-		return fgetpos(fp->stdio_stream, pos);
-	else {
-		OS_SetErrno(ESPIPE);
-		return -1;
-	}
+	if (fp->stdio_stream)return fgetpos(fp->stdio_stream, pos);
+	OS_SetErrno(ESPIPE);
+	return -1;
 }
 
-int FCGI_fsetpos(FCGI_FILE *fp, const fpos_t *pos) {
-	if (fp->stdio_stream)
-		return fsetpos(fp->stdio_stream, pos);
-	else {
-		OS_SetErrno(ESPIPE);
-		return -1;
-	}
+int FCGI_fsetpos(FCGI_FILE* fp, const fpos_t* pos) {
+	if (fp->stdio_stream)return fsetpos(fp->stdio_stream, pos);
+	OS_SetErrno(ESPIPE);
+	return -1;
 }
 #endif
 
@@ -439,11 +421,9 @@ int FCGI_fsetpos(FCGI_FILE *fp, const fpos_t *pos) {
  *
  *----------------------------------------------------------------------
  */
-int FCGI_fgetc(FCGI_FILE *fp) {
-	if (fp->stdio_stream)
-		return fgetc(fp->stdio_stream);
-	else if (fp->fcgx_stream)
-		return FCGX_GetChar(fp->fcgx_stream);
+int FCGI_fgetc(FCGI_FILE* fp) {
+	if (fp->stdio_stream)return fgetc(fp->stdio_stream);
+	if (fp->fcgx_stream)return FCGX_GetChar(fp->fcgx_stream);
 	return EOF;
 }
 
@@ -451,11 +431,9 @@ int FCGI_getchar(void) {
 	return FCGI_fgetc(FCGI_stdin);
 }
 
-int FCGI_ungetc(int c, FCGI_FILE *fp) {
-	if (fp->stdio_stream)
-		return ungetc(c, fp->stdio_stream);
-	else if (fp->fcgx_stream)
-		return FCGX_UnGetChar(c, fp->fcgx_stream);
+int FCGI_ungetc(int c, FCGI_FILE* fp) {
+	if (fp->stdio_stream)return ungetc(c, fp->stdio_stream);
+	if (fp->fcgx_stream) return FCGX_UnGetChar(c, fp->fcgx_stream);
 	return EOF;
 }
 
@@ -469,10 +447,8 @@ int FCGI_ungetc(int c, FCGI_FILE *fp) {
  *----------------------------------------------------------------------
  */
 char *FCGI_fgets(char *str, int size, FCGI_FILE *fp) {
-	if (fp->stdio_stream)
-		return fgets(str, size, fp->stdio_stream);
-	else if (fp->fcgx_stream)
-		return FCGX_GetLine(str, size, fp->fcgx_stream);
+	if (fp->stdio_stream)return fgets(str, size, fp->stdio_stream);
+	if (fp->fcgx_stream)return FCGX_GetLine(str, size, fp->fcgx_stream);
 	return NULL;
 }
 
@@ -485,16 +461,12 @@ char *FCGI_fgets(char *str, int size, FCGI_FILE *fp) {
 char *FCGI_gets(char *str) {
 	char *s;
 	int c;
-
 	for (s = str; ((c = FCGI_getchar()) != '\n');) {
 		if (c == EOF) {
-			if (s == str)
-				return NULL;
-			else
-				break;
+			if (s == str)return NULL;
+			break;
 		}
-		else
-			*s++ = (char)c;
+		*s++ = (char)c;
 	}
 	*s = 0;
 	return str;
@@ -522,12 +494,10 @@ char *FCGI_gets(char *str) {
   *
   *----------------------------------------------------------------------
   */
-int FCGI_fputc(int c, FCGI_FILE *fp) {
-	if (fp->stdio_stream)
-		return fputc(c, fp->stdio_stream);
-	else if (fp->fcgx_stream)
-		return FCGX_PutChar(c, fp->fcgx_stream);
-	else return EOF;
+int FCGI_fputc(int c, FCGI_FILE* fp) {
+	if (fp->stdio_stream)return fputc(c, fp->stdio_stream);
+	if (fp->fcgx_stream) return FCGX_PutChar(c, fp->fcgx_stream);
+	return EOF;
 }
 
 int FCGI_putchar(int c) {
@@ -543,11 +513,9 @@ int FCGI_putchar(int c) {
  *
  *----------------------------------------------------------------------
  */
-int FCGI_fputs(const char *str, FCGI_FILE *fp) {
-	if (fp->stdio_stream)
-		return fputs(str, fp->stdio_stream);
-	else if (fp->fcgx_stream)
-		return FCGX_PutS(str, fp->fcgx_stream);
+int FCGI_fputs(const char* str, FCGI_FILE* fp) {
+	if (fp->stdio_stream) return fputs(str, fp->stdio_stream);
+	if (fp->fcgx_stream) return FCGX_PutS(str, fp->fcgx_stream);
 	return EOF;
 }
 
@@ -555,17 +523,13 @@ int FCGI_puts(const char *str) {
 	int n;
 	if (FCGI_stdout->stdio_stream) {
 		n = fputs(str, FCGI_stdout->stdio_stream);
-		if (n < 0)
-			return n;
-		else
-			return fputc('\n', FCGI_stdout->stdio_stream);
+		if (n < 0)return n;
+		return fputc('\n', FCGI_stdout->stdio_stream);
 	}
-	else if (FCGI_stdout->fcgx_stream) {
+	if (FCGI_stdout->fcgx_stream) {
 		n = FCGX_PutS(str, FCGI_stdout->fcgx_stream);
-		if (n < 0)
-			return n;
-		else
-			return FCGX_PutChar('\n', FCGI_stdout->fcgx_stream);
+		if (n < 0) return n;
+		return FCGX_PutChar('\n', FCGI_stdout->fcgx_stream);
 	}
 	return EOF;
 }

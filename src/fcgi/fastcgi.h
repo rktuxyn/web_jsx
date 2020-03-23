@@ -117,8 +117,14 @@ typedef struct {
 /*
  * Variable names for FCGI_GET_VALUES / FCGI_GET_VALUES_RESULT records
  */
+
+//Read more http://www.mit.edu/~yandros/doc/specs/fcgi-spec.html
+
+/*FCGI_MAX_CONNS: The maximum number of concurrent transport connections this application will accept, e.g. "1" or "10".*/
 #define FCGI_MAX_CONNS  "FCGI_MAX_CONNS"
+/*FCGI_MAX_REQS: The maximum number of concurrent requests this application will accept, e.g. "1" or "50".*/
 #define FCGI_MAX_REQS   "FCGI_MAX_REQS"
+/*FCGI_MPXS_CONNS: "0" if this application does not multiplex connections (i.e. handle concurrent requests over each connection), "1" otherwise.*/
 #define FCGI_MPXS_CONNS "FCGI_MPXS_CONNS"
 
 
