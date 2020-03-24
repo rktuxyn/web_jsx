@@ -31,6 +31,3 @@
 ==> Go to the browser & open ```localhost``` with port ```8080``` ex: ```http://localhost:8080/index.jsxh```<br/>
 
 **Enjoy Server-side Javascript with web_jsx**<br/>
-
-Note: **web_jsx v1.0.0.1** supported Windows x64 bit operating system.<br/>
-Runtime Dependency : Microsoft Visual C++ 2015-2019 Redistributable 64bit Package. [Download](https://aka.ms/vs/16/release/vc_redist.x64.exe)
