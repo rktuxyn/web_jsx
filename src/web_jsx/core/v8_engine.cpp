@@ -40,14 +40,14 @@ int _disposed = FALSE, _initialize = FALSE;
 //#endif//!_WIN32
 
 void set_v8_flag() {
-	const char* arg[3] = {
-		"--sim_stack_size=20480",
+	const char* arg[2] = {
+		/*"--sim_stack_size=20480",
 		//"--stack_size=20480",
-		/*"--cleanup_code_caches_at_gc",*/
+		"--cleanup_code_caches_at_gc",*/
 		"--expose_async_hooks",
 		"--expose_gc"
 	};
-	int* argc = new int(3);
+	int* argc = new int(2);
 	v8::V8::SetFlagsFromCommandLine(argc, (char**)arg, true);
 	delete argc;
 //#if (defined(_WIN32)||defined(_WIN64))
@@ -55,7 +55,24 @@ void set_v8_flag() {
 //#endif//!_WIN32
 	//v8::V8::SetFlagsFromString(v8Flags, (int)strlen(v8Flags));
 }
+size_t _memory_limit = 0;
+size_t _last_heap_size = 0;
+#define _1_MB 1024 * 1024
+void GCEpilogueCallback(v8::Isolate* isolate, v8::GCType type, v8::GCCallbackFlags /* flags */) {
+	v8::HeapStatistics heap_statistics;
+	isolate->GetHeapStatistics(&heap_statistics);
 
+	if (type != v8::GCType::kGCTypeIncrementalMarking
+		&& heap_statistics.used_heap_size() > _memory_limit* _1_MB) {
+		isolate->TerminateExecution();
+		isolate->ThrowException(v8::Exception::Error(v8_str(isolate, "OOM error in GC")));
+		if (heap_statistics.used_heap_size() > _last_heap_size* _1_MB / 0.9
+			&& _last_heap_size < _memory_limit * _1_MB / 0.9) {
+			isolate->LowMemoryNotification();
+		}
+		_last_heap_size = heap_statistics.used_heap_size();
+	}
+}
 void v8_engine::create_engine(const char* exec_path){
 	ASSERT(_disposed == FALSE);
 	ASSERT(_initialize == FALSE);

@@ -271,10 +271,10 @@ int this_wjx_env(const char* name) {
 	return ic > 0 ? TRUE : FALSE;
 }
 int is_compiled_cached() {
-	return this_wjx_env("WEB_JSX_COMPILED_CACHED");
+	return FALSE;//this_wjx_env("WEB_JSX_COMPILED_CACHED");
 }
 int is_check_file_state() {
-	return this_wjx_env("WEB_JSX_CHECK_FILE_STATE");
+	return FALSE;//this_wjx_env("WEB_JSX_CHECK_FILE_STATE");
 }
 void get_dir_path(const std::string& path_str, std::string& dir) {
 	size_t found = path_str.find_last_of("/\\");

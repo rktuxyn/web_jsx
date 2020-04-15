@@ -490,8 +490,8 @@ void app_core::prepare_console_response(
 	::v8_engine::create_engine(exec_path->c_str());
 	v8::Isolate* isolate = ::v8_engine::create_isolate();
 	wjsx_env* wj_env = new wjsx_env(is_internal_request == TRUE ? FALSE : TRUE, FALSE);
-	wj_env->compiled_cached = TRUE; //is_compiled_cached();
-	wj_env->check_file_state = TRUE; //is_check_file_state();
+	wj_env->compiled_cached = FALSE; //is_compiled_cached();
+	wj_env->check_file_state = FALSE; //is_check_file_state();
 	wj_env->set_root_dir(root_dir->c_str());
 	wj_env->set_app_dir(ex_dir->c_str());
 	::js_compiler::run_script_async(

@@ -120,27 +120,9 @@ std::string* load_script(
 	_free_obj(dest);
 	return out_script;
 }
-//int load_script(
-//	const char* path, std::string& out_script
-//) {
-//	std::ifstream* file = new std::ifstream(path, std::ifstream::ate | std::ifstream::binary);
-//	if (!file->is_open()) {
-//		out_script.append("File not found in#");
-//		out_script.append(path);
-//		return FALSE;
-//	}
-//	std::vector<char>* dest = new std::vector<char>();
-//	int ret = ::load_file_to_vct(*file, *dest);
-//	file->close(); delete file;
-//	if (ret == TRUE) {
-//		::add_gscript(out_script);
-//		out_script.append(dest->data(), dest->size());
-//	}
-//	_free_obj(dest);
-//	return ret;
-//}
-//9:32 PM 11/22/2018
-V8_JS_METHOD(require) {
+V8_JS_METHOD(require);
+V8_JS_METHOD(require_once);
+void _require(const v8::FunctionCallbackInfo<v8::Value>& args, int once) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsString() || args[0]->IsNullOrUndefined()) {
 		throw_js_type_error(isolate, "File absolute path required!!!");
@@ -154,8 +136,21 @@ V8_JS_METHOD(require) {
 		utf_abs_path_str.clear();
 		return;
 	}
+	std::string module_name;
+	::get_file_name(path_info, module_name);
 	wjsx_env* wj_env = ::unwrap_wjsx_env(isolate);
-	std::string* abs_path = new std::string();
+	native_data_structure* data_struct = NULL;
+	if (once == FALSE) {
+		if (wj_env->has_native_data_structure() == TRUE) {
+			data_struct = wj_env->get_native_data_structure(FALSE);
+			if (data_struct->exists_module(module_name.c_str())) {
+				args.GetReturnValue().Set(data_struct->get_module_obj(isolate, module_name.c_str()));
+				utf_abs_path_str.clear();
+				return;
+			}
+		}
+	}
+	_NEW_STR(abs_path);
 	if (ext == typeof_module::NATIVE) {
 		bool is_full_path = false;
 		if (args.Length() > 1) {
@@ -170,7 +165,7 @@ V8_JS_METHOD(require) {
 		else {
 			::get_server_map_path(path_info, *abs_path);
 		}
-		require_native(args, abs_path->c_str(), wj_env->get_app_dir(), path_info);
+		::require_native(args, abs_path->c_str(), wj_env->get_app_dir(), path_info);
 		_free_obj(abs_path); utf_abs_path_str.clear();
 		return;
 	}
@@ -199,6 +194,7 @@ V8_JS_METHOD(require) {
 	module_object->Set(isolate, "exports", v8::ObjectTemplate::New(isolate));
 	v8_global->Set(isolate, "module", module_object);
 	wjsx_assign_js_func(isolate, v8_global, "require", ::require);
+	wjsx_assign_js_func(isolate, v8_global, "require_once", ::require_once);
 	v8::Local<v8::Context> context = v8::Context::New(isolate, nullptr, v8_global);
 	v8::Context::Scope context_scope(context);
 	::swjsx_module::scope_to_js_global(isolate, context, wj_env);
@@ -261,11 +257,26 @@ V8_JS_METHOD(require) {
 	v8::Local<v8::Object> jsGlobal =
 		context->Global()->GetPrototype().As<v8::Object>();
 	v8::Local<v8::Object> modules = v8::Handle<v8::Object>::Cast(jsGlobal->Get(context, v8_str(isolate, "module")).ToLocalChecked());
-	args.GetReturnValue().Set(modules->Get(context, v8_str(isolate, "exports")).ToLocalChecked());
+	if (once == TRUE || data_struct == NULL) {
+		args.GetReturnValue().Set(modules->Get(context, v8_str(isolate, "exports")).ToLocalChecked());
+	}
+	else {
+		v8::Local<v8::Value> target = modules->Get(context, v8_str(isolate, "exports")).ToLocalChecked();
+		args.GetReturnValue().Set(target);
+		//v8::Local<v8::Object> target_obj = v8::Local<v8::Object>::New(isolate, target);
+		typeof_native_obj pobj(isolate, v8::Local<v8::Object>::Cast(target));
+		data_struct->add_working_obj(module_name.c_str(), pobj);
+	}
 	modules.Clear(); jsGlobal.Clear(); context.Clear(); v8_global.Clear();
 	return;
 }
-
+//9:32 PM 11/22/2018
+V8_JS_METHOD(require) {
+	_require(args, FALSE);
+}
+V8_JS_METHOD(require_once) {
+	_require(args, TRUE);
+}
 v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_context(
 	v8::Isolate* isolate, 
 	const std::map<std::string, std::map<std::string, std::string>> ctx
@@ -304,6 +315,7 @@ v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_context(
 	v8::Local<v8::ObjectTemplate> v8_global = v8::ObjectTemplate::New(isolate);
 	wjsx_assign_js_obj(isolate, v8_global, "context", ctx_object);
 	wjsx_assign_js_func(isolate, v8_global, "require", ::require);
+	wjsx_assign_js_func(isolate, v8_global, "require_once", ::require_once);
 	return v8_global;
 }
 
@@ -427,6 +439,7 @@ v8::Local<v8::ObjectTemplate> wrapper::get_console_context(
 		console_print(args);
 	});
 	wjsx_assign_js_func(isolate, v8_global, "require", ::require);
+	wjsx_assign_js_func(isolate, v8_global, "require_once", ::require_once);
 	return v8_global;
 }
 //9:32 PM 11/22/2018

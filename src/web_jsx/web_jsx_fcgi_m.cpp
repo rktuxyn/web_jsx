@@ -43,7 +43,7 @@ typedef struct {
 	FCGX_Request* request;
 	native_data_structure* native_data;
 }handler__context;
-int request_process(
+int handle_request(
 	v8::Isolate* isolate,
 	const app_ex_info aei,
 	const char* env_path, char** envp,
@@ -61,20 +61,18 @@ native_data_structure* create_native_data_structure(
 	v8::Isolate* isolate, const app_ex_info& app_info,
 	thread__context* ctx
 );
-int handle_request(thread__context* ctx);
+void start_engine(const char* execute_path);
 int listen_blocking_request(thread__context* ctx);
 thread__context* get_ctx(void* args);
-void prepare_request_handler(void* args);
-void prepare_listener(void* args);
-void start_engine(const char* execute_path);
-void listen_nonblocking_request(thread__context* ctx);
+void listen_nonblocking_request(void* args);
+int handle_nonblocking_request(void* args);
 int create_nonblocking_thread(
 	const char* execute_path, int is_fserver, 
 	const char* web_app_root,
 	int is_interactive, int socket_id
 );
 /*[----------------]*/
-int request_process(
+int handle_request(
 	v8::Isolate* isolate,
 	const app_ex_info aei,
 	const char* env_path, char** envp,
@@ -180,7 +178,7 @@ int listen_blocking_request(thread__context* ctx) {
 		}
 		wj_env->set_total_handled_req(ctx->total_processed);
 		try {
-			::request_process(
+			::handle_request(
 				/*v8::Isolate* isolate*/isolate,
 				/*const app_ex_info aei*/*app_info,
 				/*const char*env_path*/ctx->env_path,
@@ -223,7 +221,6 @@ int listen_blocking_request(thread__context* ctx) {
 	return EXIT_SUCCESS;
 }
 /*[----------------]*/
-
 std::shared_ptr<shared_queue<FCGX_Request*>> _thread_safe;
 CRITICAL_SECTION _gw_accept_mutex;
 void after_queue_complete(wjsx_env* wj_env, handler__context* hctx) {
@@ -264,7 +261,7 @@ void queue_forward_request(
 	}
 	wj_env->set_total_handled_req(ctx->total_processed);
 	try {
-		::request_process(
+		::handle_request(
 			/*v8::Isolate* isolate*/isolate,
 			/*const app_ex_info aei*/*app_info,
 			/*const char*env_path*/ctx->env_path,
@@ -301,19 +298,19 @@ native_data_structure* create_native_data_structure(
 	if (ctx->web_app_root == NULL || strlen(ctx->web_app_root) == 0) {
 		if (ctx->is_interactive == TRUE)
 			fprintf_s(_stdout, "Web Application root dir not found!!!\n");
-		std::string cwd;
-		if (::get_current_working_dir(cwd) == TRUE) {
-			cwd.append("\\");
+		_NEW_STR(cwd);
+		if (::get_current_working_dir(*cwd) == TRUE) {
+			cwd->append("\\");
 			if (ctx->is_interactive == TRUE)
-				fprintf_s(_stdout, "We are trying to load `module.cfg`\nfrom current working directory %s\nIf not found in current working directory\nThen we will try to load from Application root directory\n%s\n", cwd.c_str(), app_info.ex_dir->c_str());
-			wj_env->set_root_dir(cwd.c_str());
-			std::string().swap(cwd);
+				fprintf_s(_stdout, "We are trying to load `module.cfg`\nfrom current working directory %s\nIf not found in current working directory\nThen we will try to load from Application root directory\n%s\n", cwd->c_str(), app_info.ex_dir->c_str());
+			wj_env->set_root_dir(cwd->c_str());
 		}
 		else {
 			if (ctx->is_interactive == TRUE)
 				fprintf_s(_stdout, "We are trying to load `module.cfg`\nfrom %s\n", app_info.ex_dir->c_str());
 			wj_env->set_root_dir(app_info.ex_dir->c_str());
 		}
+		_free_obj(cwd);
 	}
 	else {
 		if (ctx->is_interactive == TRUE)
@@ -332,12 +329,17 @@ native_data_structure* create_native_data_structure(
 	}
 	return nds;
 }
-int handle_request(thread__context* ctx) {
+int handle_nonblocking_request(void* args) {
 	_NEW_STR(exec_path);
 	if (::get_env_path(*exec_path) < 0) {
 		FATAL("Please add web_jsx bin path into environment variable Path!!!\n");
 	}
 	exec_path->append("web_jsx.exe");
+	thread__context* ctx = get_ctx(args);
+	ctx->is_concurrent = TRUE;
+	_NEW_STR(env_path);
+	::get_env_c("path", *env_path);
+	ctx->env_path = env_path->c_str();
 	if (ctx->is_interactive == TRUE)
 		fprintf_s(_stdout, "handle_request thread#%d\n", ctx->thread_id);
 	v8::Isolate* isolate = ::v8_engine::create_isolate(*ctx->mutex);
@@ -361,16 +363,16 @@ int handle_request(thread__context* ctx) {
 		hctx->request = request;
 		::queue_forward_request(isolate, hctx, app_info, ctx);
 		handled_req++; ctx->total_processed++;
-		if (handled_req >= 100) {
+		if (handled_req >= 50) {
 			isolate->LowMemoryNotification(); handled_req = 0;
 		}
 	});
+	_free_obj(env_path);
 	::swjsx_module::clean_native_module(hctx->native_data);
 	_free_obj(hctx->native_data); _dispose_isolate(isolate);
-	_free_app_info(app_info); _free_obj(exec_path);
+	_free_app_info(app_info); _free_obj(exec_path); free(hctx);
 	return EXIT_SUCCESS;
 }
-//https://en.cppreference.com/w/cpp/thread/mutex
 thread__context* get_ctx(void* args) {
 	thread__context* ctx = args == NULL ? new thread__context : reinterpret_cast<thread__context*>(args);
 	ctx->fcgi_flag = FCGI_FAIL_ACCEPT_ON_INTR;
@@ -378,17 +380,6 @@ thread__context* get_ctx(void* args) {
 	ctx->compiled_cached = ::is_compiled_cached();
 	ctx->check_file_state = ::is_check_file_state();
 	return ctx;
-}
-//https://stackoverflow.com/questions/32501274/two-way-parent-child-communication-in-windows-with-c
-//https://docs.microsoft.com/en-us/windows/win32/procthread/creating-a-child-process-with-redirected-input-and-output?redirectedfrom=MSDN
-void prepare_request_handler(void* args) {
-	thread__context* ctx = get_ctx(args);
-	ctx->is_concurrent = TRUE;
-	_NEW_STR(env_path);
-	::get_env_c("path", *env_path);
-	ctx->env_path = env_path->c_str();
-	::handle_request(ctx);
-	_free_obj(env_path);
 }
 void start_engine(const char* execute_path) {
 	_NEW_STR(ex_dir);
@@ -398,12 +389,13 @@ void start_engine(const char* execute_path) {
 	_free_obj(ex_dir);
 	return;
 }
-void listen_nonblocking_request(thread__context* ctx) {
+void listen_nonblocking_request(void* args) {
+	thread__context* ctx = (thread__context*)args;
 	if (ctx->is_interactive == TRUE)
-		fprintf_s(_stdout, "listen_nonblocking_request thread#%d\n", ctx->thread_id);
+		fprintf_s(_stdout, "listen_nonblocking_request thread#%d\n", ::get_thread_id());
 	for (;;) {
 		FCGX_Request* request = new FCGX_Request;
-		int ret = ::FCGX_InitRequest(request, ctx->socket_id, ctx->fcgi_flag);
+		int ret = ::FCGX_InitRequest(request, ctx->socket_id, FCGI_FAIL_ACCEPT_ON_INTR);
 		if (ret != 0) FATAL("FCGX_InitRequest failed!!!\n");
 		::EnterCriticalSection(&_gw_accept_mutex);
 		ret = FCGX_Accept_r(request);
@@ -412,13 +404,6 @@ void listen_nonblocking_request(thread__context* ctx) {
 		_thread_safe->try_queue(std::move(request));
 	}
 	return;
-}
-void prepare_listener(void* args) {
-	thread__context* ctx = (thread__context*)args;
-	ctx->is_concurrent = TRUE;
-	ctx->fcgi_flag = FCGI_FAIL_ACCEPT_ON_INTR;
-	ctx->thread_id = ::get_thread_id();
-	::listen_nonblocking_request(ctx);
 }
 
 #define MAX_CONCURRENCY 16
@@ -447,19 +432,17 @@ int create_nonblocking_thread(
 	if (concurrency > MAX_CONCURRENCY)concurrency = MAX_CONCURRENCY;
 	ASSERT(concurrency <= _MAX_ISOLATE);
 	_thread_safe = std::shared_ptr<shared_queue<FCGX_Request*>>(new shared_queue<FCGX_Request*>(1, concurrency));
-	{
-		char* cores_string = new char[10];
-		sprintf(cores_string, "%d", concurrency);
+	char* cores_string = new char[10];
+	sprintf(cores_string, "%d", concurrency);
 #ifdef _WIN32
-		wchar_t* lpName = ::ccr2ws("UV_THREADPOOL_SIZE");
-		wchar_t* lpValue = ::ccr2ws(cores_string);
-		SetEnvironmentVariable(const_cast<LPCWSTR>(lpName), const_cast<LPCWSTR>(lpValue));
-		delete[]lpName; delete[]lpValue;
+	wchar_t* lpName = ::ccr2ws("UV_THREADPOOL_SIZE");
+	wchar_t* lpValue = ::ccr2ws(cores_string);
+	SetEnvironmentVariable(const_cast<LPCWSTR>(lpName), const_cast<LPCWSTR>(lpValue));
+	delete[]lpName; delete[]lpValue;
 #else
-		setenv("UV_THREADPOOL_SIZE", cores_string, 1);
+	setenv("UV_THREADPOOL_SIZE", cores_string, 1);
 #endif//
-		delete[]cores_string;
-	}
+	delete[]cores_string;
 	::InitializeCriticalSection(&_gw_accept_mutex);
 	uv_loop_t* loop = uv_default_loop();
 	uv_loop_init(loop);
@@ -476,13 +459,12 @@ int create_nonblocking_thread(
 			ASSERT(queue_work != NULL);
 			thread__context* ctx = new thread__context;//(thread__context*)malloc(sizeof(thread__context));
 			ASSERT(ctx != NULL);
-			ctx->is_fserver = TRUE; 
-			ctx->mutex = smutex;
-			ctx->web_app_root = web_app_root;
-			ctx->is_interactive = is_interactive; ctx->app_thread_id = app_thread_id;
+			ctx->is_fserver = TRUE; ctx->mutex = smutex;
+			ctx->web_app_root = web_app_root; ctx->is_interactive = is_interactive;
+			ctx->app_thread_id = app_thread_id;
 			queue_work->data = (void*)ctx;
 			uv_queue_work(loop, queue_work, /*[task]*/[](uv_work_t* req) {
-				::prepare_request_handler(req->data);
+				::handle_nonblocking_request(req->data);
 			}, /*on_task_end*/[](uv_work_t* req, int status) {
 				delete req;
 			});
@@ -498,11 +480,11 @@ int create_nonblocking_thread(
 			ASSERT(ctx != NULL);
 			ctx->socket_id = socket_id; ctx->is_fserver = is_fserver;
 			ctx->is_interactive = is_interactive; ctx->app_thread_id = app_thread_id;
-			uv_thread_create(listener_ctx, ::prepare_listener, (void*)ctx);
+			uv_thread_create(listener_ctx, ::listen_nonblocking_request, (void*)ctx);
 			free(listener_ctx);
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		if (is_interactive == TRUE) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			fprintf_s(_stdout, "Total %d nonbloking listener registred.\n", total_listener);
 			fprintf_s(_stdout, "All thread registered....\n");
 		}

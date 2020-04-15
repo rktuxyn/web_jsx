@@ -53,10 +53,6 @@ std::istream& get_line(
 		}
 	}
 }
-void get_module_name(const std::string& path_str, std::string& name) {
-	size_t found = path_str.find_last_of("/\\");
-	name = path_str.substr(found, path_str.size());
-}
 int prepare_native_module(
 	v8::Isolate* isolate,
 	native_data_structure* native_data,
@@ -68,7 +64,7 @@ int prepare_native_module(
 	std::string ex_path(root_dir);
 	ex_path.append("module.cfg");
 	if (__file_exists(ex_path.c_str()) == false) {
-		swap_obj(ex_path);
+		::swap_obj(ex_path);
 		ex_path = std::string(app_dir);
 		ex_path.append("module.cfg");
 		if (__file_exists(ex_path.c_str()) == false) {
@@ -76,13 +72,13 @@ int prepare_native_module(
 			std::string err("module.cfg not found in web_jsx app directory... App Dir:");
 			err.append(app_dir);
 			throw_js_error(isolate, err.c_str());
-			swap_obj(ex_path); swap_obj(err);
+			::swap_obj(ex_path); ::swap_obj(err);
 			return is_loaded;
 		}
 	}
 	
 	std::ifstream* file = new std::ifstream(ex_path, std::ios::out);
-	swap_obj(ex_path);
+	::swap_obj(ex_path);
 	std::string line, path;
 	do {
 		get_line(*file, line);
@@ -90,19 +86,24 @@ int prepare_native_module(
 		path = app_dir;
 		path.append(line);
 		if (__file_exists(path.c_str()) == true) {
+			std::string module_name;
+			::get_file_name(path, module_name);
+			if (native_data->exists_module(module_name.c_str()) == TRUE) {
+				path = "Duplicate native module not allowed-> " + line;
+				throw_js_error(isolate, path.c_str());
+				file->close(); delete file; swap_obj(path); swap_obj(line);
+				return _ERROR;
+			}
 			v8::Handle<v8::Object> target = v8::Object::New(isolate);
-			if (native_data->store_native_module(::load_native_module(isolate, target, path.c_str(), app_dir)) == FALSE) {
-				is_loaded = _ERROR;
+			if (native_data->store_native_module(::load_native_module(isolate, target, path.c_str(), app_dir), module_name.c_str()) == FALSE) {
 				path = "Unable to load native module-> " + line;
 				throw_js_error(isolate, path.c_str());
 				file->close(); delete file; swap_obj(path); swap_obj(line);
-				return is_loaded;
+				return _ERROR;
 			}
 			is_loaded = TRUE;
 			typeof_native_obj pobj(isolate, target);
-			_NEW_STR(module_name);
-			get_module_name(path, *module_name);
-			data[module_name->c_str()] = pobj;
+			data[module_name.c_str()] = pobj;
 		}
 		else {
 			file->close(); delete file;
@@ -157,8 +158,7 @@ void get_module_by_name(
 	native_string module_name(isolate, args[0]);
 	native_data_structure* native_data = wj_env->get_native_data_structure(FALSE);
 	auto lib_obj = native_data->get_lib_obj();//
-	bool is_request_module = false;
-	is_request_module = to_boolean(isolate, args[1]);
+	bool is_request_module = to_boolean(isolate, args[1]);
 	//!TODO
 }
 void swjsx_module::scope_to_js_global(

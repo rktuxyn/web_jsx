@@ -12,7 +12,7 @@
 #	define TRUE                1
 #endif//!FALSE
 void sow_web_jsx::create_wj_core_extend_script(std::stringstream& js_stream, int is_cli) {
-	js_stream << "const __extend = function( dest, source, is_first ) {\n";
+	js_stream << "var __extend = function( dest, source, is_first ) {\n";
 	js_stream << "	if ( typeof ( dest ) !== \"object\" && ( typeof( is_first ) === \"boolean\" && is_first === true ) ) {\n";
 	js_stream << "		dest = this;\n";
 	js_stream << "	}\n";
@@ -35,6 +35,15 @@ void sow_web_jsx::create_wj_core_extend_script(std::stringstream& js_stream, int
 	js_stream << "		resolve( func.apply( this, args ) );\n";
 	js_stream << "	} );\n";
 	js_stream << "}\n";
+	js_stream << "function __reset_object_value(object, prop, value) {\n";
+	js_stream << "	Object.defineProperty( object, prop, {\n";
+	js_stream << "		enumerable: true,\n";
+	js_stream << "		writable: false,\n";
+	js_stream << "		configurable: true,\n";
+	js_stream << "		value: value\n";
+	js_stream << "	} )\n";
+	js_stream << "}\n";
+
 	js_stream << "String.format = function ( format ) { if ( typeof ( format ) !== 'string' ) throw new Error(\"String required!!!\"); let args = Array.prototype.slice.call( arguments, 1 ); let len = args.length - 1; return format.replace( /{(\\d+)}/g, function ( match, number )  { let index = parseInt( number ); if ( isNaN( index ) ) throw new Error( \"Invalid param index!!!\" ); if ( index > len ) throw new Error( \"Index should not greater than \" + len + format + JSON.stringify( args ) ); return typeof ( args[index] ) !== 'undefined' ? args[number] : \"\"; } ); };\n";
 }
 void prepare_native_module(std::stringstream& js_stream, int is_cli = TRUE) {
@@ -80,7 +89,7 @@ void sow_web_jsx::js_write_header(std::stringstream& js_stream) {
 	js_stream << "context.https = context.https === \"on\" || context.https === \"true\" ? true : false;\n";
 	js_stream << "context.request.protocol = context.https === true ? \"https:\" : \"http:\";\n";
 	js_stream << "context.host_url = context.request.protocol + \"//\" + context.host;\n";
-	js_stream << "context.request.header = ( function () { try { return JSON.parse( context.request.header ); } catch ( e ) { return []; } }() );\n";
+	//js_stream << "context.request.header = ( function () { try { return JSON.parse( context.request.header.replace( /\\\\/gi, \"/\" ) ); } catch ( e ) { return []; } }() );\n";
 	js_stream << "context.request.query_string = ( function () { try { return JSON.parse( (context.request.query_string) ); } catch ( e ) { return {}; } }() );\n";
 	js_stream << "context.request.content_length = (function(){ let len = parseInt(context.request.content_length); return isNaN(len) ? 0 : len; }());\n";
 	js_stream << "context.request.read_payload = function read_payload( cb ) { return this.method !== 'POST'? -1 : this._read_payload(this.content_length, this.content_type, cb);}\r\n";
@@ -102,10 +111,10 @@ void sow_web_jsx::js_write_console_header(std::stringstream& js_stream) {
 	js_stream << "/*__web_jsx_script__*/\n";
 	::prepare_native_module(js_stream);
 	js_stream << "this.__print = function ( str ) { if ( env.is_interactive === false ) return; print( String.format( str, Array.prototype.slice.call( arguments, 1 ) ) ); return; };\n";
-	js_stream << "env.app_dir = ( function () { if ( env.app_dir === undefined || env.app_dir === null ) { throw new Error(\"App directory not found in current context!!!\"); } return env.app_dir.replace( /\\\\/g,'/' ).replace(/\\/\\//gi, '/'); }());\n";
-	js_stream << "env.app_path = ( function () { if ( env.app_path === undefined || env.app_path === null ) { throw new Error(\"App path not found in current context!!!\"); } return env.app_path.replace( /\\\\/g,'/' ); }());\n";
-	js_stream << "env.root_dir = ( function () { if ( env.root_dir === undefined || env.root_dir === null ) { throw new Error(\"Root directory not found in current context!!!\"); } return env.root_dir.replace( /\\\\/g,'/' ) }());\n";
-	js_stream << "env.path_translated = ( function () { if ( env.path_translated === undefined || env.path_translated === null ) { throw new Error(\"Translated path not found in current context!!!\"); } return env.path_translated.replace( /\\\\/g,'/' ) }());\n";
-	js_stream << "env.path = ( function () { if ( env.path === undefined || env.path === null ) { throw new Error(\"Environment path not found in current context!!!\"); } return env.path.replace( /\\\\/g,'/' ) }());\n";
-	js_stream << "env.arg = ( function () { try { return JSON.parse( env.arg ); } catch ( e ) { __print( e.message ); return []; } }() );\n";
+	js_stream << "__reset_object_value( env, \"app_dir\", ( function () { if ( env.app_dir === undefined || env.app_dir === null ) { throw new Error(\"App directory not found in current context!!!\"); } return env.app_dir.replace( /\\\\/g,'/' ).replace(/\\/\\//gi, '/'); }()) );\n";
+	js_stream << "__reset_object_value( env, \"app_path\", ( function () { if ( env.app_path === undefined || env.app_path === null ) { throw new Error(\"App path not found in current context!!!\"); } return env.app_path.replace( /\\\\/g,'/' ); }()) );\n";
+	js_stream << "__reset_object_value( env, \"root_dir\", ( function () { if ( env.root_dir === undefined || env.root_dir === null ) { throw new Error(\"Root directory not found in current context!!!\"); } return env.root_dir.replace( /\\\\/g,'/' ) }()) );\n";
+	js_stream << "__reset_object_value( env, \"path_translated\", ( function () { if ( env.path_translated === undefined || env.path_translated === null ) { throw new Error(\"Translated path not found in current context!!!\"); } return env.path_translated.replace( /\\\\/g,'/' ) }()) );\n";
+	js_stream << "__reset_object_value( env, \"path\", ( function () { if ( env.path === undefined || env.path === null ) { throw new Error(\"Environment path not found in current context!!!\"); } return env.path.replace( /\\\\/g,'/' ) }()) );\n";
+	js_stream << "__reset_object_value( env, \"arg\", ( function () { try { return JSON.parse( env.arg ); } catch ( e ) { __print( e.message ); return []; } }() ) );\n";
 }

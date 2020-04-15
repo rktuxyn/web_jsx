@@ -171,6 +171,7 @@ EXPORT_WJSX int read_file(const char* path, std::stringstream & stream);
 EXPORT_WJSX int read_file(const char* path, std::string & out_put);
 EXPORT_WJSX int write_file(const char* path, const char* data, size_t len);
 EXPORT_WJSX int file_has_changed(const char* a, const char* b);
+void get_file_name(const std::string path_str, std::string& name);
 template<class _stream>
 int stream_is_available(_stream & strm) {
 	return (strm.good() == false || strm.fail() == true) ? FALSE : TRUE;
@@ -200,6 +201,7 @@ void swap_obj(_swap_obj & obj) {
 typedef struct native_modules {
 	struct native_modules* next;  /* pointer to next member*/
 	void* wj_module;
+	const char* name;
 }wj_native_modules;
 //#pragma warning(push)
 //#pragma warning(disable:4251)
@@ -218,14 +220,17 @@ public:
 	native_data_structure& operator=(native_data_structure&&) = delete;
 	void set_mutex(std::shared_ptr<std::mutex> mutex);
 	std::shared_ptr<std::mutex> get_mutex();
-	int store_native_module(void* wj_module);
+	int store_native_module(void* wj_module, const char* name);
 	wj_native_modules* get_native_module();
-	int store_working_module(void* wj_module);
+	int store_working_module(void* wj_module, const char* name);
 	wj_native_modules* get_working_module();
 	std::map<std::string, typeof_native_obj>& get_lib_obj();
-	void add_lib_obj(const char* key, typeof_native_obj& value);
+	void add_native_obj(const char* key, typeof_native_obj& value);
 	std::map<std::string, typeof_native_obj>& get_request_obj();
-	void add_request_obj(const std::string key, typeof_native_obj value);
+	void add_working_obj(const char* key, typeof_native_obj value);
+	void* get_lib(const char* key);
+	v8::Local<v8::Object>get_module_obj(v8::Isolate* isolate, const char* key);
+	int exists_module(const char* key);
 	void clear();
 	~native_data_structure();
 };

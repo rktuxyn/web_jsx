@@ -271,6 +271,7 @@ int file_has_changed(
 	_free_obj(file_a); _free_obj(file_b);
 	return ret;
 }
+
 int load_file_to_vct(
 	std::ifstream& file_stream,
 	std::vector<char>& buffer
@@ -281,7 +282,7 @@ int load_file_to_vct(
 		file_stream.setf(std::ios_base::binary);
 	buffer.reserve(total_len);
 	do {
-		if (not file_stream.good())break;
+		if (not file_stream.good() || file_stream.eof())break;
 		size_t read_len = total_len > READ_CHUNK ? READ_CHUNK : total_len;
 		char* in = new char[read_len];
 		file_stream.read(in, read_len);
@@ -371,16 +372,18 @@ void v8_object_extend_internal(
 }
 
 #if !defined(_store_module)
-#	define _store_module(module_obj, wj_module)		\
-if( module_obj == NULL ){							\
-	module_obj = new wj_native_modules;				\
-	module_obj->wj_module = wj_module;				\
-	module_obj->next = NULL;						\
-} else {											\
-	wj_native_modules* anm = new wj_native_modules;	\
-	anm->wj_module = wj_module;						\
-	anm->next = module_obj;							\
-	module_obj = anm;								\
+#	define _store_module(module_obj, wj_module, name)	\
+if( module_obj == NULL ){								\
+	module_obj = new wj_native_modules;					\
+	module_obj->wj_module = wj_module;					\
+	module_obj->name = name;							\
+	module_obj->next = NULL;							\
+} else {												\
+	wj_native_modules* anm = new wj_native_modules;		\
+	anm->wj_module = wj_module;							\
+	anm->name = name;									\
+	anm->next = module_obj;								\
+	module_obj = anm;									\
 }
 #endif//!_store_module
 
@@ -399,17 +402,17 @@ std::shared_ptr<std::mutex> native_data_structure::get_mutex(){
 	if (this->_mutex == NULL)FATAL("std::mutex should not NULL...");
 	return _mutex;
 }
-int native_data_structure::store_native_module(void* wj_module) {
+int native_data_structure::store_native_module(void* wj_module, const char* name) {
 	if (wj_module == NULL)return FALSE;
-	_store_module(_native_modules, wj_module);
+	_store_module(_native_modules, wj_module, name);
 	return TRUE;
 }
 wj_native_modules* native_data_structure::get_native_module(){
 	return _native_modules;
 }
-int native_data_structure::store_working_module(void* wj_module){
+int native_data_structure::store_working_module(void* wj_module, const char* name){
 	if (wj_module == NULL)return FALSE;
-	_store_module(_working_modules, wj_module);
+	_store_module(_working_modules, wj_module, name);
 	return TRUE;
 }
 wj_native_modules* native_data_structure::get_working_module(){
@@ -418,15 +421,60 @@ wj_native_modules* native_data_structure::get_working_module(){
 std::map<std::string, typeof_native_obj>& native_data_structure::get_lib_obj() {
 	return *this->_lib_data;
 }
-void native_data_structure::add_lib_obj(const char* key, typeof_native_obj& value) {
+void native_data_structure::add_native_obj(const char* key, typeof_native_obj& value) {
 	(*_lib_data)[std::string(key)] = value;
 }
 std::map<std::string, typeof_native_obj>& native_data_structure::get_request_obj() {
 	return *this->_request_data;
 }
-void native_data_structure::add_request_obj(const std::string key, typeof_native_obj value) {
-	(*_request_data)[key.c_str()] = value;
+void native_data_structure::add_working_obj(const char* key, typeof_native_obj value) {
+	(*_request_data)[std::string(key)] = value;
 }
+void* native_data_structure::get_lib(const char* key) {
+	wj_native_modules* modules;
+	for (modules = _working_modules; modules; modules = modules->next) {
+		if (strcmp(modules->name, key) == 0) {
+			return modules->wj_module;
+		}
+	}
+	for (modules = _native_modules; modules; modules = modules->next) {
+		if (strcmp(modules->name, key) == 0) {
+			return modules->wj_module;
+		}
+	}
+	return NULL;
+}
+int native_data_structure::exists_module(const char* key) {
+	{
+		auto itr = _request_data->find(key);
+		if (itr != _request_data->end()) {
+			return TRUE;
+		}
+	}
+	{
+		auto itr = _lib_data->find(key);
+		if (itr != _lib_data->end()) {
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+v8::Local<v8::Object> native_data_structure::get_module_obj(v8::Isolate* isolate, const char* key){
+	{
+		auto itr = _request_data->find(key);
+		if (itr != _request_data->end()) {
+			return v8::Local<v8::Object>::New(isolate, itr->second);
+		}
+	}
+	{
+		auto itr = _lib_data->find(key);
+		if (itr != _lib_data->end()) {
+			return v8::Local<v8::Object>::New(isolate, itr->second);
+		}
+	}
+	return v8::Object::New(isolate);
+}
+
 void native_data_structure::clear() {
 	if (_is_disposed == TRUE)return;
 	_is_disposed = TRUE;
@@ -436,4 +484,9 @@ void native_data_structure::clear() {
 }
 native_data_structure::~native_data_structure() {
 	this->clear();
+}
+#include <regex>
+void get_file_name(const std::string path_str, std::string& name) {
+	size_t found = path_str.find_last_of("/\\");
+	name = path_str.substr(found + 1, path_str.size());// std::regex_replace(path_str.substr(found + 1, path_str.size()), std::regex("(?:\\)"), "");
 }

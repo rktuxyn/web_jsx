@@ -31,17 +31,22 @@ int fcgi_request::freq_env_c(const char* var_name, char** envp, std::string& out
 }
 void read_request_header(char **envp, std::string&out) {
 	char **env = envp;
-	std::stringstream ss;
-	ss << "["; int count = 0;
+	int count = 0;
+	/*std::stringstream ss;
+	ss << "["; */
 	while (*(++env)) {
 		char* en = *env;
-		if (count != 0)ss << ",";
-		ss << "\"" << en << "\"";
+		/*if (count != 0)ss << ",";*/
+		if (count != 0) {
+			out.append("~").append(en); continue;
+		}
+		out.append(en);
+		//ss << "\"" << en << "\"";
 		count++;
 	}
-	ss << "]";
+	/*ss << "]";
 	ss.str().swap(out);
-	swap_obj(ss);
+	swap_obj(ss);*/
 	return;
 }
 void fcgi_request::get_global_obj(

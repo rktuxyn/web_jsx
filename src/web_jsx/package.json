@@ -1,0 +1,30 @@
+{
+  "name": "web_jsx",
+  "description": "Web jsx/jsxh",
+  "version": "0.0.1",
+  "private": true,
+  "bugs": {
+    "url": "https://github.com/RKTUXYN/web_jsx"
+  },
+  "dependencies": {
+    "sow.npgsql": "^0.0.1",
+    "curl": "^4.8.0",
+    "v8": "^2.0.0",
+    "zlib": "^1.1.7",
+    "libpq": "^4.1.2",
+    "openssl": "^2.39.1"
+  },
+  "engines": {
+    "iis": ">8.5"
+  },
+  "homepage": "https://web_jsx.safeonline.world/",
+  "keywords": [
+		
+  ],
+  "license": "CC",
+  "main": "n/a",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RKTUXYN/web_jsx"
+  }
+}
