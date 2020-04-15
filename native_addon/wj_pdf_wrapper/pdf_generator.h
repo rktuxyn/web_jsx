@@ -14,6 +14,7 @@
 #	include <vector>
 #	include <map>
 #	include <string>
+#	include <sstream>
 
 #pragma warning (disable : 4231)
 #pragma warning(disable : 4996)
@@ -63,7 +64,9 @@ namespace pdf_ext {
 			std::map<std::string, std::string>&wgs_settings,
 			std::map<std::string, std::string>&wos_settings
 		);
-		long generate(const char*html, std::string& str_output);
+		int generate(const char*html, std::string& str_output);
+		//template<typename _in_stream, typename _out_stream>
+		int generate(std::stringstream& in_out_stream);
 		int generate_to_path(const char*html, const char* output_path);
 		int generate_from_url(const char*url, std::string& str_output);
 		int generate_from_url(const char*url, const char* output_path);

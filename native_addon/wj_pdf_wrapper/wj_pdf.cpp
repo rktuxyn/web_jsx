@@ -1,3 +1,9 @@
+/**
+* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
+* @author {SOW}
+* Copyrights licensed under the New BSD License.
+* See the accompanying LICENSE file for terms.
+*/
 #	include "wj_pdf.h"
 #	include <web_jsx/wjsx_env.h>
 #	include <web_jsx/web_jsx.h>
@@ -78,22 +84,13 @@ V8_JS_METHOD(generate_pdf) {
 	v8::Handle<v8::Object> v8_result = v8::Object::New(isolate);
 	if (rec < 0) {
 		utf8_path_str.clear();
-		v8_result->Set(
-			ctx,
-			v8_str(isolate, "ret_val"),
-			v8::Number::New(isolate, rec)
-		);
-		v8_result->Set(
-			ctx,
-			v8_str(isolate, "ret_msg"),
-			v8_str(isolate, pdf_gen->get_status_msg())
-		);
+		v8_result->Set( ctx, v8_str(isolate, "ret_val"), v8::Number::New(isolate, rec) );
+		v8_result->Set( ctx, v8_str(isolate, "ret_msg"), v8_str(isolate, pdf_gen->get_status_msg()) );
 		args.GetReturnValue().Set(v8_result);
 		v8_result.Clear();
 		delete pdf_gen; _free_obj(abs_path);
 		return;
 	}
-
 	if (!form_body) {
 		if (v8_url_str->IsString() && !v8_url_str->IsNullOrUndefined()) {
 			native_string utf8_url_str(isolate, v8_url_str);
@@ -105,7 +102,6 @@ V8_JS_METHOD(generate_pdf) {
 			rec = pdf_gen->generate_to_path(utf8_body_str.c_str(), abs_path->c_str());
 			utf8_body_str.clear();
 		}
-
 	}
 	else {
 		auto str = new std::string(wj_env->body().str());
@@ -114,28 +110,12 @@ V8_JS_METHOD(generate_pdf) {
 	}
 	_free_obj(abs_path); utf8_path_str.clear();
 	if (rec > 0) {
-		v8_result->Set(
-			ctx,
-			v8_str(isolate, "ret_val"),
-			v8::Number::New(isolate, rec)
-		);
-		v8_result->Set(
-			ctx,
-			v8_str(isolate, "ret_msg"),
-			v8_str(isolate, "Success")
-		);
+		v8_result->Set( ctx, v8_str(isolate, "ret_val"), v8::Number::New(isolate, rec) );
+		v8_result->Set( ctx, v8_str(isolate, "ret_msg"), v8_str(isolate, "Success") );
 	}
 	else {
-		v8_result->Set(
-			ctx,
-			v8_str(isolate, "ret_val"),
-			v8::Number::New(isolate, rec)
-		);
-		v8_result->Set(
-			ctx,
-			v8_str(isolate, "ret_msg"),
-			v8_str(isolate, pdf_gen->get_status_msg())
-		);
+		v8_result->Set( ctx, v8_str(isolate, "ret_val"), v8::Number::New(isolate, rec) );
+		v8_result->Set( ctx, v8_str(isolate, "ret_msg"), v8_str(isolate, pdf_gen->get_status_msg()) );
 	}
 	args.GetReturnValue().Set(v8_result);
 	v8_result.Clear();
@@ -198,22 +178,14 @@ V8_JS_METHOD(generate_pdf_from_body) {
 		delete pdf_gen;
 		return;
 	}
-
-	std::string* str = new std::string(_body_stream.str());
-	_body_stream.clear(); std::stringstream().swap(_body_stream);
-	std::string* str_output = new std::string();
-	rec = pdf_gen->generate(str->c_str(), *str_output);
-	_free_obj(str);
+	rec = pdf_gen->generate(_body_stream);
 	if (rec < 0) {
-		_free_obj(str_output);
 		_body_stream << pdf_gen->get_status_msg();
 		args.GetReturnValue().Set(v8::Number::New(isolate, rec));
 		pdf_gen->dispose();
 		delete pdf_gen;
 		return;
 	}
-	_body_stream.write(str_output->c_str(), str_output->size());
-	_free_obj(str_output);
 	sow_web_jsx::wrapper::add_header(wj_env, "wkhtmltopdf_version", pdf_gen->version);
 	pdf_gen->dispose();
 	delete pdf_gen;

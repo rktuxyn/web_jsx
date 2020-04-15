@@ -13,14 +13,6 @@
 #	include <web_jsx/web_jsx.h>
 #	include "curl_util.h"
 
-#if defined(FAST_CGI_APP)
-int _sr = FALSE;
-void onr_resource_free() {
-	///We will no longer be needing curl funcionality
-	curl_global_cleanup();
-}
-#endif//!FAST_CGI_APP
-
 using namespace http_client;
 http_request::http_request(const char * full_url, bool follow_location = false) {
 	_disposed = false;
@@ -29,12 +21,6 @@ http_request::http_request(const char * full_url, bool follow_location = false) 
 	_full_url = full_url;
 	_follow_location = follow_location;
 	_internal_error = NULL;
-#if defined(FAST_CGI_APP)
-	if (_sr == FALSE) {
-		_sr = TRUE;
-		sow_web_jsx::register_resource(onr_resource_free);
-	}
-#endif//FAST_CGI_APP
 }
 void http_request::set_error(const char * error) {
 	_free_char(_internal_error);
@@ -106,9 +92,6 @@ int http_request::send_request(std::string & response_header, std::string &respo
 		rec = -1;
 	}
 	curl_easy_cleanup(_curl);
-#if !defined(FAST_CGI_APP)
-	curl_global_cleanup();
-#endif//!FAST_CGI_APP
 	return rec;
 }
 http_request::~http_request() {
