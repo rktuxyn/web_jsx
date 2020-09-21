@@ -5,14 +5,10 @@
 * See the accompanying LICENSE file for terms.
 */
 #	include "n_help.h"
+#	include "web_jsx_global.h"
+#	include "std_wrapper.hpp"
 using namespace sow_web_jsx;
-//template<class _vct>
-//void add_http_status(_vct& vct, std::string& values) {
-//	if (!vct.empty()) {
-//		vct.clear();
-//	}
-//	vct.push_back(values);
-//}
+
 void n_help::add_http_status(std::vector<std::string>&http_status, std::string&values) {
 	if (!http_status.empty()) {
 		http_status.clear();
@@ -48,8 +44,12 @@ response_status n_help::get_http_response_status(int status_code) {
 	if (status_code == 501)return response_status::NOT_IMPLEMENTED;
 	return response_status::OK;
 }
-BOOL n_help::write_http_status(std::vector<std::string>&http_status, bool check_status = false) {
+int n_help::write_http_status(
+	wjsx_env&wj_env, 
+	bool check_status = false
+) {
 	int rec = TRUE;
+	std::vector<std::string>& http_status = wj_env.get_http_status();
 	for (size_t i = 0; i < http_status.size(); ++i) {
 		if (rec == TRUE) {
 			std::string&str = http_status[i];
@@ -76,12 +76,12 @@ BOOL n_help::write_http_status(std::vector<std::string>&http_status, bool check_
 			}
 		}
 		if (!check_status) {
-			std::cout << http_status[i] << H_N_L;
+			wj_env << http_status[i] << H_N_L;
 		}
 	}
 	return rec;
 }
-BOOL n_help::is_binary_response(std::map<std::string, std::string>& header) {
+int n_help::is_binary_response(std::map<std::string, std::string>& header) {
 	if (header.empty())return FALSE;
 	int rec = FALSE;
 	
@@ -97,7 +97,7 @@ BOOL n_help::is_binary_response(std::map<std::string, std::string>& header) {
 	}
 	return rec;
 }
-BOOL n_help::is_gzip_encoding(std::map<std::string, std::string>&header) {
+int n_help::is_gzip_encoding(std::map<std::string, std::string>&header) {
 	if (header.empty())return FALSE;
 	int rec = FALSE;
 	auto it = header.find("Content-Encoding");
@@ -106,7 +106,7 @@ BOOL n_help::is_gzip_encoding(std::map<std::string, std::string>&header) {
 	}
 	return rec;
 }
-BOOL n_help::is_attachment_response(std::map<std::string, std::string>&header) {
+int n_help::is_attachment_response(std::map<std::string, std::string>&header) {
 	if (header.empty())return FALSE;
 	int rec = FALSE;
 	auto it = header.find("x-content-type");
@@ -116,10 +116,12 @@ BOOL n_help::is_attachment_response(std::map<std::string, std::string>&header) {
 	}
 	return rec;
 }
-void n_help::write_cookies(std::vector<std::string>&cookies) {
+void n_help::write_cookies(wjsx_env&wj_env) {
+	std::vector<std::string>& cookies = wj_env.get_http_cookies();
 	if (cookies.empty())return;
+	std::ostream& cout = wj_env.cout();
 	for (size_t i = 0; i < cookies.size(); ++i) {
-		std::cout << cookies[i] << H_N_L;
+		cout << cookies[i] << H_N_L;
 	}
 }
 void n_help::v8_object_loop(v8::Isolate* isolate, const v8::Local<v8::Object>v8_obj, std::map<const char*, const char*>&out_put) {
@@ -179,50 +181,53 @@ const char* get_server_error(response_status status_code) {
 void n_help::error_response(
 	const char* server_root,
 	response_status status_code,
-	const char* error_msg
+	const char* error_msg,
+	wjsx_env& wj_env
 ) {
-	std::cout << "Content-Type:text/html" << H_N_L;
-	std::cout << "Accept-Ranges:bytes" << H_N_L;
+	std::ostream& cout = wj_env.cout();
+	cout << "Content-Type:text/html" << H_N_L;
+	cout << "Accept-Ranges:bytes" << H_N_L;
 	int status = (int)status_code;
-	std::cout << "Status:" << status << " " << get_server_error(status_code) << H_N_L;
-	std::cout << H_PROCESS_BY << ":" << H_PROCESS_BY_VAL << H_N_L;
-	std::cout << H_POWERED_BY << ":" << H_POWERED_BY_VAL << H_N_L;
-	std::cout << "WebJsx-Error-Code:" << status << H_N_L;
-	std::cout << "\r\n";
+	cout << "Status:" << status << " " << get_server_error(status_code) << H_N_L;
+	cout << H_PROCESS_BY << ":" << H_PROCESS_BY_VAL << H_N_L;
+	cout << H_POWERED_BY << ":" << H_POWERED_BY_VAL << H_N_L;
+	cout << "WebJsx-Error-Code:" << status << H_N_L;
+	cout << "\r\n";
 	std::string* str = new std::string(server_root);
 	str->append("error\\");
 	str->append(std::to_string(status));
 	str->append(".html");
 	std::string* body = new std::string();
-	size_t ret = sow_web_jsx::read_file(str->c_str(), *body, true);
-	if (is_error_code(ret) == TRUE) {
+	int ret = ::read_file(str->c_str(), *body);
+	if (::is_error_code(ret) == TRUE) {
 		std::string html_body = REGEX_REPLACE_MATCH(*body, std::regex("(<%(.+?)%>)"), [&error_msg](const std::smatch& m) {
 			return error_msg;
 		});
-		std::cout << html_body;
+		cout << html_body;
 		html_body.clear(); std::string().swap(html_body);
 	}
 	else {
-		std::cout << "No Error file found in /error/" << status << ".html<br/>";
-		std::cout << "Server root:" << server_root << "<br/><br/><br/>";
-		std::cout << error_msg;
+		cout << "No Error file found in /error/" << status << ".html<br/>";
+		cout << "Server root:" << server_root << "<br/><br/><br/>";
+		cout << error_msg;
 	}
-	body->clear(); delete body;
-	str->clear(); delete str;
-	fflush(stdout);
+	_free_obj(body); _free_obj(str);
+	cout.flush();
 }
-void n_help::write_header(std::map<std::string, std::string>& header) {
-	if (header.empty())return;
+void n_help::write_header(wjsx_env&wj_env) {
+	std::map<std::string, std::string>& headers = wj_env.get_http_header();
+	if (headers.empty())return;
 	std::string po_by(H_PROCESS_BY);
 	std::string pow_by(H_POWERED_BY);
-	for (auto it = header.begin(); it != header.end(); ++it) {
+	std::ostream& cout = wj_env.cout();
+	for (auto it = headers.begin(); it != headers.end(); ++it) {
 		if (strings_equal(it->first, po_by))continue;
 		if (strings_equal(it->first, pow_by))continue;
-		std::cout << it->first << ":" << it->second << H_N_L;
+		cout << it->first << ":" << it->second << H_N_L;
 	}
 	po_by.clear(); po_by.clear();
-	std::cout << H_PROCESS_BY << ":" << H_PROCESS_BY_VAL << H_N_L;
-	std::cout << H_POWERED_BY << ":" << H_POWERED_BY_VAL << H_N_L;
+	cout << H_PROCESS_BY << ":" << H_PROCESS_BY_VAL << H_N_L;
+	cout << H_POWERED_BY << ":" << H_POWERED_BY_VAL << H_N_L;
 	return;
 }
 //https://stackoverflow.com/questions/3381614/c-convert-string-to-hexadecimal-and-vice-versa

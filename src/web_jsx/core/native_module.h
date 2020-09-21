@@ -12,13 +12,7 @@
 #	define _native_module_h
 #	include <v8.h>
 #	include <string>
-
-typedef enum {
-	NATIVE = 1,
-	_JS = 2,
-	NO_EXT = 3,
-	_UNKNOWN = -1
-}typeof_module;
+#	include "wjsx_env.h"
 namespace sow_web_jsx {
 	typeof_module get_module_type(const std::string& path_str);
 	void require_native(
@@ -27,13 +21,11 @@ namespace sow_web_jsx {
 		const char* app_dir,
 		const char* module_name
 	);
-	int load_native_module(
+	void* load_native_module(
 		v8::Isolate* isolate,
 		v8::Handle<v8::Object> target,
 		const char* path,
 		const char* app_dir
 	);
-	void free_native_modules();
-	void free_working_module();
 }
 #endif//!_native_module_h

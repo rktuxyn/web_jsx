@@ -1,3 +1,9 @@
+/**
+* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
+* @author {SOW}
+* Copyrights licensed under the New BSD License.
+* See the accompanying LICENSE file for terms.
+*/
 //5:37 AM 12/2/2018
 #if defined(_MSC_VER)
 #pragma once

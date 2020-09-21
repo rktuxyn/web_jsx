@@ -13,10 +13,14 @@
 #	define _web_jsx_fcgi_h
 #	include "web_jsx_app_core.h"
 #if defined(FAST_CGI_APP)
-namespace web_jsx {
+namespace sow_web_jsx {
 	namespace fcgi_request {
-		int request_process(const app_ex_info aei, const char*env_path, char **envp);
-		int request_handler(const char*execute_path, const char*path, int is_spath);
+		int request_handler(
+			const char*execute_path, 
+			const char*path, int is_spath,
+			const char* web_app_root,
+			int is_interactive
+		);
 	}
 }
 #endif//!FAST_CGI_APP

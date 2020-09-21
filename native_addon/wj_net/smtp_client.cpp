@@ -16,11 +16,6 @@
 #	include "curl_util.h"
 namespace smtp_client {
 #pragma region Help
-	bool _sr = false;
-	void onr_resource_free() {
-		///We will no longer be needing curl funcionality
-		curl_global_cleanup();
-	}
 	void date_time_now(std::string& ret) {
 		time_t t;
 		struct tm* tm;
@@ -58,12 +53,6 @@ namespace smtp_client {
 		if (_has_error)return;
 		_internal_error = NULL;
 		_recipients = NULL;
-#if defined(FAST_CGI_APP)
-		if (_sr == false) {
-			_sr = true;
-			sow_web_jsx::register_resource(onr_resource_free);
-		}
-#endif//FAST_CGI_APP
 		_cheaders = NULL;
 		_headers = new std::vector<std::string>();
 		_attachments = new std::vector<mail_attachment*>();
@@ -418,33 +407,25 @@ namespace smtp_client {
 		curl_easy_cleanup(_curl);
 		/* Free multipart message. */
 		curl_mime_free(mime);
-		_headers->clear(); delete _headers; _headers = NULL;
-		_attachments->clear(); delete _attachments; _attachments = NULL;
+		_free_obj(_headers); _free_obj(_attachments);
 		_curl = NULL; _recipients = NULL;
 		_cheaders = NULL; mime = NULL;
 		return rec;
 	}
 	const char* smtp_request::get_last_error()const {
+		if (_internal_error == NULL)return "No error found in current context.";
 		return const_cast<const char*>(_internal_error);
 	}
 	void smtp_request::set_error(const char* error) {
-		if (_internal_error != NULL)
-			delete[]_internal_error;
+		_free_char(_internal_error);
 		size_t len = strlen(error);
 		_internal_error = new char[len + 1];
 		strcpy_s(_internal_error, len, error);
 		_has_error = true;
 	}
 	smtp_request::~smtp_request() {
-		delete _internal_error;
-		if (_headers) {
-			_headers->clear();
-			delete _headers; _headers = NULL;
-		}
-		if (_attachments) {
-			_attachments->clear();
-			delete _attachments; _attachments = NULL;
-		}
+		_free_char(_internal_error);
+		_free_obj(_headers); _free_obj(_attachments);
 		if (_recipients != NULL) {
 			curl_slist_free_all(_recipients);
 			_recipients = NULL;

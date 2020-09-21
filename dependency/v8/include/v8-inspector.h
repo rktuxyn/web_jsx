@@ -9,6 +9,7 @@
 #include <cctype>
 
 #include <memory>
+#include <unordered_map>
 
 #include "v8.h"  // NOLINT(build/include)
 
@@ -24,6 +25,7 @@ namespace Runtime {
 namespace API {
 class RemoteObject;
 class StackTrace;
+class StackTraceId;
 }
 }
 namespace Schema {
@@ -87,7 +89,6 @@ class V8_EXPORT V8ContextInfo {
 
   static int executionContextId(v8::Local<v8::Context> context);
 
- private:
   // Disallow copying and allocating this one.
   enum NotNullTagEnum { NotNullLiteral };
   void* operator new(size_t) = delete;
@@ -110,6 +111,8 @@ class V8_EXPORT V8StackTrace {
   virtual ~V8StackTrace() = default;
   virtual std::unique_ptr<protocol::Runtime::API::StackTrace>
   buildInspectorObject() const = 0;
+  virtual std::unique_ptr<protocol::Runtime::API::StackTrace>
+  buildInspectorObject(int maxAsyncDepth) const = 0;
   virtual std::unique_ptr<StringBuffer> toString() const = 0;
 
   // Safe to pass between threads, drops async chain.
@@ -131,7 +134,7 @@ class V8_EXPORT V8InspectorSession {
   // Dispatching protocol messages.
   static bool canDispatchMethod(const StringView& method);
   virtual void dispatchProtocolMessage(const StringView& message) = 0;
-  virtual std::unique_ptr<StringBuffer> stateJSON() = 0;
+  virtual std::vector<uint8_t> state() = 0;
   virtual std::vector<std::unique_ptr<protocol::Schema::API::Domain>>
   supportedDomains() = 0;
 
@@ -142,7 +145,7 @@ class V8_EXPORT V8InspectorSession {
   virtual void breakProgram(const StringView& breakReason,
                             const StringView& breakDetails) = 0;
   virtual void setSkipAllPauses(bool) = 0;
-  virtual void resume() = 0;
+  virtual void resume(bool setTerminateOnResume = false) = 0;
   virtual void stepOver() = 0;
   virtual std::vector<std::unique_ptr<protocol::Debugger::API::SearchMatch>>
   searchInTextByLines(const StringView& text, const StringView& query,
@@ -158,6 +161,8 @@ class V8_EXPORT V8InspectorSession {
                             v8::Local<v8::Context>*,
                             std::unique_ptr<StringBuffer>* objectGroup) = 0;
   virtual void releaseObjectGroup(const StringView&) = 0;
+  virtual void triggerPreciseCoverageDeltaUpdate(
+      const StringView& occassion) = 0;
 };
 
 class V8_EXPORT V8InspectorClient {
@@ -228,12 +233,20 @@ class V8_EXPORT V8InspectorClient {
 struct V8_EXPORT V8StackTraceId {
   uintptr_t id;
   std::pair<int64_t, int64_t> debugger_id;
+  bool should_pause = false;
 
   V8StackTraceId();
+  V8StackTraceId(const V8StackTraceId&) = default;
   V8StackTraceId(uintptr_t id, const std::pair<int64_t, int64_t> debugger_id);
+  V8StackTraceId(uintptr_t id, const std::pair<int64_t, int64_t> debugger_id,
+                 bool should_pause);
+  explicit V8StackTraceId(const StringView&);
+  V8StackTraceId& operator=(const V8StackTraceId&) = default;
+  V8StackTraceId& operator=(V8StackTraceId&&) noexcept = default;
   ~V8StackTraceId() = default;
 
   bool IsInvalid() const;
+  std::unique_ptr<StringBuffer> ToString();
 };
 
 class V8_EXPORT V8Inspector {
@@ -245,8 +258,7 @@ class V8_EXPORT V8Inspector {
   virtual void contextCreated(const V8ContextInfo&) = 0;
   virtual void contextDestroyed(v8::Local<v8::Context>) = 0;
   virtual void resetContextGroup(int contextGroupId) = 0;
-  virtual v8::MaybeLocal<v8::Context> contextById(int groupId,
-                                                  v8::Maybe<int> contextId) = 0;
+  virtual v8::MaybeLocal<v8::Context> contextById(int contextId) = 0;
 
   // Various instrumentation.
   virtual void idleStarted() = 0;
@@ -290,6 +302,24 @@ class V8_EXPORT V8Inspector {
   virtual std::unique_ptr<V8StackTrace> createStackTrace(
       v8::Local<v8::StackTrace>) = 0;
   virtual std::unique_ptr<V8StackTrace> captureStackTrace(bool fullStack) = 0;
+
+  // Performance counters.
+  class V8_EXPORT Counters : public std::enable_shared_from_this<Counters> {
+   public:
+    explicit Counters(v8::Isolate* isolate);
+    ~Counters();
+    const std::unordered_map<std::string, int>& getCountersMap() const {
+      return m_countersMap;
+    }
+
+   private:
+    static int* getCounterPtr(const char* name);
+
+    v8::Isolate* m_isolate;
+    std::unordered_map<std::string, int> m_countersMap;
+  };
+
+  virtual std::shared_ptr<Counters> enableCounters() = 0;
 };
 
 }  // namespace v8_inspector

@@ -30,7 +30,6 @@ static constexpr int getAppTypeIndex() {
 class NativeString {
 	char* data;
 	size_t length;
-	char utf8ValueMemory[sizeof(String::Utf8Value)];
 	String::Utf8Value* utf8Value = nullptr;
 	bool invalid = false;
 public:
@@ -40,6 +39,7 @@ public:
 			length = 0;
 		}
 		else if (value->IsString()) {
+			char utf8ValueMemory[sizeof(String::Utf8Value)];
 			utf8Value = new (utf8ValueMemory) String::Utf8Value(isolate, value);
 			data = (**utf8Value);
 			length = utf8Value->length();

@@ -10,9 +10,12 @@
 #if !defined(_v8_util_h)
 #	define _v8_util_h
 #	include <v8.h>
-#	include "web_jsx_global.h"
+#	include "template_info.h"
 #	include "t_async.h"
 #	include <libplatform/v8-tracing.h>
+#	include <map>
+#	include <sstream>
+#	include <memory>
 #pragma warning (disable : 4231)
 #pragma warning(disable : 4996)
 #if !defined(TYPE_CHECK)
@@ -32,15 +35,39 @@
 	isolate->ThrowException(v8::Exception::Error(v8_str(isolate, err)))
 #endif//!throw_js_error
 
-#if defined(__WJSX_SHARED)
-#if !defined(_export_wjsx)
-#	define _export_wjsx __declspec(dllexport)
-#endif//!jsx_export
+#if !defined(throw_js_type_error)
+#define throw_js_type_error(isolate, err)\
+	isolate->ThrowException(v8::Exception::TypeError(v8_str(isolate, err)))
+#endif//!throw_js_type_error
+
+#if !defined(EXPORT_WJSX)
+#if (defined(_WIN32)||defined(_WIN64))
+#	define EXPORT_WJSX __declspec(dllexport)
 #else
-#if !defined(_export_wjsx)
-#	define _export_wjsx
-#endif//!_export_wjsx
-#endif//__WJSX_SHARED
+#	define EXPORT_WJSX
+#endif//_WIN32||_WIN64
+#endif//!EXPORT_WJSX
+
+#if !defined(js_method_args)
+#define js_method_args const v8::FunctionCallbackInfo<v8::Value>& args
+#endif//!js_method_args
+
+#if !defined(V8_JS_METHOD)
+#define V8_JS_METHOD(name)\
+void name(js_method_args)
+#endif//!V8_JS_METHOD
+
+//target->Set( isolate, name, v8::FunctionTemplate::New(isolate, func) )\
+
+#if !defined(wjsx_assign_js_func)
+#	define wjsx_assign_js_func(isolate, target, name, func)\
+	target->Set(v8_str(isolate, name), v8::FunctionTemplate::New(isolate, func), v8::PropertyAttribute::ReadOnly)
+#endif//!wjsx_assign_js_func
+
+#if !defined(wjsx_assign_js_obj)
+#	define wjsx_assign_js_obj(isolate, target, name, obj)\
+	target->Set(v8_str(isolate, name), obj, v8::PropertyAttribute::ReadOnly)
+#endif//!wjsx_assign_js_obj
 
 namespace sow_web_jsx {
 	typedef struct {
@@ -51,49 +78,53 @@ namespace sow_web_jsx {
 		std::vector<std::string>* http_status;
 		std::string*root_dir;
 	}internal_global_ctx;
-	_export_wjsx bool to_boolean(v8::Isolate* isolate, v8::Local<v8::Value> value);
-	_export_wjsx void garbage_collect(v8::Isolate* isolat);
+	EXPORT_WJSX bool to_boolean(v8::Isolate* isolate, v8::Local<v8::Value> value);
+	EXPORT_WJSX void garbage_collect(v8::Isolate* isolat);
 	const char* _toCharStr(const v8::String::Utf8Value& value);
 #define T_CHAR _toCharStr
 	const char* to_char_str(v8::Isolate* isolate, v8::Local<v8::Value> x);
-	void read_line(const v8::FunctionCallbackInfo<v8::Value>& args);
+	V8_JS_METHOD(read_line);
 	//v8::Local<v8::String> v8_str(v8::Isolate* isolate, const char* x);
 	void set__exception(
 		v8::Isolate * isolate, 
-		v8::TryCatch*try_catch, 
+		v8::TryCatch*try_catch,
 		template_result&tr
 	);
-	_export_wjsx void set__exception(
+	EXPORT_WJSX void set__exception(
 		v8::Isolate * isolate, 
 		v8::TryCatch*try_catch, 
 		std::string& error_str
 	);
-	_export_wjsx void get_server_map_path(const char* req_path, std::string&output);
-	_export_wjsx int get_prop_value(
+	EXPORT_WJSX void get_server_map_path(const char* req_path, std::string&output);
+	EXPORT_WJSX int get_prop_value(
 		v8::Isolate* isolate, v8::Local<v8::Context> ctx,
 		v8::Local<v8::Object> v8_obj, const char* prop, std::string& out
 	);
-	_export_wjsx int v8_object_get_number(v8::Isolate* isolate, v8::Local<v8::Context>ctx, v8::Local<v8::Object>obj, const char* prop);
-	_export_wjsx v8::Local<v8::String> concat_msg(v8::Isolate* isolate, const char* a, const char*b);
-	v8::Handle<v8::Object> native_write_filei(v8::Isolate* isolate, const char* abs_path, const char* buffer);
-	class _export_wjsx native_string {
+	EXPORT_WJSX int v8_object_get_number(v8::Isolate* isolate, v8::Local<v8::Context>ctx, v8::Local<v8::Object>obj, const char* prop);
+	EXPORT_WJSX v8::Local<v8::String> concat_msg(v8::Isolate* isolate, const char* a, const char*b);
+	void get_script_origin(const char* path_info, std::string&origin);
+	std::unique_ptr<v8::ScriptCompiler::CachedData> read_script_cached(const char* script_path, const char* cscript_path, int check_file_state);
+	int create_script_cached_data(v8::MaybeLocal<v8::UnboundScript>unbound_script, const char* cscript_path);
+	v8::Handle<v8::Object> native_write_filei(
+		v8::Isolate* isolate, const char* abs_path, 
+		const char* buffer
+	);
+	class EXPORT_WJSX native_string {
 	private:
 		char* _data;
 		size_t _length;
-		char _utf8ValueMemory[sizeof(v8::String::Utf8Value)];
 		v8::String::Utf8Value* _utf8Value = nullptr;
 		bool _invalid = false;
 	public:
-		native_string(v8::Isolate* isolate, const v8::Local<v8::Value>& value);
+		explicit native_string(v8::Isolate* isolate, const v8::Local<v8::Value>& value);
+		native_string(const native_string&) = delete;
+		native_string& operator=(const native_string&) = delete;
 		bool is_invalid(v8::Isolate* isolate);
 		std::string_view get_string();
-		//std::string get_string();
 		const char* c_str();
 		bool is_empty();
 		size_t size();
-		/**
-		 * Sets the handle to be empty. is_empty() will then return true.
-		 */
+		/**Sets the handle to be empty. is_empty() will then return true.*/
 		void clear();
 		~native_string();
 	};
@@ -116,19 +147,20 @@ namespace sow_web_jsx {
 	*	Build ==>3:29 AM 1/29/2019
 	*/
 	template <typename T>
-	T* unwrap_ctx(v8::Isolate* isolate, int index = 0) {
-		v8::Local<v8::Context>ctx = isolate->GetEnteredContext();
-		v8::Local<v8::Object> self = ctx->Global();
-		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(self->GetInternalField(index));
-		return  reinterpret_cast<T*>(wrap->Value());
+	T* unwrap_isolate_data(v8::Isolate* isolate, int index = 0, int raise_exception = 1) {
+		void* data = isolate->GetData((isolate->GetNumberOfDataSlots() + index) - 1);
+		if (data == NULL) {
+			if (raise_exception == 1)
+				throw_js_error(isolate, "Unable to load native environment...");
+			return NULL;
+		}
+		return reinterpret_cast<T*>(data);
 	};
 	template <typename T>
-	void wrap_ctx(v8::Isolate* isolate, v8::Local<v8::Context> ctx, T* internal_ctx, int index = 0) {
-		v8::Local<v8::Object> global = ctx->Global();
-		global->SetInternalField(index, v8::External::New(isolate, internal_ctx));
+	void wrap_isolate_data(v8::Isolate* isolate, T* internal_ctx, int index = 0) {
+		isolate->SetData((isolate->GetNumberOfDataSlots() + index) - 1, internal_ctx);
 		return;
 	};
-	v8::Local<v8::Context> create_internal_context(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> v8_object);
-	//
+	void clear_isolate_data(v8::Isolate* isolate, int index);
 };
 #endif //!_v8_util_h

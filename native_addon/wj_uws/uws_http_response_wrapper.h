@@ -58,7 +58,8 @@ struct HttpResponseWrapper {
 				Local<Value> argv[] = { dataArrayBuffer, Boolean::New(isolate, last) };
 				Local<Function>::New(isolate, p)->Call(isolate->GetCurrentContext(), isolate->GetCurrentContext()->Global(), 2, argv).IsEmpty();
 
-				dataArrayBuffer->Neuter();
+				//dataArrayBuffer->Neuter();
+				dataArrayBuffer->Detach();
 			});
 
 			args.GetReturnValue().Set(args.Holder());

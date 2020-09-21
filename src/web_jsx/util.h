@@ -10,66 +10,34 @@
 #endif//!_MSC_VER
 #if !defined(_util_h)
 #	define _util_h
-#	include "web_jsx_app_global.h"
 #	include <string>
 #	include <map>
 #	include <vector>
-#if !defined(_WIN32) && (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
-#	include <unistd.h>
-#	define get_current_dir getcwd
-bool is_user_interactive();
+#	include "core/wjsx_env.h"
+
+int is_user_interactive();
 void print_info();
-#else
-#	include <direct.h>
-#define get_current_dir _getcwd
-#if !defined(_WINCON_)
-#	include <Wincon.h>
-#endif//_WINCON_
-#define FOREGROUND_BLACK			0x0000 // text color contains black.
-#define FOREGROUND_YELLOW			0x0006 // text color contains Yellow.
-#define FOREGROUND_DARK_YELLOW		0x0007 // text color contains DarkYellow.
-#define FOREGROUND_LIGHT_GREEN		0XA // text color contains LightGreen.
-#define FOREGROUND_LIGHT_RED		0XC // text color contains LightGreen.
-BOOL is_user_interactive();
-WORD get_current_console_color(HANDLE hConsole);
-void print_info();
-#endif//!_WIN32
-#define _DELETE DELETE
-#undef DELETE
-typedef enum {
-	GET			=	1,
-	HEAD		=	2,
-	POST		=	3,
-	PUT			=	4,
-	DELETE		=	5,
-	CONNECT		=	6,
-	OPTIONS		=	7,
-	TRACE		=	8,
-	UNSUPPORTED	=	-1
-}req_method;
-typedef enum {
-	JSX			=	1,
-	JSXH		=	2,
-	WJSX		=	3,
-	WJSXH		=	4,
-	JS			=	5,
-	RAW_SCRIPT	=	6,
-	UNKNOWN		=	-1
-}web_extension;
 void replace_back_slash(std::string&str);
 char *string_copy(char *str);
 const char* get_app_path();
 void get_app_path(std::string&path);
-const char* get_current_working_dir(void);
+int get_current_working_dir(std::string&out);
 char *get_env(const char* var_name);
 const char *get_env_c(const char* var_name);
+int get_env_c(const char* var_name, std::string& out_str);
 int get_env_path(std::string&path_str);
-void print_envp(char*envp[]);
+void print_envp(wjsx_env&wj_env, char*envp[]);
 void print_envp_c(char **envp);
 int print_env_var(char* val, const char* env);
-web_extension get_request_extension (const std::string& path_str);
-void request_file_info (
+web_extension get_request_extension(const std::string& path_str);
+int is_compiled_cached();
+int is_check_file_state();
+void get_dir_path(
 	const std::string& path_str, 
+	std::string& dir
+);
+void request_file_info(
+	const std::string& path_str,
 	std::string&dir, 
 	std::string&file_name
 );
@@ -83,7 +51,7 @@ req_method determine_req_method(const char* request_method);
 const char* get_content_type(void);
 void read_query_string(
 	std::map<std::string, std::string>&data, 
-	const char*query_string
+	const std::string&query_string
 );
 //int write___file(const char*path, const char*buffer);
 void obj_insert(
@@ -91,12 +59,16 @@ void obj_insert(
 	const char* prop, 
 	std::map<std::string, std::map<std::string, std::string>>&to_obj
 );
-void write_header(const char* ct);
+void write_header(
+	const char* ct,
+	wjsx_env* wj_env
+);
 void write_internal_server_error(
 	const char* content_type,
 	const char* ex_dir,
 	int error_code,
-	const char* error_msg
+	const char* error_msg, 
+	wjsx_env* wj_env
 );
 void json_obj_stringify(
 	std::map<std::string, std::string>& json_obj,
@@ -106,4 +78,5 @@ void json_array_stringify_s(
 	std::vector<char*>& json_array_obj, 
 	std::string& json_str
 );
+int get_thread_id();
 #endif//!_util_h

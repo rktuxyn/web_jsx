@@ -1544,7 +1544,20 @@ static int acceptNamedPipe() {
 
 	return ipcFd;
 }
-
+//SOCKET ConvertProcessSocket(SOCKET oldsocket, DWORD source_pid) {
+//	HANDLE source_handle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, source_pid);
+//	HANDLE newhandle;
+//	DuplicateHandle(
+//		source_handle, (HANDLE)oldsocket,
+//		GetCurrentProcess(), &newhandle, 0, FALSE,
+//		DUPLICATE_CLOSE_SOURCE | DUPLICATE_SAME_ACCESS
+//	);
+//	CloseHandle(source_handle);
+//	LPWSAPROTOCOL_INFOW wsaProtocolInfo;
+//	ZeroMemory(&wsaProtocolInfo, sizeof(LPWSAPROTOCOL_INFOW));
+//	int fcd = WSADuplicateSocketW(oldsocket, GetCurrentProcess(), wsaProtocolInfo);
+//	return (SOCKET)newhandle;
+//}
 static int acceptSocket(const char *webServerAddrs) {
 	SOCKET hSock;
 	int ipcFd = -1;
@@ -1602,7 +1615,6 @@ static int acceptSocket(const char *webServerAddrs) {
 		}
 #endif
 	}
-
 	if (hSock == INVALID_SOCKET) {
 		/* Use FormatMessage() */
 		fprintf(stderr, "accept()/WSAAccept() failed: %d", WSAGetLastError());
@@ -1677,7 +1689,10 @@ int OS_Accept(int listen_sock, int fail_on_intr, const char *webServerAddrs) {
 
 	return ipcFd;
 }
-
+int OS_Accept_sync(int listen_sock, int fail_on_intr, const char* webServerAddrs) {
+	listenType = FD_SOCKET_SYNC;
+	return OS_Accept(listen_sock, fail_on_intr, webServerAddrs);
+}
 /*
  *----------------------------------------------------------------------
  *

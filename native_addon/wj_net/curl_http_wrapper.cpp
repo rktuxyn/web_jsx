@@ -10,7 +10,7 @@
 #	include <web_jsx/v8_util.h>
 #	include "http_request.h"
 using namespace sow_web_jsx;
-void http_request(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(http_request) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsObject() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
@@ -82,7 +82,7 @@ void http_request(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		cookies->clear(); delete cookies;
 		v8_cookie_str.Clear();
 	}
-	if (sow_web_jsx::wrapper::is_cli() == FALSE) {
+	if (::unwrap_wjsx_env(isolate)->is_cli() == FALSE) {
 		http->read_debug_information(false);
 	}
 	else {
@@ -163,4 +163,8 @@ void http_request(const v8::FunctionCallbackInfo<v8::Value>& args) {
 }
 void http_export(v8::Isolate* isolate, v8::Handle<v8::Object> target){
 	wjsx_set_method(isolate, target, "create_http_request", http_request);
+}
+void on_resource_free() {
+	///We will no longer be needing curl funcionality
+	curl_global_cleanup();
 }

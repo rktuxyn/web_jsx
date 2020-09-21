@@ -10,7 +10,7 @@
 #endif//!_MSC_VER
 #if !defined(_web_jsx_cgi_h)
 #	define _web_jsx_cgi_h
-namespace web_jsx {
+namespace sow_web_jsx {
 	namespace cgi_request {
 		int request_handler(const char*execute_path);
 	}

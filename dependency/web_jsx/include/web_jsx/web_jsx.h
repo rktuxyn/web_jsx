@@ -27,13 +27,17 @@
     #endif//!__cplusplus
 #endif//!NULL
 
-#if !defined(_export_wjsx)
+#if !defined(WJSX_API)
+#	define WJSX_API(type) type
+#endif//!WJSX_API
+
+#if !defined(EXPORT_WJSX)
 #if (defined(_WIN32)||defined(_WIN64))
-#	define _export_wjsx __declspec(dllexport)
+#	define EXPORT_WJSX __declspec(dllexport)
 #else
-#	define _export_wjsx
+#	define EXPORT_WJSX
 #endif//_WIN32||_WIN64
-#endif//!_export_wjsx
+#endif//!EXPORT_WJSX
 
 #if !defined(__file_exists)
 #define __file_exists(fname)\
@@ -47,6 +51,8 @@ _access(fname, 0)!=-1
   }
 #endif//!TYPE_CHECK
 
+#	include <web_jsx/wjsx_env.h>
+
 #if !defined(v8_str)
 #define v8_str(isolate, x)\
 	v8::String::NewFromUtf8(isolate, x, v8::NewStringType::kNormal).ToLocalChecked()
@@ -57,15 +63,46 @@ _access(fname, 0)!=-1
 	isolate->ThrowException(v8::Exception::Error(v8_str(isolate, err)))
 #endif//!throw_js_error
 
-#if !defined(wjsx_set_method)
-#define wjsx_set_method(isolate, target, name, func)\
-	target->Set(isolate->GetCurrentContext(), v8_str(isolate, name), v8::Function::New(isolate, func) )
-#endif//!register_wjsx_module
+#if !defined(throw_js_type_error)
+#define throw_js_type_error(isolate, err)\
+	isolate->ThrowException(v8::Exception::TypeError(v8_str(isolate, err)))
+#endif//!throw_js_type_error
 
+#if !defined(js_method_args)
+#define js_method_args const v8::FunctionCallbackInfo<v8::Value>& args
+#endif//!js_method_args
+
+#if !defined(V8_JS_METHOD)
+#define V8_JS_METHOD(name)\
+void name(js_method_args)
+#endif//!V8_JS_METHOD
+
+#if !defined(set_prototype)
+#define set_prototype(isolate, prototype, name, func)\
+prototype->Set(isolate, name, v8::FunctionTemplate::New(isolate, func))
+#endif//!set_prototype
+
+//target->Set(isolate->GetCurrentContext(), v8_str(isolate, name), obj )
 #if !defined(wjsx_set_object)
 #define wjsx_set_object(isolate, target, name, obj)\
-	target->Set(isolate->GetCurrentContext(), v8_str(isolate, name), obj )
+	target->DefineOwnProperty(\
+		isolate->GetCurrentContext(),\
+		v8_str(isolate, name),\
+		obj,\
+		v8::PropertyAttribute::ReadOnly\
+	)
 #endif//!register_wjsx_module
+
+//target->Set(isolate->GetCurrentContext(), v8_str(isolate, name), v8::Function::New(isolate->GetCurrentContext(), func).ToLocalChecked() )
+#if !defined(wjsx_set_method)
+#if V8_MAJOR_VERSION < 8
+#define wjsx_set_method(isolate, target, name, func)\
+	target->Set(isolate->GetCurrentContext(), v8_str(isolate, name), v8::Function::New(isolate, func) )
+#else
+#define wjsx_set_method(isolate, target, name, func)\
+	wjsx_set_object(isolate, target, name, v8::Function::New(isolate->GetCurrentContext(), func).ToLocalChecked())
+#endif//!V8_MAJOR_VERSION
+#endif//!wjsx_set_method
 
 #if !defined(to_char_str_n)
 #define to_char_str_n(value)\
@@ -111,29 +148,21 @@ inline int is_error_code(_input ret) {
 	return (ret == FALSE || ret == std::string::npos || ret < 0) ? TRUE : FALSE;
 }
 extern "C" {
-	_export_wjsx void web_jsx_native_module(v8::Handle<v8::Object>target);
+	EXPORT_WJSX void web_jsx_native_module(v8::Handle<v8::Object>target);
 }
 /*[function pointers]*/
 typedef void (*add_resource_func)();
 /*[/function pointers]*/
 namespace sow_web_jsx {
-	_export_wjsx void register_resource(add_resource_func func);
+	WJSX_API(void) register_resource(add_resource_func func);
 	namespace wrapper {
-		_export_wjsx void clear_cache(int clean_body, int clean_root);
-		_export_wjsx int is_cli();
-		_export_wjsx int is_flush();
-		_export_wjsx int set_flush_status(int flush);
-		_export_wjsx std::stringstream& get_body_stream();
-		_export_wjsx const char* get_root_dir();
-		_export_wjsx const char* get_app_dir();
-		_export_wjsx void add_header(const char*key, const char*value);
-		_export_wjsx int is_http_status_ok();
-		_export_wjsx int is_gzip_encoding();
-		_export_wjsx int flush_http_status();
-		_export_wjsx void flush_header();
-		_export_wjsx void flush_cookies();
-		_export_wjsx int set_binary_output();
-		_export_wjsx int set_binary_mode_in();
+		WJSX_API(void) clear_cache(wjsx_env& wj_env);
+		WJSX_API(void) add_header(wjsx_env* wj_env, const char* key, const char* value);
+		WJSX_API(int) is_http_status_ok(wjsx_env* wj_env);
+		WJSX_API(int) is_gzip_encoding(wjsx_env* wj_env);
+		WJSX_API(int) flush_http_status(wjsx_env* wj_env);
+		WJSX_API(void) flush_header(wjsx_env* wj_env);
+		WJSX_API(void) flush_cookies(wjsx_env* wj_env);
 	}
 }
 

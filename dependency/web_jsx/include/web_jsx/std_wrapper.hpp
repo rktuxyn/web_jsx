@@ -119,7 +119,7 @@ namespace std {
 		) {
 		std::basic_string<CharT> tmp("INVALID");//
 		std::sregex_iterator begin(first, last, re), end;
-		std::all_of(begin, end, [&](const std::match_results<BidirIt>& match) {
+		bool find = std::all_of(begin, end, [&](const std::match_results<BidirIt>& match) {
 			tmp = match.str(1);
 			return false;
 		});
@@ -252,11 +252,11 @@ namespace std {
 		) {
 		size_t increment = 0;
 		std::sregex_iterator begin(first, last, re), end;
-		std::all_of(begin, end, [&](const std::match_results<BidirIt>& match) {
+		bool find = std::all_of(begin, end, [&](const std::match_results<BidirIt>& match) {
 			increment++;
 			return false;
 		});
-		return increment;
+		return find == false ? 0 : increment;
 	}
 	template<class Traits,
 		class CharT>

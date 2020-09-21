@@ -7,34 +7,34 @@
 //1:13 AM 1/17/2020
 #if !defined(_v8_util_h)
 #	define _v8_util_h
+#	include "web_jsx.h"
 #	include <v8.h>
 #	include <string>
-#if !defined(_export_wjsx)
-#if (defined(_WIN32)||defined(_WIN64))
-#	define _export_wjsx __declspec(dllexport)
-#else
-#	define _export_wjsx
-#endif//_WIN32||_WIN64
-#endif//!_export_wjsx
+
+#if !defined(WJSX_API)
+#	define WJSX_API(type) type
+#endif//!WJSX_API
+
 namespace sow_web_jsx {
-	_export_wjsx bool to_boolean(v8::Isolate* isolate, v8::Local<v8::Value> value);
-	_export_wjsx void garbage_collect(v8::Isolate* isolat);
-	_export_wjsx void set__exception(
+	WJSX_API(bool) to_boolean(v8::Isolate* isolate, v8::Local<v8::Value> value);
+	WJSX_API(void) garbage_collect(v8::Isolate* isolat);
+	WJSX_API(void) set__exception(
 		v8::Isolate * isolate, 
 		v8::TryCatch*try_catch, 
 		std::string& error_str
 	);
-	_export_wjsx void get_server_map_path(const char* req_path, std::string& output);
-	_export_wjsx int get_prop_value(
+	WJSX_API(void) get_server_map_path(const char* req_path, std::string& output);
+	WJSX_API(int) get_prop_value(
 		v8::Isolate* isolate, v8::Local<v8::Context> ctx, 
 		v8::Local<v8::Object> v8_obj, const char* prop, std::string&out
 	);
-	_export_wjsx v8::Local<v8::String> concat_msg(v8::Isolate* isolate, const char* a, const char*b);
-	class _export_wjsx native_string {
+	WJSX_API(v8::Local<v8::String>) concat_msg(v8::Isolate* isolate, const char* a, const char*b);
+	WJSX_API(int) v8_object_get_number(v8::Isolate* isolate, v8::Local<v8::Context>ctx, v8::Local<v8::Object>obj, const char* prop);
+	
+	class native_string {
 	private:
 		char* _data;
 		size_t _length;
-		char _utf8ValueMemory[sizeof(v8::String::Utf8Value)];
 		v8::String::Utf8Value* _utf8Value = nullptr;
 		bool _invalid = false;
 	public:
@@ -44,9 +44,7 @@ namespace sow_web_jsx {
 		const char* c_str();
 		bool is_empty();
 		size_t size();
-		/**
-		 * Sets the handle to be empty. is_empty() will then return true.
-		 */
+		/**Sets the handle to be empty. is_empty() will then return true.*/
 		void clear();
 		~native_string();
 	};
@@ -62,23 +60,19 @@ namespace sow_web_jsx {
 		object->SetInternalField(0, v8::External::New(isolate, xx));
 		return;
 	}
-	/*
-	* Retrieve the c++ object pointer from the js object
-	*	This is where we take the actual c++ object that was embedded
-	*	into the javascript object and get it back to a useable c++ object
-	*	Build ==>3:29 AM 1/29/2019
-	*/
 	template <typename T>
-	T* unwrap_ctx(v8::Isolate* isolate, int index = 0) {
-		v8::Local<v8::Context>ctx = isolate->GetEnteredContext();
-		v8::Local<v8::Object> self = ctx->Global();
-		v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(self->GetInternalField(index));
-		return  reinterpret_cast<T*>(wrap->Value());
+	T* unwrap_isolate_data(v8::Isolate* isolate, int index = 0, int raise_exception = 1) {
+		void* data = isolate->GetData((isolate->GetNumberOfDataSlots() + index) - 1);
+		if (data == NULL) {
+			if (raise_exception == 1)
+				throw_js_error(isolate, "Unable to load native environment...");
+			return NULL;
+		}
+		return reinterpret_cast<T*>(data);
 	};
 	template <typename T>
-	void wrap_ctx(v8::Isolate* isolate, v8::Local<v8::Context> ctx, T* internal_ctx, int index = 0) {
-		v8::Local<v8::Object> global = ctx->Global();
-		global->SetInternalField(index, v8::External::New(isolate, internal_ctx));
+	void wrap_isolate_data(v8::Isolate* isolate, T* internal_ctx, int index = 0) {
+		isolate->SetData((isolate->GetNumberOfDataSlots() + index) - 1, internal_ctx);
 		return;
 	};
 }

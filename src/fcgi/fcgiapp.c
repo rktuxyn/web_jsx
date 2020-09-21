@@ -1454,13 +1454,16 @@ static int ProcessManagementRecord(int type, FCGX_Stream *stream) {
 			name = *pPtr;
 			*(strchr(name, '=')) = '\0';
 			if (strcmp(name, FCGI_MAX_CONNS) == 0) {
-				value = '1';
+				value = '1';//number of concurrent transport connections
+				//value = '5';
 			}
 			else if (strcmp(name, FCGI_MAX_REQS) == 0) {
-				value = '1';
+				value = '1'; //maximum number of concurrent request
+				//value = '50';
 			}
 			else if (strcmp(name, FCGI_MPXS_CONNS) == 0) {
-				value = '0';
+				value = '0'; //default enable multiplex connections
+				//value = '1';
 			}
 			else {
 				name = NULL;
@@ -2104,7 +2107,6 @@ DLLAPI int FCGX_Init_x(FCGX_Request * request, int sock, int flags) {
 	libInitialized = 1;
 	return 0;
 }
-
 /*
  *----------------------------------------------------------------------
  *

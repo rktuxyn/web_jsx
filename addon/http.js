@@ -41,7 +41,41 @@ function http_init( body, follow_location ) {
         req_object.cookie = this.cookie.join( ";" );
     }
     return create_http_request( req_object );
-};
+}
+function download_init( output, showprogress ) {
+    let req_object = {
+        url: this.url,
+        output: output,
+        show_progress: typeof ( showprogress ) !== "boolean" ? false : showprogress,
+        is_debug: this.is_debug,
+        is_verify_ssl: this.is_verify_ssl,
+        is_verify_ssl_host: this.is_verify_ssl_host
+    };
+    if ( Object.keys( this.header ).length > 0 ) {
+        req_object.header = [];
+        for ( let key in this.header )
+            req_object.header.push( `${key}:${this.header[key]}` );
+    }
+    if ( this.cookie && this.cookie.length > 0 ) {
+        req_object.cookie = this.cookie.join( ";" );
+    }
+    return create_http_download_request( req_object );
+}
+function parse_download_response( resp ) {
+    this.response = {
+        http_status_code: 200,
+        cookie: void 0,
+        header: void 0,
+        body: void 0,
+        is_error: false,
+        error: undefined
+    };
+    if ( resp.ret_val < 0 ) {
+        this.response.is_error = true;
+        this.response.error = resp.ret_msg;
+        return;
+    }
+}
 function parse_response( resp ) {
     this.response = {
         http_status_code: 0,
@@ -114,15 +148,14 @@ function resolve( deferred, cb ) {
 };
 //8:23 PM 12/2/2018
 //1:02 PM 11/24/2019
-//With Rajib & Ovi
 class http_request {
     constructor( _url, opt ) {
         this.url = _url;
         if ( !opt || opt === null || typeof ( opt ) !== "object" ) {
             opt = {
                 is_debug: false,
-                is_verify_ssl: true,
-                is_verify_ssl_host: true
+                is_verify_ssl: false,
+                is_verify_ssl_host: false
             };
         }
         Object.extend( this, opt );
@@ -155,16 +188,35 @@ class http_request {
         this.header[key] = value;
         return this;
     }
+    default_header() {
+        return this.set_header( "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8" )
+            .set_header( "Accept-Language", "en-US,en;q=0.9,mt;q=0.8" )
+            .set_header( "User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.110 Safari/537.36" )
+            .set_header( "Accept-Encoding", "gzip" )
+            ;
+    }
+    downloadAsync( output, showprogress, cb ) {
+        return resolve( new Promise( ( resolve, reject ) => {
+            this.download( output, showprogress );
+            resolve( this.response );
+        } ), cb );
+    }
+    download( output, showprogress ) {
+        let resp = download_init.call( this, output, showprogress );
+        parse_download_response.call( this, resp );
+        clean_resp( resp );
+        return this;
+    }
     getAsync( cb, follow_location ) {
         return resolve( new Promise( ( resolve, reject ) => {
             this.get( follow_location );
-            resolve();
+            resolve( this.response );
         } ), cb );
     }
     postAsync( body, cb, follow_location ) {
         return resolve( new Promise( ( resolve, reject ) => {
             this.post( body, follow_location ); body = undefined;
-            resolve();
+            resolve( this.response );
         } ), cb );
     }
     /**
@@ -173,7 +225,7 @@ class http_request {
     sendAsync( body, cb, follow_location ) {
         return resolve( new Promise( ( resolve, reject ) => {
             this.post( body, follow_location );
-            return body = undefined, resolve();
+            return body = void 0, resolve( this.response );
         } ), cb );
     }
     /**
@@ -215,8 +267,10 @@ class http_request {
     clear_response() {
         clean_resp( this.response );
         delete this.response;
-        this.url = undefined;
-        this.method = undefined;
+        delete this.url;
+        delete this.method;
+        delete this.header;
+        delete this.cookie;
         this.header = {};
         this.cookie = [];
         return this;

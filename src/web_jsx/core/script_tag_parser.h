@@ -10,14 +10,8 @@
 #endif//!_MSC_VER
 #if !defined(_script_tag_parser_h)
 #	define _script_tag_parser_h
-#	include "web_jsx_global.h"
+#	include "template_info.h"
 namespace sow_web_jsx {
-	void add_common_func(std::stringstream& stream);
-	void js_write_header(std::stringstream&js_stream);
-	void js_write_footer(std::string&str);
-	void js_write_footer(std::stringstream&js_stream);
-	void js_write_console_header(std::stringstream&js_stream);
-	void js_write_console_footer(std::stringstream&js_stream);
 	namespace script_tag_parser {
 		int parse(
 			template_result & tr,

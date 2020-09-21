@@ -12,14 +12,8 @@
 #	include <iostream>
 #	include <web_jsx/web_jsx.h>
 #	include "curl_util.h"
+
 using namespace http_client;
-#if defined(FAST_CGI_APP)
-bool _sr = false;
-void onr_resource_free() {
-	///We will no longer be needing curl funcionality
-	curl_global_cleanup();
-}
-#endif//!FAST_CGI_APP
 http_request::http_request(const char * full_url, bool follow_location = false) {
 	_disposed = false;
 	_curl = curl_easy_init();
@@ -27,23 +21,12 @@ http_request::http_request(const char * full_url, bool follow_location = false) 
 	_full_url = full_url;
 	_follow_location = follow_location;
 	_internal_error = NULL;
-#if defined(FAST_CGI_APP)
-	if (_sr == false) {
-		_sr = true;
-		sow_web_jsx::register_resource(onr_resource_free);
-	}
-#endif//FAST_CGI_APP
 }
 void http_request::set_error(const char * error) {
-	if (_internal_error != NULL) {
-		delete[] _internal_error;
-		_internal_error = NULL;
-	}
+	_free_char(_internal_error);
 	size_t len = strlen(error);
 	_internal_error = new char[len + 1];
 	strcpy_s(_internal_error, len, error);
-	/*_internal_error = new char[strlen(error) + 1];
-	strcpy(_internal_error, error);*/
 }
 size_t write_callback(char *contents, size_t size, size_t nmemb, void *userp) {
 	((std::string*)userp)->append((char*)contents, size * nmemb);
@@ -109,19 +92,13 @@ int http_request::send_request(std::string & response_header, std::string &respo
 		rec = -1;
 	}
 	curl_easy_cleanup(_curl);
-#if !defined(FAST_CGI_APP)
-	curl_global_cleanup();
-#endif//!FAST_CGI_APP
 	return rec;
 }
 http_request::~http_request() {
 	if (_header_chunk != NULL) {
-		delete _header_chunk; _header_chunk = NULL;
+		curl_slist_free_all(_header_chunk); _header_chunk = NULL;
 	}
-	if (_internal_error != NULL) {
-		delete[] _internal_error;
-		_internal_error = NULL;
-	}
+	_free_char(_internal_error);
 }
 const char * http_request::get_last_error() {
 	return const_cast<const char*>(_internal_error);

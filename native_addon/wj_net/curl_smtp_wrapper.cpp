@@ -12,7 +12,7 @@
 #	include "curl_smtp_wrapper.h"
 using namespace sow_web_jsx;
 
-void smtp_request(const v8::FunctionCallbackInfo<v8::Value>& args) {
+V8_JS_METHOD(smtp_request) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsObject() || args[0]->IsNullOrUndefined()) {
 		isolate->ThrowException(v8::Exception::TypeError(
@@ -29,7 +29,7 @@ void smtp_request(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
 	v8::Local<v8::Object> config = v8::Handle<v8::Object>::Cast(args[0]);
 	v8::Local<v8::Value> v8_val;
-	if (sow_web_jsx::wrapper::is_cli() == FALSE) {
+	if (::unwrap_wjsx_env(isolate)->is_cli() == FALSE) {
 		smtp->read_debug_information(false);
 	}
 	else {
@@ -99,16 +99,14 @@ void smtp_request(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	smtp->set_date_header();
 	v8_val = config->Get(ctx, v8_str(isolate, "to")).ToLocalChecked();
 	if (v8_val->IsNullOrUndefined() || !v8_val->IsString()) {
-		isolate->ThrowException(v8::Exception::Error(
-			v8_str(isolate, "SMTP To required...")));
+		isolate->ThrowException(v8::Exception::Error(v8_str(isolate, "SMTP To required...")));
 		delete smtp;
 		return;
 	}
 	smtp->mail_to(to_char_str(isolate, v8_val));
 	v8_val = config->Get(ctx, v8_str(isolate, "from")).ToLocalChecked();
 	if (v8_val->IsNullOrUndefined() || !v8_val->IsString()) {
-		isolate->ThrowException(v8::Exception::Error(
-			v8_str(isolate, "SMTP From required...")));
+		isolate->ThrowException(v8::Exception::Error(v8_str(isolate, "SMTP From required...")));
 		delete smtp;
 		return;
 	}
@@ -123,8 +121,7 @@ void smtp_request(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	}
 	v8_val = config->Get(ctx, v8_str(isolate, "mail_domain")).ToLocalChecked();
 	if (v8_val->IsNullOrUndefined() || !v8_val->IsString()) {
-		isolate->ThrowException(v8::Exception::Error(
-			v8_str(isolate, "SMTP Domain required...")));
+		isolate->ThrowException(v8::Exception::Error(v8_str(isolate, "SMTP Domain required...")));
 		delete smtp;
 		return;
 	}
@@ -140,15 +137,14 @@ void smtp_request(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	}
 	smtp->prepare();
 	if (smtp->has_error()) {
-		isolate->ThrowException(v8::Exception::Error(
-			v8_str(isolate, smtp->get_last_error())));
+		isolate->ThrowException(v8::Exception::Error(v8_str(isolate, smtp->get_last_error())));
 		delete smtp;
 		return;
 	}
 	v8_val = config->Get(ctx, v8_str(isolate, "attachments")).ToLocalChecked();
 	if (!v8_val->IsNullOrUndefined() && v8_val->IsArray()) {
 		v8::Local<v8::Array> harr = v8::Local<v8::Array>::Cast(v8_val);
-		harr->Set(0, v8_str(isolate, ""));
+		harr->Set(ctx, 0, v8_str(isolate, ""));
 		for (uint32_t i = 0, l = harr->Length(); i < l; i++) {
 			v8::Local<v8::Value>v_val = harr->Get(ctx, i).ToLocalChecked();
 			if (v_val->IsNullOrUndefined() || !v_val->IsObject())continue;
