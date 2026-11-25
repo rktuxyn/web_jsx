@@ -1,8 +1,8 @@
 {
    "context":{
-      "host":"sow.pc",
+      "host":"fsys.pc",
       "remote_addr":"127.0.0.1",
-      "root_dir":"D:\\___PROJECT\\__SOW\\",
+      "root_dir":"D:\\___PROJECT\\__fsys\\",
       "server_protocol":"HTTP/1.1",
       "request":{
          "accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
@@ -43,7 +43,7 @@
          "redirect":"function redirect( url, force ) {  }",
          "as_gzip":"function as_gzip() {  }"
       },
-      "host_url":"https://sow.pc"
+      "host_url":"https://fsys.pc"
    },
    "fs":{
       "read_file":"function read_file() { [native code] }",

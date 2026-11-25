@@ -1,13 +1,30 @@
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 #	include "t_async.h"
 #	include <thread> 
 #	include <sstream>
-void sow_web_jsx::async_callback(async_func_arg* arg) {
+void fsys_web_jsx::async_callback(async_func_arg* arg) {
 	v8::Isolate*			isolate = v8::Isolate::GetCurrent();
 	v8::Locker				locker(isolate);
 	v8::HandleScope			handleScope(isolate);
@@ -41,7 +58,7 @@ void sow_web_jsx::async_callback(async_func_arg* arg) {
 	v8::Unlocker			unlocker(isolate);
 	isolate->Exit();
 }
-int sow_web_jsx::async_thread(v8::Isolate* isolate, v8::Local<v8::Array> func_array) {
+int fsys_web_jsx::async_thread(v8::Isolate* isolate, v8::Local<v8::Array> func_array) {
 	v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
 	uint32_t l = func_array->Length();
 	int total_thread = 0;
@@ -58,7 +75,7 @@ int sow_web_jsx::async_thread(v8::Isolate* isolate, v8::Local<v8::Array> func_ar
 	return total_thread;
 }
 
-int sow_web_jsx::set_time_out(v8::Isolate* isolate, acync_cb func, async_func_arg* args, uint64_t interval) {
+int fsys_web_jsx::set_time_out(v8::Isolate* isolate, acync_cb func, async_func_arg* args, uint64_t interval) {
 	uv_timer_t* timer_req = (uv_timer_t*)malloc(sizeof(uv_timer_t));
 	ASSERT(timer_req != NULL);
 	async__context* context = new async__context();
@@ -75,7 +92,7 @@ int sow_web_jsx::set_time_out(v8::Isolate* isolate, acync_cb func, async_func_ar
 	}, interval, 0);
 	/*[/Simulate the setTimeout in JavaScript]*/
 }
-int sow_web_jsx::set_interval(v8::Isolate* isolate, acync_cb func, async_func_arg* args, uint64_t interval) {
+int fsys_web_jsx::set_interval(v8::Isolate* isolate, acync_cb func, async_func_arg* args, uint64_t interval) {
 	uv_timer_t* timer_req = (uv_timer_t*)malloc(sizeof(uv_timer_t));
 	ASSERT(timer_req != NULL);
 	async__context* context = new async__context();
@@ -92,7 +109,7 @@ int sow_web_jsx::set_interval(v8::Isolate* isolate, acync_cb func, async_func_ar
 	}, 0, interval);
 	/*[/Simulate the setTimeout in JavaScript]*/
 }
-int sow_web_jsx::acync_init(v8::Isolate* isolate, acync_cb func, async_func_arg* args) {
+int fsys_web_jsx::acync_init(v8::Isolate* isolate, acync_cb func, async_func_arg* args) {
 	async__context* context = new async__context();
 	context->func = func;
 	context->args = args;

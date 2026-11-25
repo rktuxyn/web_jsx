@@ -1,15 +1,32 @@
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 //1:17 PM 1/20/2019
 #	include "template_marger.h"
 #	include "web_jsx_global.h"
 #	include "wjsx_env.h"
 #	include "std_wrapper.hpp"
-using namespace sow_web_jsx;
+using namespace fsys_web_jsx;
 int parse_placeholder_node(
 	std::list<std::string>&ml, std::string& body, 
 	std::string& full_body, std::regex&id_regx, 
@@ -52,7 +69,7 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& vec) {
 	}
 	return os;
 };*/
-int sow_web_jsx::template_marger::implimant_attachment(
+int fsys_web_jsx::template_marger::implimant_attachment(
 	template_result& tr, 
 	const char* root_dir,
 	std::string&html_body
@@ -110,7 +127,7 @@ _SUCCESS:
 	_free_obj(error_msg);
 	return 1;
 }
-int sow_web_jsx::template_marger::marge_template(
+int fsys_web_jsx::template_marger::marge_template(
 	template_result& tr, 
 	std::vector<std::string>& templates,
 	std::string&html_body,

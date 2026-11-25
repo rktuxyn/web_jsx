@@ -1,9 +1,26 @@
 //2:32 AM 11/27/2018
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 #	include "pdf_generator.h"
 #	include <web_jsx/std_wrapper.hpp>
@@ -97,7 +114,7 @@ void pdf_ext::pdf_generator::prepare_default_settings() {
 		{ "web.enableIntelligentShrinking", "true" }, { "web.minimumFontSize", "12" },
 		{ "web.printMediaType", "true" }, { "header.fontSize", "8" }, { "header.fontName", "Times New Roman" },
 		{ "header.left", "[date]" }, { "header.line", "false" }, { "header.spacing", "0" }, { "footer.fontSize", "8" },
-		{ "footer.left", "Powered by @ https://safeonline.world" }, { "footer.right", "Page [page] of [topage]" },
+		{ "footer.left", "Powered by @ https://fsys.tech" }, { "footer.right", "Page [page] of [topage]" },
 		{ "footer.line", "false" }, { "footer.spacing", "0" }
 	};
 }
@@ -112,7 +129,7 @@ int pdf_ext::pdf_generator::init(int use_graphics) {
 #if defined(FAST_CGI_APP)
 	if (_store_resource == FALSE) {
 		_store_resource = TRUE;
-		sow_web_jsx::register_resource(on_resource_free);
+		fsys_web_jsx::register_resource(on_resource_free);
 	}
 #endif//FAST_CGI_APP
 	_wgs = wkhtmltopdf_create_global_settings();

@@ -13,7 +13,7 @@
 #	define WJSX_API(type) type
 #endif//!WJSX_API
 
-namespace sow_web_jsx {
+namespace fsys_web_jsx {
 	namespace base64 {
 		WJSX_API(std::string) to_encode_str(unsigned char const* bytes_to_encode, unsigned int in_len);
 		WJSX_API(std::string) to_decode_str(std::string const& encoded_string);

@@ -1,13 +1,30 @@
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 #	include "n_help.h"
 #	include "web_jsx_global.h"
 #	include "std_wrapper.hpp"
-using namespace sow_web_jsx;
+using namespace fsys_web_jsx;
 
 void n_help::add_http_status(std::vector<std::string>&http_status, std::string&values) {
 	if (!http_status.empty()) {
@@ -148,7 +165,7 @@ void n_help::v8_object_loop(v8::Isolate* isolate, const v8::Local<v8::Object>v8_
 #define H_PROCESS_BY "X-Process-By"
 #define H_PROCESS_BY_VAL "WebJsx"
 #define H_POWERED_BY "X-Powered-By"
-#define H_POWERED_BY_VAL "safeonline.world"
+#define H_POWERED_BY_VAL "fsys.tech"
 //void  to_upper_case(std::string& str) {
 //	std::transform(str.begin(), str.end(), str.begin(), ::toupper);
 //}
@@ -231,7 +248,7 @@ void n_help::write_header(wjsx_env&wj_env) {
 	return;
 }
 //https://stackoverflow.com/questions/3381614/c-convert-string-to-hexadecimal-and-vice-versa
-void sow_web_jsx::string_to_hex(const std::string& input, std::string& output){
+void fsys_web_jsx::string_to_hex(const std::string& input, std::string& output){
 	static const char* const lut = "0123456789ABCDEF";
 	size_t len = input.length();
 	output.reserve(2 * len);
@@ -242,7 +259,7 @@ void sow_web_jsx::string_to_hex(const std::string& input, std::string& output){
 	}
 	return;
 }
-void sow_web_jsx::hex_to_string(const std::string& input, std::string& output) {
+void fsys_web_jsx::hex_to_string(const std::string& input, std::string& output) {
 	static const char* const lut = "0123456789ABCDEF";
 	size_t len = input.length();
 	if (len & 1) throw std::invalid_argument("odd length");

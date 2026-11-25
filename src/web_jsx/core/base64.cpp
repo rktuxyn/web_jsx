@@ -2,7 +2,7 @@
    base64.cpp and base64.h
    base64 encoding and decoding with C++.
    Version: 1.01.00
-   Copyright (C) 2004-2017 René Nyffenegger
+   Copyright (C) 2004-2017 Renï¿½ Nyffenegger
    This source code is provided 'as-is', without any express or implied
    warranty. In no event will the author be held liable for any damages
    arising from the use of this software.
@@ -16,7 +16,7 @@
    2. Altered source versions must be plainly marked as such, and must not be
 	  misrepresented as being the original source code.
    3. This notice may not be removed or altered from any source distribution.
-   René Nyffenegger rene.nyffenegger@adp-gmbh.ch
+   Renï¿½ Nyffenegger rene.nyffenegger@adp-gmbh.ch
 */
 //2:17 PM 1/3/2020
 #	include "base64.h"
@@ -79,7 +79,7 @@ unsigned char b64_lookup(unsigned char c) {
 	return 255;
 }
 
-namespace sow_web_jsx {
+namespace fsys_web_jsx {
 	std::string base64::to_encode_str(unsigned char const* bytes_to_encode, unsigned int in_len) {
 		std::string ret;
 		int i = 0;
@@ -155,7 +155,7 @@ namespace sow_web_jsx {
 		return ret;
 	}
 	/*
-	Copyright © 2004-2017 by René Nyffenegger
+	Copyright ï¿½ 2004-2017 by Renï¿½ Nyffenegger
 
 	This source code is provided 'as-is', without any express or implied
 	warranty. In no event will the author be held liable for any damages

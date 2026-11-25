@@ -1,8 +1,25 @@
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 //9:11 PM 11/18/2018
 #	include "util.h"
@@ -45,11 +62,11 @@ void print_info() {
 	std::cout << "Supported Web Server IIS, Apache & Nginx\r\n";
 	std::cout << "Extension-> .jsx|.wjsx (Mixed handler (javascript & html))\r\n";
 	std::cout << "Extension-> .jsxh|.wjsxh|.js (Raw javascript handler)\r\n";
-	std::cout << "git:https://github.com/RKTUXYN/web_jsx\r\n";
+	std::cout << "git:https://github.com/fsystech/web_jsx\r\n";
 	std::cout << "Developed by Rajib Chy #https://github.com/rajibchy\r\n";
-	std::cout << "Powered by Safe Online World (SOW)\r\n";
-	std::cout << "Copyright @ https://www.safeonline.world 2018\r\n";
-	std::cout << "Read more about Web Jsx https://web_jsx.safeonline.world/\r\n";
+	std::cout << "Powered by FSys Tech Ltd.\r\n";
+	std::cout << "Copyright @ https://fsys.tech 2018\r\n";
+	std::cout << "Read more about Web Jsx https://fsys.tech/\r\n";
 	std::cout << "*******************************************************";
 }
 #else
@@ -107,11 +124,11 @@ void print_info() {
 	std::cout << "Extension-> .jsx|.wjsx (Mixed handler (javascript & html)) \r\n";
 	std::cout << "Extension-> .jsxh|.wjsxh|.js (Raw javascript handler)\r\n";
 	SetConsoleTextAttribute(hConsole, FOREGROUND_YELLOW);
-	std::cout << "git:https://github.com/rktuxyn/web_jsx" << "\r\n";
+	std::cout << "git:https://github.com/fystech/web_jsx" << "\r\n";
 	std::cout << "Developed by Rajib Chy #https://github.com/rajibchy\r\n";
-	std::cout << "Powered by Safe Online World Ltd. (SOW)\r\n";
-	std::cout << "Copyright @ https://www.safeonline.world 2019\r\n";
-	std::cout << "Read more about Web Jsx https://web_jsx.safeonline.world/\r\n";
+	std::cout << "Powered by FSys Tech Ltd.\r\n";
+	std::cout << "Copyright @ https://fsys.tech 2019\r\n";
+	std::cout << "Read more about Web Jsx https://fsys.tech/\r\n";
 	SetConsoleTextAttribute(hConsole, FOREGROUND_LIGHT_RED);
 	std::cout << "*******************************************************";
 	fflush(stdout);
@@ -320,7 +337,7 @@ void write_headert(
 ) {
 	wj_env << "Content-Type:" << ct << H_N_L;
 	wj_env << "Accept-Ranges:bytes" << H_N_L;
-	wj_env << "X-Powered-By:safeonline.world" << H_N_L;
+	wj_env << "X-Powered-By:fsys.tech" << H_N_L;
 	wj_env << "X-Process-By:web_jsx" << H_N_L;
 }
 void write_header(

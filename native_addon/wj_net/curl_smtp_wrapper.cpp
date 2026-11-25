@@ -1,8 +1,25 @@
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 //11:39 PM 2/12/2020
 #	include "curl_http_wrapper.h"
@@ -10,7 +27,7 @@
 #	include <web_jsx/v8_util.h>
 #	include "smtp_client.h"
 #	include "curl_smtp_wrapper.h"
-using namespace sow_web_jsx;
+using namespace fsys_web_jsx;
 
 V8_JS_METHOD(smtp_request) {
 	v8::Isolate* isolate = args.GetIsolate();
@@ -35,7 +52,7 @@ V8_JS_METHOD(smtp_request) {
 	else {
 		v8_val = config->Get(ctx, v8_str(isolate, "is_debug")).ToLocalChecked();
 		if (v8_val->IsBoolean()) {
-			smtp->read_debug_information(sow_web_jsx::to_boolean(isolate, v8_val));
+			smtp->read_debug_information(fsys_web_jsx::to_boolean(isolate, v8_val));
 		}
 		else {
 			smtp->read_debug_information(true);
@@ -73,21 +90,21 @@ V8_JS_METHOD(smtp_request) {
 	}
 	v8_val = config->Get(ctx, v8_str(isolate, "is_verify_ssl")).ToLocalChecked();
 	if (v8_val->IsBoolean()) {
-		smtp->verify_ssl(sow_web_jsx::to_boolean(isolate, v8_val));
+		smtp->verify_ssl(fsys_web_jsx::to_boolean(isolate, v8_val));
 	}
 	else {
 		smtp->verify_ssl(true);
 	}
 	v8_val = config->Get(ctx, v8_str(isolate, "is_verify_ssl_host")).ToLocalChecked();
 	if (v8_val->IsBoolean()) {
-		smtp->verify_ssl_host(sow_web_jsx::to_boolean(isolate, v8_val));
+		smtp->verify_ssl_host(fsys_web_jsx::to_boolean(isolate, v8_val));
 	}
 	else {
 		smtp->verify_ssl_host(true);
 	}
 	v8_val = config->Get(ctx, v8_str(isolate, "is_http_auth")).ToLocalChecked();
 	if (v8_val->IsBoolean()) {
-		smtp->http_auth(sow_web_jsx::to_boolean(isolate, v8_val));
+		smtp->http_auth(fsys_web_jsx::to_boolean(isolate, v8_val));
 	}
 	else {
 		smtp->http_auth(true);
@@ -168,7 +185,7 @@ V8_JS_METHOD(smtp_request) {
 	bool isHtml = false;
 	v8_val = config->Get(ctx, v8_str(isolate, "is_html")).ToLocalChecked();
 	if (!v8_val->IsNullOrUndefined() && v8_val->IsBoolean()) {
-		isHtml = sow_web_jsx::to_boolean(isolate, v8_val);
+		isHtml = fsys_web_jsx::to_boolean(isolate, v8_val);
 	}
 	v8_val = config->Get(ctx, v8_str(isolate, "body")).ToLocalChecked();
 	if (v8_val->IsNullOrUndefined() || !v8_val->IsString()) {

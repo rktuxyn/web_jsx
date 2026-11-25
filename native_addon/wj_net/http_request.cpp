@@ -1,9 +1,26 @@
 //5:40 AM 12/2/2018
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 //Read more https://curl.haxx.se/libcurl/c/https.html
 #	include "http_request.h"
@@ -61,7 +78,7 @@ void http_request::verify_ssl(bool verify) {
 	*/
 	curl_easy_setopt(_curl, CURLOPT_SSL_VERIFYPEER, verify);
 
-	curl_easy_setopt(_curl, CURLOPT_SSL_CTX_FUNCTION, *sow_web_jsx::ssl_ctx_callback);
+	curl_easy_setopt(_curl, CURLOPT_SSL_CTX_FUNCTION, *fsys_web_jsx::ssl_ctx_callback);
 }
 void http_request::verify_ssl_host(bool verify) {
 	/*
@@ -77,7 +94,7 @@ void http_request::read_debug_information(bool isDebug) {
 	curl_easy_setopt(_curl, CURLOPT_VERBOSE, isDebug);
 	if (isDebug == true) {
 		/* if CURLOPT_VERBOSE is enabled then CURLOPT_DEBUGFUNCTION will be work*/
-		curl_easy_setopt(_curl, CURLOPT_DEBUGFUNCTION, sow_web_jsx::debug_log);
+		curl_easy_setopt(_curl, CURLOPT_DEBUGFUNCTION, fsys_web_jsx::debug_log);
 	}
 }
 int http_request::send_request(std::string & response_header, std::string &response_body) {

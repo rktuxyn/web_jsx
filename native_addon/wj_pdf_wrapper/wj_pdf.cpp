@@ -1,8 +1,25 @@
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 #	include "wj_pdf.h"
 #	include <web_jsx/wjsx_env.h>
@@ -10,7 +27,7 @@
 #	include <web_jsx/v8_util.h>
 #	include "pdf_generator.h"
 #	include <map>
-using namespace sow_web_jsx;
+using namespace fsys_web_jsx;
 void v8_object_loop(v8::Isolate* isolate, const v8::Local<v8::Object>v8_obj, std::map<std::string, std::string>& out_put) {
 	v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
 	v8::Local<v8::Array> property_names = v8_obj->GetOwnPropertyNames(ctx).ToLocalChecked();
@@ -59,7 +76,7 @@ V8_JS_METHOD(generate_pdf) {
 	wjsx_env* wj_env = ::unwrap_wjsx_env(isolate);
 	native_string utf8_path_str(isolate, v8_path_str);
 	std::string* abs_path = new std::string(wj_env->get_root_dir());
-	sow_web_jsx::get_server_map_path(utf8_path_str.c_str(), *abs_path);
+	fsys_web_jsx::get_server_map_path(utf8_path_str.c_str(), *abs_path);
 	v8::Local<v8::Value> v8_global_settings_str = config->Get(ctx, v8_str(isolate, "global_settings")).ToLocalChecked();
 	auto wgs_settings = new std::map<std::string, std::string>();
 	if (!v8_global_settings_str->IsNullOrUndefined() && v8_global_settings_str->IsObject()) {
@@ -125,7 +142,7 @@ V8_JS_METHOD(generate_pdf) {
 V8_JS_METHOD(generate_pdf_from_body) {
 	v8::Isolate* isolate = args.GetIsolate();
 	wjsx_env* wj_env = ::unwrap_wjsx_env(isolate);
-	if (sow_web_jsx::wrapper::is_http_status_ok(wj_env) == FALSE) {
+	if (fsys_web_jsx::wrapper::is_http_status_ok(wj_env) == FALSE) {
 		args.GetReturnValue().Set(v8::Number::New(isolate, -1));
 		return;
 	}
@@ -186,11 +203,11 @@ V8_JS_METHOD(generate_pdf_from_body) {
 		delete pdf_gen;
 		return;
 	}
-	sow_web_jsx::wrapper::add_header(wj_env, "wkhtmltopdf_version", pdf_gen->version);
+	fsys_web_jsx::wrapper::add_header(wj_env, "wkhtmltopdf_version", pdf_gen->version);
 	pdf_gen->dispose();
 	delete pdf_gen;
-	sow_web_jsx::wrapper::add_header(wj_env, "Accept-Ranges", "bytes");
-	sow_web_jsx::wrapper::add_header(wj_env, "Content-Type", "application/pdf");
+	fsys_web_jsx::wrapper::add_header(wj_env, "Accept-Ranges", "bytes");
+	fsys_web_jsx::wrapper::add_header(wj_env, "Content-Type", "application/pdf");
 	args.GetReturnValue().Set(v8::Number::New(isolate, rec));
 	return;
 }

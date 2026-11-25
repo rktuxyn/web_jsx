@@ -1,8 +1,25 @@
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 #	include "js_compiler.h"
 #	include <uv.h>
@@ -15,9 +32,9 @@
 //#if defined(WEB_JSX_MULTI_THREAD)
 //#	include <mutex>
 //#endif//!WEB_JSX_MULTI_THREAD
-using namespace sow_web_jsx;
-using namespace sow_web_jsx::wrapper;
-using namespace sow_web_jsx::js_compiler;
+using namespace fsys_web_jsx;
+using namespace fsys_web_jsx::wrapper;
+using namespace fsys_web_jsx::js_compiler;
 enum  script_cache_type{
 	kAfterExecute = 1,
 	kEager = 2
@@ -103,8 +120,8 @@ int v8_compaile_java_script(
 		v8::HandleScope						handle_scope(isolate);
 		v8::Local<v8::Context>				v8_ctx;
 		v8::Local<v8::ObjectTemplate>		ctx_object;
-		ctx_object = sow_web_jsx::wrapper::get_context(isolate, ctx);
-		wjsx_assign_js_func(isolate, ctx_object, "runtime_compiler", sow_web_jsx::runtime_compiler);
+		ctx_object = fsys_web_jsx::wrapper::get_context(isolate, ctx);
+		wjsx_assign_js_func(isolate, ctx_object, "runtime_compiler", fsys_web_jsx::runtime_compiler);
 		wjsx_assign_js_func(isolate, ctx_object, "__implimant_native_module", ::implimant_native_module);
 		v8_ctx								= v8::Context::New(isolate, nullptr, ctx_object);
 		v8::Context::Scope					context_scope(v8_ctx);
@@ -173,16 +190,16 @@ int v8_compaile_java_script(
 		v8::Local<v8::Context>				v8_ctx;
 		v8::Local<v8::ObjectTemplate>		ctx_object;
 		if (is_cli == TRUE) {
-			ctx_object = sow_web_jsx::wrapper::get_console_context(
+			ctx_object = fsys_web_jsx::wrapper::get_console_context(
 				arg->isolate, *(reinterpret_cast<std::map<std::string, std::string>*>(arg->ctx))
 			);
 		}
 		else {
-			ctx_object = sow_web_jsx::wrapper::get_context(
+			ctx_object = fsys_web_jsx::wrapper::get_context(
 				arg->isolate, *(reinterpret_cast<std::map<std::string, std::map<std::string, std::string>>*>(arg->ctx))
 			);
 		}
-		wjsx_assign_js_func(arg->isolate, ctx_object, "runtime_compiler", sow_web_jsx::runtime_compiler);
+		wjsx_assign_js_func(arg->isolate, ctx_object, "runtime_compiler", fsys_web_jsx::runtime_compiler);
 		wjsx_assign_js_func(arg->isolate, ctx_object, "__implimant_native_module", ::implimant_native_module);
 		v8_ctx = v8::Context::New(arg->isolate, nullptr, ctx_object);
 

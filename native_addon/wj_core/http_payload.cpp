@@ -1,8 +1,25 @@
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 //2:00 PM 12/24/2019
 #	include "http_payload.h"
@@ -17,7 +34,7 @@
 #if !defined(DATA_READ_CHUNK)
 #	define DATA_READ_CHUNK 8192
 #endif//!DATA_READ_CHUNK
-using namespace sow_web_jsx;
+using namespace fsys_web_jsx;
 /*[Help]*/
 class http_posted_file {
 public:
@@ -785,7 +802,7 @@ v8::Local<v8::Object> get_file_obj(v8::Isolate* isolate, http_posted_file* pf) {
 	}, v8::WeakCallbackType::kParameter);
 	return exports;
 }
-V8_JS_METHOD(sow_web_jsx::read_http_posted_file) {
+V8_JS_METHOD(fsys_web_jsx::read_http_posted_file) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsNumber() || args[0]->IsNullOrUndefined()) {
 		throw_js_type_error(isolate, "Contenent length required!!!");
@@ -968,7 +985,7 @@ V8_JS_METHOD(sow_web_jsx::read_http_posted_file) {
 	}
 	args.GetReturnValue().Set(localApp);
 }
-V8_JS_METHOD(sow_web_jsx::write_file_from_payload) {
+V8_JS_METHOD(fsys_web_jsx::write_file_from_payload) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsNumber() || args[0]->IsNullOrUndefined()) {
 		throw_js_type_error(isolate, "Contenent length required!!!");
@@ -1005,7 +1022,7 @@ V8_JS_METHOD(sow_web_jsx::write_file_from_payload) {
 	}
 	app->clear(); delete app; ctype.clear(); upload_dir.clear();
 }
-V8_JS_METHOD(sow_web_jsx::read_payload) {
+V8_JS_METHOD(fsys_web_jsx::read_payload) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsNumber() || args[0]->IsNullOrUndefined()) {
 		throw_js_type_error(isolate, "Contenent length required!!!");

@@ -2,7 +2,7 @@
 
 **web_jsx** *.wjsx & *.wjsxh **(Server-side Javascript)** FastCgi/Cgi (Runs with IIS, Apache, Nginx)<br/>
 
-==> Download ```web_jsx``` current version from [here](https://github.com/safeonlineworld/web_jsx/releases).<br/>
+==> Download ```web_jsx``` current version from [here](https://github.com/fsystech/web_jsx/releases).<br/>
 ==> Extract zip file to C drive.<br/>
 ==> Add to path environment variables (e.g. ```C:\web_jsx\```).<br/>
 ==> Bind ```web_jsx.exe``` with IIS/Apache/Nginx According to ```FastCgiModule```.<br/>

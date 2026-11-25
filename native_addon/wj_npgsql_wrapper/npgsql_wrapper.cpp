@@ -1,8 +1,25 @@
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 #	include "npgsql_wrapper.h"
 #	include <npgsql.h>
@@ -12,7 +29,7 @@
 #	include <web_jsx/web_jsx.h>
 #	include <web_jsx/v8_util.h>
 //11:33 PM 12/13/2019
-using namespace sow_web_jsx;
+using namespace fsys_web_jsx;
 template<class _pg_connection>
 int create_pgsql_connection(v8::Isolate* isolate, _pg_connection* pgsql, const char* conn) {
 	int rec = pgsql->connect(conn);
@@ -351,14 +368,14 @@ npgsql_query* _create_query(v8::Isolate* isolate, npgsql_connection* pg_con) {
 	return new npgsql_query(cpool);
 }
 npgsql_connection* get_conn_instance(const v8::FunctionCallbackInfo<v8::Value>& args) {
-	npgsql_connection* pg_conn = sow_web_jsx::unwrap<npgsql_connection>(args);
+	npgsql_connection* pg_conn = fsys_web_jsx::unwrap<npgsql_connection>(args);
 	if (pg_conn == NULL) {
 		throw_js_error(args.GetIsolate(), "npgsql_connection object disposed...");
 		return NULL;
 	}
 	return pg_conn;
 }
-void sow_web_jsx::npgsql_export(v8::Isolate* isolate, v8::Handle<v8::Object> target) {
+void fsys_web_jsx::npgsql_export(v8::Isolate* isolate, v8::Handle<v8::Object> target) {
 	v8::Local<v8::FunctionTemplate> appTemplate = v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* iso = args.GetIsolate();
 		if (!args.IsConstructCall()) {

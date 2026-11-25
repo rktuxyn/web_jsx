@@ -1,8 +1,25 @@
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 #	include "script_tag_parser.h"
 #	include "template_marger.h"
@@ -11,7 +28,7 @@
 #	include "std_wrapper.hpp"
 #	include <sstream>
 #	include "js_polyfill.h"
-using namespace sow_web_jsx;
+using namespace fsys_web_jsx;
 
 typedef enum {
 	sts,
@@ -184,7 +201,7 @@ int script_tag_parser::parse(template_result & tr, std::string&html_body) {
 	info->is_tag_start = false;
 	info->is_tag_end = true;
 	std::stringstream js_stream(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
-	sow_web_jsx::js_write_header(js_stream);
+	fsys_web_jsx::js_write_header(js_stream);
 	std::sregex_token_iterator iter(html_body.begin(), html_body.end(), *rgx, -1);
 	for (std::sregex_token_iterator end; iter != end; ++iter) {
 		info->tag_found = false;
@@ -228,7 +245,7 @@ int script_tag_parser::parse(template_result & tr, std::string&html_body) {
 		html_body = std::regex_replace (html_body, std::regex("\\n\\s*\\n"), "\n");
 		html_body = std::regex_replace (html_body, std::regex("\\r\\n\\s*\\r\\n"), "\n");
 	}
-	//sow_web_jsx::js_write_footer(html_body);
+	//fsys_web_jsx::js_write_footer(html_body);
 
 	return 1;
 };
