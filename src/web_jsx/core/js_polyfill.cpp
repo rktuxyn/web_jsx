@@ -1,8 +1,25 @@
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 #include "js_polyfill.h"
 #if !defined(FALSE)
@@ -11,7 +28,7 @@
 #if !defined(TRUE)
 #	define TRUE                1
 #endif//!FALSE
-void sow_web_jsx::create_wj_core_extend_script(std::stringstream& js_stream, int is_cli) {
+void fsys_web_jsx::create_wj_core_extend_script(std::stringstream& js_stream, int is_cli) {
 	js_stream << "var __extend = function( dest, source, is_first ) {\n";
 	js_stream << "	if ( typeof ( dest ) !== \"object\" && ( typeof( is_first ) === \"boolean\" && is_first === true ) ) {\n";
 	js_stream << "		dest = this;\n";
@@ -49,7 +66,7 @@ void sow_web_jsx::create_wj_core_extend_script(std::stringstream& js_stream, int
 void prepare_native_module(std::stringstream& js_stream, int is_cli = TRUE) {
 	js_stream << "__implimant_native_module( ); delete this[\"__implimant_native_module\"];\n";//Impliment native module according to module.cfg
 	js_stream << "if ( typeof( this[\"__wj_core\"] ) !== \"object\" ) throw new Error(\"Please add wj_core.dll\");\n";
-	sow_web_jsx::create_wj_core_extend_script(js_stream, is_cli);
+	fsys_web_jsx::create_wj_core_extend_script(js_stream, is_cli);
 	if (is_cli == FALSE) {
 		js_stream << "__extend( context, __wj_core.context, true );\n";
 	}
@@ -78,7 +95,7 @@ void prepare_native_module(std::stringstream& js_stream, int is_cli = TRUE) {
 
 	}
 }
-void sow_web_jsx::js_write_header(std::stringstream& js_stream) {
+void fsys_web_jsx::js_write_header(std::stringstream& js_stream) {
 	js_stream << "/*__web_jsx_script__*/\n";
 	js_stream << "if( typeof( context ) !== \"object\" ) throw new Error(\"context didn't initialized yet.\");\n";
 	::prepare_native_module(js_stream, FALSE);
@@ -107,7 +124,7 @@ void sow_web_jsx::js_write_header(std::stringstream& js_stream) {
 	js_stream << "context.response.header(\"Content-Type\", \"text/html; charset=utf-8\");\n";
 	js_stream << "context.response.header(\"Connection\", \"Keep-Alive\");\n";
 }
-void sow_web_jsx::js_write_console_header(std::stringstream& js_stream) {
+void fsys_web_jsx::js_write_console_header(std::stringstream& js_stream) {
 	js_stream << "/*__web_jsx_script__*/\n";
 	::prepare_native_module(js_stream);
 	js_stream << "this.__print = function ( str ) { if ( env.is_interactive === false ) return; print( String.format( str, Array.prototype.slice.call( arguments, 1 ) ) ); return; };\n";

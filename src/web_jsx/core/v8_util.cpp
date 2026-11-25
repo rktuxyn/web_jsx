@@ -1,8 +1,25 @@
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 //6:24 PM 1/22/2019
 #	include "v8_util.h"
@@ -10,8 +27,8 @@
 #	include "template_info.h"
 #	include "std_wrapper.hpp"
 #	include "wjsx_env.h"
-namespace sow_web_jsx {
-	bool sow_web_jsx::to_boolean(v8::Isolate* isolate, v8::Local<v8::Value> value) {
+namespace fsys_web_jsx {
+	bool fsys_web_jsx::to_boolean(v8::Isolate* isolate, v8::Local<v8::Value> value) {
 #if V8_MAJOR_VERSION < 7 || (V8_MAJOR_VERSION == 7 && V8_MINOR_VERSION == 0)
 		/* Old */
 		return value->BooleanValue(isolate->GetCurrentContext()).ToChecked();
@@ -19,16 +36,16 @@ namespace sow_web_jsx {
 		return value->BooleanValue(isolate);
 #endif
 	}
-	void sow_web_jsx::garbage_collect(v8::Isolate* isolate) {
+	void fsys_web_jsx::garbage_collect(v8::Isolate* isolate) {
 		//isolate->RequestGarbageCollectionForTesting(v8::Isolate::GarbageCollectionType::kFullGarbageCollection);
 		isolate->LowMemoryNotification();
 		//isolate->IdleNotificationDeadline(0);
 	}
-	const char* sow_web_jsx::_toCharStr(const v8::String::Utf8Value& value) {
+	const char* fsys_web_jsx::_toCharStr(const v8::String::Utf8Value& value) {
 		if (value.length() <= 0)return "";
 		return *value ? *value : "<string conversion failed>";
 	}
-	const char* sow_web_jsx::to_char_str(v8::Isolate* isolate, v8::Local<v8::Value> x) {
+	const char* fsys_web_jsx::to_char_str(v8::Isolate* isolate, v8::Local<v8::Value> x) {
 		v8::String::Utf8Value str(isolate, x);
 		return _toCharStr(str);
 	}
@@ -59,7 +76,7 @@ namespace sow_web_jsx {
 	}
 	// The callback that is invoked by v8 whenever the JavaScript 'read_line'
 	// function is called. Reads a string from standard input and returns.
-	V8_JS_METHOD(sow_web_jsx::read_line) {
+	V8_JS_METHOD(fsys_web_jsx::read_line) {
 		if (args.Length() > 0) {
 			args.GetIsolate()->ThrowException(v8_str(args.GetIsolate(), "Unexpected arguments"));
 			return;
@@ -76,7 +93,7 @@ namespace sow_web_jsx {
 		error_str.append(stackTrace.c_str());
 		stackTrace.clear();
 	}
-	void sow_web_jsx::set__exception(
+	void fsys_web_jsx::set__exception(
 		v8::Isolate* isolate, v8::TryCatch* try_catch, 
 		template_result& tr
 	) {
@@ -92,7 +109,7 @@ namespace sow_web_jsx {
 
 	}
 	
-	void sow_web_jsx::set__exception(
+	void fsys_web_jsx::set__exception(
 		v8::Isolate* isolate, 
 		v8::TryCatch* try_catch, 
 		std::string&error_str
@@ -114,7 +131,7 @@ namespace sow_web_jsx {
 		}*/
 		return;
 	}
-	void sow_web_jsx::get_server_map_path(const char* req_path, std::string& output) {
+	void fsys_web_jsx::get_server_map_path(const char* req_path, std::string& output) {
 		output.append(req_path);
 		output = std::regex_replace(output, std::regex("(?:/)"), "\\");
 	}
@@ -144,7 +161,7 @@ namespace sow_web_jsx {
 		return val->Int32Value(ctx).FromMaybe(0);
 	}
 
-	v8::Local<v8::String> sow_web_jsx::concat_msg(
+	v8::Local<v8::String> fsys_web_jsx::concat_msg(
 		v8::Isolate* isolate, 
 		const char* a, const char* b
 	) {
@@ -165,7 +182,7 @@ namespace sow_web_jsx {
 		}
 	}
 #endif//!WEB_JSX_MULTI_THREAD
-	void sow_web_jsx::get_script_origin(const char* path_info, std::string& origin){
+	void fsys_web_jsx::get_script_origin(const char* path_info, std::string& origin){
 #if defined(WEB_JSX_MULTI_THREAD)
 		replace_all(origin, "\\", "_");
 #else
@@ -174,7 +191,7 @@ namespace sow_web_jsx {
 		str.swap(origin); delete regx;
 #endif//!WEB_JSX_MULTI_THREAD
 	}
-	std::unique_ptr<v8::ScriptCompiler::CachedData> sow_web_jsx::read_script_cached(
+	std::unique_ptr<v8::ScriptCompiler::CachedData> fsys_web_jsx::read_script_cached(
 		const char* script_path,
 		const char* cscript_path,
 		int check_file_state
@@ -203,7 +220,7 @@ namespace sow_web_jsx {
 		_free_obj(dest);
 		return cached_data;
 	}
-	int sow_web_jsx::create_script_cached_data(v8::MaybeLocal<v8::UnboundScript> unbound_script, const char* cscript_path){
+	int fsys_web_jsx::create_script_cached_data(v8::MaybeLocal<v8::UnboundScript> unbound_script, const char* cscript_path){
 		if (unbound_script.IsEmpty())return FALSE;
 		v8::ScriptCompiler::CachedData* cdata = v8::ScriptCompiler::CreateCodeCache(unbound_script.ToLocalChecked());
 		int ret = ::write_file(cscript_path, reinterpret_cast<const char*>(cdata->data), cdata->length);
@@ -217,7 +234,7 @@ namespace sow_web_jsx {
 		delete cdata;
 		return ret;
 	}
-	v8::Handle<v8::Object> sow_web_jsx::native_write_filei(
+	v8::Handle<v8::Object> fsys_web_jsx::native_write_filei(
 		v8::Isolate* isolate, 
 		const char* abs_path, 
 		const char* buffer
@@ -232,7 +249,7 @@ namespace sow_web_jsx {
 				ctx, v8_str(isolate, "staus_code"), v8::Number::New(isolate, -1)
 			);
 			v8_result->Set(
-				ctx, v8_str(isolate, "message"), sow_web_jsx::concat_msg(isolate, "Unable to create file!!! Server absolute path==>", abs_path)
+				ctx, v8_str(isolate, "message"), fsys_web_jsx::concat_msg(isolate, "Unable to create file!!! Server absolute path==>", abs_path)
 			);
 			return v8_result;
 		}
@@ -244,7 +261,7 @@ namespace sow_web_jsx {
 				ctx, v8_str(isolate, "staus_code"), v8::Number::New(isolate, -1)
 			);
 			v8_result->Set(
-				ctx, v8_str(isolate, "message"), sow_web_jsx::concat_msg(isolate, "Unable to create file!!! Server absolute path==>", abs_path)
+				ctx, v8_str(isolate, "message"), fsys_web_jsx::concat_msg(isolate, "Unable to create file!!! Server absolute path==>", abs_path)
 			);
 			return v8_result;
 		}

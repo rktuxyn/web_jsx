@@ -1,8 +1,25 @@
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 //6:14 PM 2/12/2020
 #	include "zlib_w.h"
@@ -10,7 +27,7 @@
 #	include <web_jsx/v8_util.h>
 #	include <web_jsx/wjsx_env.h>
 #	include "zgzip.h"
-using namespace sow_web_jsx;
+using namespace fsys_web_jsx;
 void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target){
 	v8::Handle<v8::Object> gzip_object = v8::Object::New(isolate);
 	v8::Local<v8::Context>context = isolate->GetCurrentContext();
@@ -184,7 +201,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 			delete deflate;
 			_WFLUSH();
 			args.Holder()->SetAlignedPointerInInternalField(0, nullptr);
-			sow_web_jsx::wrapper::clear_cache(*wj_env);
+			fsys_web_jsx::wrapper::clear_cache(*wj_env);
 		});
 		//[/Out Stream std::cout]
 		//[File Write]
@@ -314,7 +331,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 		});
 		set_prototype(isolate, prototype, "fs_close_file", [](js_method_args) {
 			v8::Isolate* isolate = args.GetIsolate();
-			gzip::gzip_deflate* deflate = sow_web_jsx::unwrap<gzip::gzip_deflate>(args);
+			gzip::gzip_deflate* deflate = fsys_web_jsx::unwrap<gzip::gzip_deflate>(args);
 			deflate->f_close_file();
 		});
 		//[/File Write]
@@ -344,7 +361,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 			v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
 			int window_bits = args[0]->Int32Value(ctx).FromMaybe(0);
 			gzip::gzip_inflate* inflate = new gzip::gzip_inflate(window_bits);
-			//if (!sow_web_jsx::wrapper::set_binary_mode_in()) {/*[Nothing to do when failed...]*/ }
+			//if (!fsys_web_jsx::wrapper::set_binary_mode_in()) {/*[Nothing to do when failed...]*/ }
 			if (inflate->has_error() == TRUE) {
 				throw_js_error(isolate, inflate->get_last_error());
 				delete inflate;
@@ -558,7 +575,7 @@ void gzip_compressor_export(v8::Isolate* isolate, v8::Handle<v8::Object> target)
 		});
 		set_prototype(isolate, inflate_prototype, "fs_flush", [](js_method_args) {
 			v8::Isolate* isolate = args.GetIsolate();
-			gzip::gzip_inflate* inflate = sow_web_jsx::unwrap<gzip::gzip_inflate>(args);
+			gzip::gzip_inflate* inflate = fsys_web_jsx::unwrap<gzip::gzip_inflate>(args);
 			int ret = inflate->f_flush();
 			if (ret == FALSE) {
 				throw_js_error(isolate, "Stream already flashed...");

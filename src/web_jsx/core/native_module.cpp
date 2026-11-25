@@ -1,8 +1,25 @@
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 #pragma warning(disable : 4996)
 #	include "native_module.h"
@@ -32,7 +49,7 @@ void js_throw_error(v8::Isolate* isolate, const char* reason, const char* module
 	throw_js_error(isolate, error->c_str());
 	_free_obj(error);
 }
-typeof_module sow_web_jsx::get_module_type(const std::string& path_str) {
+typeof_module fsys_web_jsx::get_module_type(const std::string& path_str) {
 	size_t found = path_str.find_last_of(".");
 	if (found == std::string::npos) return NO_EXT;
 	std::string str_extension = path_str.substr(found + 1);
@@ -42,7 +59,7 @@ typeof_module sow_web_jsx::get_module_type(const std::string& path_str) {
 	return _UNKNOWN;
 }
 
-void sow_web_jsx::require_native(
+void fsys_web_jsx::require_native(
 	const v8::FunctionCallbackInfo<v8::Value>& args,
 	const char* abs_path,
 	const char* app_dir,
@@ -80,7 +97,7 @@ void sow_web_jsx::require_native(
 	wj_module = dlopen(path, RTLD_NOW);
 #else
 	SetDllDirectoryA(app_dir);
-	wchar_t* wpath = sow_web_jsx::ccr2ws(path);
+	wchar_t* wpath = fsys_web_jsx::ccr2ws(path);
 	wj_module = LoadLibraryEx(wpath, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
 	delete[]wpath;
 #endif//!_WIN32||_WIN64
@@ -109,7 +126,7 @@ void sow_web_jsx::require_native(
 	return;
 }
 
-void* sow_web_jsx::load_native_module(
+void* fsys_web_jsx::load_native_module(
 	v8::Isolate* isolate,
 	v8::Handle<v8::Object> target, 
 	const char* path,
@@ -120,7 +137,7 @@ void* sow_web_jsx::load_native_module(
 	wj_module = dlopen(path, RTLD_NOW);
 #else
 	SetDllDirectoryA(app_dir);
-	wchar_t* wpath = sow_web_jsx::ccr2ws(path);
+	wchar_t* wpath = fsys_web_jsx::ccr2ws(path);
 	wj_module = LoadLibraryEx(wpath, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
 	delete[]wpath;
 #endif//!_WIN32||_WIN64

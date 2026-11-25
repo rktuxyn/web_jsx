@@ -67,11 +67,11 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
-            VALUE "CompanyName", "Safe Online World Ltd. (SOW)"
+            VALUE "CompanyName", "FSys Tech Ltd."
             VALUE "FileDescription", "Global functionality of Web Jsx - Server-side Javascript (64 bit) run with IIS, Apache & Nginx"
             VALUE "FileVersion", "1.0.0.2"
             VALUE "InternalName", "wj_core.dll"
-            VALUE "LegalCopyright", "Copyright ©  2018 Safe Online World Ltd. (SOW)"
+            VALUE "LegalCopyright", "Copyright ï¿½  2018 FSys Tech Ltd."
             VALUE "OriginalFilename", "wj_core.dll"
             VALUE "ProductName", "Web Jsx (Server-side Javascript Extension Handler)"
             VALUE "ProductVersion", "1.0.0.2"

@@ -1,8 +1,25 @@
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 #	include "mysql_wrapper.h"
 #	include <my_sql.h>
@@ -23,7 +40,7 @@ void json_array_stringify_s(std::vector<char*>& json_array_obj, std::string& jso
 	delete ss;
 	return;
 }
-void sow_web_jsx::mysql__export(v8::Isolate* isolate, v8::Handle<v8::Object> target) {
+void fsys_web_jsx::mysql__export(v8::Isolate* isolate, v8::Handle<v8::Object> target) {
 	v8::Local<v8::FunctionTemplate> appTemplate = v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* iso = args.GetIsolate();
 		if (!args.IsConstructCall()) {
@@ -80,7 +97,7 @@ void sow_web_jsx::mysql__export(v8::Isolate* isolate, v8::Handle<v8::Object> tar
 				iso->ThrowException(v8::Exception::TypeError(v8_str(iso, "Database port number required!!!")));
 				return;
 			}
-			my_sql* sql = sow_web_jsx::unwrap<my_sql>(args);
+			my_sql* sql = fsys_web_jsx::unwrap<my_sql>(args);
 			mysqlw::connection_details* con = new mysqlw::connection_details();
 			con->database = new std::string(database.c_str());// "test";
 			con->host = new std::string(host.c_str());//"localhost";
@@ -114,7 +131,7 @@ void sow_web_jsx::mysql__export(v8::Isolate* isolate, v8::Handle<v8::Object> tar
 			return;
 		}
 		native_string database_name(iso, args[0]);
-		my_sql* sql = sow_web_jsx::unwrap<my_sql>(args);
+		my_sql* sql = fsys_web_jsx::unwrap<my_sql>(args);
 		if (sql->switch_database(database_name.c_str()) < 0) {
 			database_name.clear();
 			iso->ThrowException(v8::Exception::Error(v8_str(iso, sql->get_last_error())));
@@ -125,7 +142,7 @@ void sow_web_jsx::mysql__export(v8::Isolate* isolate, v8::Handle<v8::Object> tar
 	});
 	set_prototype(isolate, prototype, "re_connect", [](js_method_args) {
 		v8::Isolate* iso = args.GetIsolate();
-		my_sql* sql = sow_web_jsx::unwrap<my_sql>(args);
+		my_sql* sql = fsys_web_jsx::unwrap<my_sql>(args);
 		if (sql->connect() == connection_state::CLOSED) {
 			iso->ThrowException(v8::Exception::Error(v8_str(iso, sql->get_last_error())));
 			return;
@@ -134,7 +151,7 @@ void sow_web_jsx::mysql__export(v8::Isolate* isolate, v8::Handle<v8::Object> tar
 	});
 	set_prototype(isolate, prototype, "close_all_connection",[](js_method_args) {
 		v8::Isolate* iso = args.GetIsolate();
-		my_sql* sql = sow_web_jsx::unwrap<my_sql>(args);
+		my_sql* sql = fsys_web_jsx::unwrap<my_sql>(args);
 		sql->close_all_connection();
 		args.GetReturnValue().Set(args.Holder());
 	});
@@ -145,7 +162,7 @@ void sow_web_jsx::mysql__export(v8::Isolate* isolate, v8::Handle<v8::Object> tar
 			return;
 		}
 		native_string query_str(iso, args[0]);
-		my_sql* sql = sow_web_jsx::unwrap<my_sql>(args);
+		my_sql* sql = fsys_web_jsx::unwrap<my_sql>(args);
 		const char* result = sql->execute(query_str.c_str());
 		query_str.clear();
 		if (sql->has_error()) {
@@ -160,7 +177,7 @@ void sow_web_jsx::mysql__export(v8::Isolate* isolate, v8::Handle<v8::Object> tar
 		}
 	});
 	set_prototype(isolate, prototype, "execute_query", [](js_method_args) {
-		my_sql* sql = sow_web_jsx::unwrap<my_sql>(args);
+		my_sql* sql = fsys_web_jsx::unwrap<my_sql>(args);
 		v8::Isolate* iso = args.GetIsolate();
 		if (sql->state() == connection_state::CLOSED) {
 			iso->ThrowException(v8::Exception::Error(
@@ -204,7 +221,7 @@ void sow_web_jsx::mysql__export(v8::Isolate* isolate, v8::Handle<v8::Object> tar
 		});
 	set_prototype(isolate, prototype, "clear", [](js_method_args) {
 		v8::Isolate* iso = args.GetIsolate();
-		my_sql* sql = sow_web_jsx::unwrap<my_sql>(args);
+		my_sql* sql = fsys_web_jsx::unwrap<my_sql>(args);
 		//v8::Isolate* iso = args.GetIsolate();
 		sql->exit_all();
 		/* Return this */

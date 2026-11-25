@@ -4,10 +4,10 @@
   "version": "0.0.1",
   "private": true,
   "bugs": {
-    "url": "https://github.com/RKTUXYN/web_jsx"
+    "url": "https://github.com/fsystech/web_jsx"
   },
   "dependencies": {
-    "sow.npgsql": "^0.0.1",
+    "npgsql": "^0.0.1",
     "curl": "^4.8.0",
     "v8": "^2.0.0",
     "zlib": "^1.1.7",
@@ -17,7 +17,7 @@
   "engines": {
     "iis": ">8.5"
   },
-  "homepage": "https://web_jsx.safeonline.world/",
+  "homepage": "https://fsys.tech/",
   "keywords": [
 		
   ],
@@ -25,6 +25,6 @@
   "main": "n/a",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/RKTUXYN/web_jsx"
+    "url": "git+https://github.com/fsystech/web_jsx"
   }
 }

@@ -1,15 +1,32 @@
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 //11:39 PM 2/12/2020
 #	include "curl_http_wrapper.h"
 #	include <web_jsx/web_jsx.h>
 #	include <web_jsx/v8_util.h>
 #	include "http_request.h"
-using namespace sow_web_jsx;
+using namespace fsys_web_jsx;
 V8_JS_METHOD(http_request) {
 	v8::Isolate* isolate = args.GetIsolate();
 	if (!args[0]->IsObject() || args[0]->IsNullOrUndefined()) {
@@ -45,7 +62,7 @@ V8_JS_METHOD(http_request) {
 	v8::Local<v8::Value> v8_follow_location = config->Get(ctx, v8_str(isolate, "follow_location")).ToLocalChecked();
 	bool follow_location = true;
 	if (v8_follow_location->IsBoolean()) {
-		follow_location = sow_web_jsx::to_boolean(isolate, v8_follow_location);
+		follow_location = fsys_web_jsx::to_boolean(isolate, v8_follow_location);
 	}
 	http_client::http_request* http = new http_client::http_request(*utf_url_str, follow_location);
 	v8_url_str.Clear();
@@ -88,7 +105,7 @@ V8_JS_METHOD(http_request) {
 	else {
 		v8::Local<v8::Value> v8_isDebug = config->Get(ctx, v8_str(isolate, "is_debug")).ToLocalChecked();
 		if (v8_isDebug->IsBoolean()) {
-			http->read_debug_information(sow_web_jsx::to_boolean(isolate, v8_isDebug));
+			http->read_debug_information(fsys_web_jsx::to_boolean(isolate, v8_isDebug));
 		}
 		else {
 			http->read_debug_information(true);
@@ -97,14 +114,14 @@ V8_JS_METHOD(http_request) {
 
 	v8::Local<v8::Value> v8_v_ssl = config->Get(ctx, v8_str(isolate, "is_verify_ssl")).ToLocalChecked();
 	if (v8_v_ssl->IsBoolean()) {
-		http->verify_ssl(sow_web_jsx::to_boolean(isolate, v8_v_ssl));
+		http->verify_ssl(fsys_web_jsx::to_boolean(isolate, v8_v_ssl));
 	}
 	else {
 		http->verify_ssl(true);
 	}
 	v8::Local<v8::Value> v8_v_ssl_host = config->Get(ctx, v8_str(isolate, "is_verify_ssl_host")).ToLocalChecked();
 	if (v8_v_ssl_host->IsBoolean()) {
-		http->verify_ssl_host(sow_web_jsx::to_boolean(isolate, v8_v_ssl_host));
+		http->verify_ssl_host(fsys_web_jsx::to_boolean(isolate, v8_v_ssl_host));
 	}
 	else {
 		http->verify_ssl_host(true);

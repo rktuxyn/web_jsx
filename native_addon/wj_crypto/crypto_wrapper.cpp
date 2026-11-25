@@ -1,15 +1,32 @@
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 //11:09 AM 2/13/2020
 #	include "crypto_wrapper.h"
 #	include <web_jsx/web_jsx.h>
 #	include <web_jsx/v8_util.h>
 #	include "crypto.h"
-using namespace sow_web_jsx;
+using namespace fsys_web_jsx;
 V8_JS_METHOD(generate_key_iv) {
 	v8::Isolate* isolate = args.GetIsolate();
 	std::string key, iv, error;
@@ -79,7 +96,7 @@ V8_JS_METHOD(encrypt_decrypt_file) {
 	wjsx_env* wj_env = ::unwrap_wjsx_env(isolate);
 	const char* root_dir = wj_env->get_root_dir();
 	std::string* source_path = new std::string(root_dir);
-	sow_web_jsx::get_server_map_path(utf_source_path.c_str(), *source_path);
+	fsys_web_jsx::get_server_map_path(utf_source_path.c_str(), *source_path);
 	if (__file_exists(source_path->c_str()) == false) {
 		_free_obj(source_path);
 		isolate->ThrowException(v8::Exception::TypeError(
@@ -88,7 +105,7 @@ V8_JS_METHOD(encrypt_decrypt_file) {
 	}
 	std::string* dest_path = new std::string();
 	dest_path->append(root_dir);
-	sow_web_jsx::get_server_map_path(utf_dest_path.c_str(), *dest_path);
+	fsys_web_jsx::get_server_map_path(utf_dest_path.c_str(), *dest_path);
 
 	native_string utf_key(isolate, args[0]);
 	native_string utf_iv(isolate, args[1]);
@@ -134,7 +151,7 @@ V8_JS_METHOD(encrypt_str) {
 	utf_key.clear(); utf_iv.clear();
 	if (rec == FALSE) {
 		isolate->ThrowException(v8::Exception::Error(
-			sow_web_jsx::concat_msg(isolate, "Unable to encrypt plain text.==>", dest.str().c_str())));
+			fsys_web_jsx::concat_msg(isolate, "Unable to encrypt plain text.==>", dest.str().c_str())));
 	}
 	else {
 		args.GetReturnValue().Set(v8_str(isolate, dest.str().c_str()));
@@ -167,7 +184,7 @@ V8_JS_METHOD(decrypt_str) {
 	utf_key.clear(); utf_iv.clear();
 	if (rec == FALSE) {
 		isolate->ThrowException(v8::Exception::Error(
-			sow_web_jsx::concat_msg(isolate, "Unable to decrypt encrypted text.==>", dest.str().c_str())));
+			fsys_web_jsx::concat_msg(isolate, "Unable to decrypt encrypted text.==>", dest.str().c_str())));
 	}
 	else {
 		args.GetReturnValue().Set(v8_str(isolate, dest.str().c_str()));

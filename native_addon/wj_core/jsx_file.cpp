@@ -1,8 +1,25 @@
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 #pragma warning(disable : 4996)
 #	include "jsx_file.h"
@@ -10,7 +27,7 @@
 #	include <web_jsx/wjsx_env.h>
 #	include <io.h> 
 #	include <string>
-using namespace sow_web_jsx;
+using namespace fsys_web_jsx;
 enum jsx_file_mode {
 	f_read = 0x0001,
 	f_write = 0x0002,
@@ -195,7 +212,7 @@ int jsx_file::panic(const char* error) {
 	this->_errorc = -1;
 	return -1;
 }
-void sow_web_jsx::jsx_file_bind(v8::Isolate* isolate, v8::Local<v8::Object> ctx) {
+void fsys_web_jsx::jsx_file_bind(v8::Isolate* isolate, v8::Local<v8::Object> ctx) {
 	v8::Local<v8::FunctionTemplate> jsx_file_tmplate = v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* isolate = args.GetIsolate();
 		if (!args.IsConstructCall()) {
@@ -221,7 +238,7 @@ void sow_web_jsx::jsx_file_bind(v8::Isolate* isolate, v8::Local<v8::Object> ctx)
 		native_string utf_abs_path_str(isolate, args[0]);
 		wjsx_env* wj_env = ::unwrap_wjsx_env(isolate);
 		std::string* abs_path = new std::string(wj_env->get_root_dir());
-		sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
+		fsys_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
 		native_string utf_mood_str(isolate, args[1]);
 		jsx_file* x_file = new jsx_file(abs_path->c_str(), utf_mood_str.c_str(), dwrite_disk == true ? TRUE : FALSE);
 		utf_mood_str.clear();
@@ -240,7 +257,7 @@ void sow_web_jsx::jsx_file_bind(v8::Isolate* isolate, v8::Local<v8::Object> ctx)
 	// Methods, Properties, etc.
 	prototype->Set(isolate, "read", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* iso = args.GetIsolate();
-		jsx_file* jf = sow_web_jsx::unwrap<jsx_file>(args);
+		jsx_file* jf = fsys_web_jsx::unwrap<jsx_file>(args);
 		if (jf->has_error() == TRUE) {
 			throw_js_error(iso, jf->get_last_error());
 			return;
@@ -264,7 +281,7 @@ void sow_web_jsx::jsx_file_bind(v8::Isolate* isolate, v8::Local<v8::Object> ctx)
 	}));
 	prototype->Set(isolate, "write", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* iso = args.GetIsolate();
-		jsx_file* jf = sow_web_jsx::unwrap<jsx_file>(args);
+		jsx_file* jf = fsys_web_jsx::unwrap<jsx_file>(args);
 		if (jf->has_error() == TRUE) {
 			throw_js_error(iso, jf->get_last_error());
 			return;
@@ -285,7 +302,7 @@ void sow_web_jsx::jsx_file_bind(v8::Isolate* isolate, v8::Local<v8::Object> ctx)
 	}));
 	prototype->Set(isolate, "flush", v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* iso = args.GetIsolate();
-		jsx_file* jf = sow_web_jsx::unwrap<jsx_file>(args);
+		jsx_file* jf = fsys_web_jsx::unwrap<jsx_file>(args);
 		if (jf->has_error() == TRUE) {
 			throw_js_error(iso, jf->get_last_error());
 			return;

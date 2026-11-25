@@ -17,7 +17,7 @@
 #endif//_WIN32||_WIN64
 #endif//!EXPORT_WJSX
 
-namespace sow_web_jsx {
+namespace fsys_web_jsx {
 	namespace base64 {
 		EXPORT_WJSX std::string to_encode_str(unsigned char const* bytes_to_encode, unsigned int in_len);
 		EXPORT_WJSX std::string to_decode_str(std::string const& encoded_string);

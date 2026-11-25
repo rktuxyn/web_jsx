@@ -1,25 +1,42 @@
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 //1:23 AM 1/23/2019
 #	include "web_jsx_global.h"
 #	include <regex>
 #	include <iostream>
 #	include <sstream>
-void sow_web_jsx::format__path(std::string&str) {
+void fsys_web_jsx::format__path(std::string&str) {
 	str = std::regex_replace(str, std::regex("(?:/)"), "\\");
 }
-void sow_web_jsx::get_dir_from_path (const std::string& path_str, std::string&dir) {
+void fsys_web_jsx::get_dir_from_path (const std::string& path_str, std::string&dir) {
 	dir.clear();
 	size_t found = path_str.find_last_of("/\\");
 	if (found == std::string::npos)return;
 	dir = path_str.substr(0, found);
 }
 //\r\n
-std::istream& sow_web_jsx::get_line(std::istream& is, std::string& t) {
+std::istream& fsys_web_jsx::get_line(std::istream& is, std::string& t) {
 	t.clear();
 	std::streambuf* sb = is.rdbuf();
 	for (;;) {
@@ -47,7 +64,7 @@ std::istream& sow_web_jsx::get_line(std::istream& is, std::string& t) {
 		}
 	}
 }
-bool sow_web_jsx::strings_equal(
+bool fsys_web_jsx::strings_equal(
 	const std::string& s1,
 	const std::string& s2,
 	size_t n
@@ -63,7 +80,7 @@ bool sow_web_jsx::strings_equal(
 	}
 	return good;
 }
-bool sow_web_jsx::strings_equal(
+bool fsys_web_jsx::strings_equal(
 	const std::string& s1,
 	const std::string& s2
 ) {
@@ -77,7 +94,7 @@ bool sow_web_jsx::strings_equal(
 	}
 	return (s2.size() == s1.size()) ? true : false;
 }
-std::string sow_web_jsx::extract_between(
+std::string fsys_web_jsx::extract_between(
 	const std::string& data,
 	const std::string& separator1,
 	const std::string& separator2
@@ -96,7 +113,7 @@ std::string sow_web_jsx::extract_between(
 	return result;
 }
 #if !(defined(_WIN32)||defined(_WIN64))
-wchar_t* sow_web_jsx::ccr2ws(const char* s) {
+wchar_t* fsys_web_jsx::ccr2ws(const char* s) {
 	size_t len = strlen(s);
 	std::unique_ptr<wchar_t[]> tmp(new wchar_t[len + 1]);
 	return tmp.release();
@@ -104,7 +121,7 @@ wchar_t* sow_web_jsx::ccr2ws(const char* s) {
 #else
 #pragma warning(push)
 #pragma warning(disable:4996)
-wchar_t* sow_web_jsx::ccr2ws(const char* mbstr) {
+wchar_t* fsys_web_jsx::ccr2ws(const char* mbstr) {
 	mbstate_t state;
 	memset(&state, 0, sizeof state);
 	size_t len = sizeof(wchar_t) + mbsrtowcs(NULL, &mbstr, 0, &state);
@@ -115,7 +132,7 @@ wchar_t* sow_web_jsx::ccr2ws(const char* mbstr) {
 #pragma warning(pop)
 #endif//!_WIN32
 //#	include <fstream>
-//size_t sow_web_jsx::read_file(const char* absolute_path, std::stringstream& ssstream, bool check_file_exists) {
+//size_t fsys_web_jsx::read_file(const char* absolute_path, std::stringstream& ssstream, bool check_file_exists) {
 //	//size_t r_length = -1;
 //	std::ifstream* file_stream = new std::ifstream(absolute_path, std::ifstream::binary);
 //	//std::ifstream file_stream(absolute_path, std::ifstream::binary);
@@ -144,14 +161,14 @@ wchar_t* sow_web_jsx::ccr2ws(const char* mbstr) {
 //	file_stream->close(); delete file_stream;
 //	return total_len;
 //}
-//size_t sow_web_jsx::read_file(const char*absolute_path, std::string&str, bool check_file_exists) {
+//size_t fsys_web_jsx::read_file(const char*absolute_path, std::string&str, bool check_file_exists) {
 //	std::stringstream ssstream(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
-//	size_t ret = sow_web_jsx::read_file(absolute_path, ssstream, check_file_exists);
+//	size_t ret = fsys_web_jsx::read_file(absolute_path, ssstream, check_file_exists);
 //	str = std::string(ssstream.str());
 //	std::stringstream().swap(ssstream);
 //	return ret;
 //}
-//char* sow_web_jsx::read_file(const char* absolute_path, bool check_file_exists = true) {
+//char* fsys_web_jsx::read_file(const char* absolute_path, bool check_file_exists = true) {
 //	if (check_file_exists) {
 //		if (__file_exists(absolute_path) == false) {
 //			return new char[8]{ "INVALID" };

@@ -1,8 +1,25 @@
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 #	include	"directory_.h"
 #	include <web_jsx/std_wrapper.hpp>
@@ -26,16 +43,16 @@ bool __is_match_extension (
 	return strcmp(path_str.substr(found + 1).c_str(), ext) == 0;
 }
 #if !(defined(_WIN32)||defined(_WIN64))
-int sow_web_jsx::read_directory_files(const char* name, std::vector<char*>&directory) {
+int fsys_web_jsx::read_directory_files(const char* name, std::vector<char*>&directory) {
 #error Not Implemented
 }
-int sow_web_jsx::read_directory_sub_directory(const char* name, std::vector<const char*>&directory, const char* ext) {
+int fsys_web_jsx::read_directory_sub_directory(const char* name, std::vector<const char*>&directory, const char* ext) {
 #error Not Implemented
 }
-int sow_web_jsx::read_directory_sub_directory(const char* name, std::vector<std::string>&directory, const char* ext) {
+int fsys_web_jsx::read_directory_sub_directory(const char* name, std::vector<std::string>&directory, const char* ext) {
 #error Not Implemented
 }
-int sow_web_jsx::dir_exists(const char* dir) {
+int fsys_web_jsx::dir_exists(const char* dir) {
 	struct stat stats;
 	stat(dir, &stats);
 	// Check for file existence
@@ -43,17 +60,17 @@ int sow_web_jsx::dir_exists(const char* dir) {
 		return 1;
 	return 0;
 }
-int sow_web_jsx::create_directory(const char* dir) {
+int fsys_web_jsx::create_directory(const char* dir) {
 #error Not Implemented
 }
-int sow_web_jsx::delete_dir(const char * name) {
+int fsys_web_jsx::delete_dir(const char * name) {
 #error Not Implemented
 }
-int sow_web_jsx::read_directory_sub_directory_x(const char * name, std::vector<std::string>& directory, const std::regex& pattern) {
+int fsys_web_jsx::read_directory_sub_directory_x(const char * name, std::vector<std::string>& directory, const std::regex& pattern) {
 #error Not Implemented
 }
 #else
-int sow_web_jsx::read_directory_files(
+int fsys_web_jsx::read_directory_files(
 	const char* name, 
 	std::vector<char*>&directory
 ) {
@@ -73,7 +90,7 @@ int sow_web_jsx::read_directory_files(
 	closedir (dir);
 	return EXIT_SUCCESS;
 }
-int sow_web_jsx::read_directory_sub_directory(
+int fsys_web_jsx::read_directory_sub_directory(
 	const char* name, 
 	std::vector<const char*>&directory, 
 	const char* ext
@@ -104,7 +121,7 @@ int sow_web_jsx::read_directory_sub_directory(
 	closedir (dir);
 	return EXIT_SUCCESS;
 }
-int sow_web_jsx::read_directory_sub_directory(
+int fsys_web_jsx::read_directory_sub_directory(
 	const char* name, 
 	std::vector<std::string>&directory, 
 	const char* ext
@@ -139,13 +156,13 @@ int sow_web_jsx::read_directory_sub_directory(
 	closedir (dir);
 	return EXIT_SUCCESS;
 }
-int sow_web_jsx::dir_exists(const char* dir) {
+int fsys_web_jsx::dir_exists(const char* dir) {
 	DWORD attribs = ::GetFileAttributesA(dir);
 	if (attribs == INVALID_FILE_ATTRIBUTES)return -2;
 	if (attribs && (attribs & FILE_ATTRIBUTE_DIRECTORY/*16*/))return 1;
 	return -1;
 }
-/*int sow_web_jsx::dir_exists(const char* dir) {
+/*int fsys_web_jsx::dir_exists(const char* dir) {
 	wchar_t* wString = (wchar_t*)malloc(MAX_PATH);
 	MultiByteToWideChar(CP_ACP, 0, dir, -1, wString, MAX_PATH);
 	if (CreateDirectory(wString, NULL)) {
@@ -159,7 +176,7 @@ int sow_web_jsx::dir_exists(const char* dir) {
 	free(wString);
 	return -3;
 }*/
-int sow_web_jsx::create_directory(const char* dir) {
+int fsys_web_jsx::create_directory(const char* dir) {
 	DIR* d = opendir(dir);
 	if (d != NULL) {
 		closedir(d);
@@ -169,7 +186,7 @@ int sow_web_jsx::create_directory(const char* dir) {
 		return 2;
 	return -2;
 }
-int sow_web_jsx::delete_dir(const char * name) {
+int fsys_web_jsx::delete_dir(const char * name) {
 	DIR *dir;
 	if (!(dir = opendir(name)))
 		/* could not open directory */
@@ -182,7 +199,7 @@ int sow_web_jsx::delete_dir(const char * name) {
 		std::string* d_path = new std::string(name);
 		d_path->append(d_name);
 		d_path->append("\\");
-		error = sow_web_jsx::delete_dir(d_path->c_str());
+		error = fsys_web_jsx::delete_dir(d_path->c_str());
 		_free_obj(d_path);
 		if (error == EXIT_FAILURE)break;
 	}
@@ -193,11 +210,11 @@ int sow_web_jsx::delete_dir(const char * name) {
 		return EXIT_SUCCESS;
 	return EXIT_FAILURE;
 }
-int sow_web_jsx::rename_dir(const char* old_dir, const char* new_dir) {
+int fsys_web_jsx::rename_dir(const char* old_dir, const char* new_dir) {
 	int result = rename(old_dir, new_dir);
 	return result;
 }
-int sow_web_jsx::read_directory_sub_directory_x(
+int fsys_web_jsx::read_directory_sub_directory_x(
 	const char * name, 
 	std::vector<std::string>& directory, 
 	const std::regex& pattern

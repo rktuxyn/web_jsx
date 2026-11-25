@@ -1,8 +1,25 @@
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 //2:46 AM 11/21/2018
 #	include "native_wrapper.h"
@@ -12,7 +29,7 @@
 #	include "native_module.h"
 #	include "module_store.h"
 #	include "js_polyfill.h"
-using namespace sow_web_jsx;
+using namespace fsys_web_jsx;
 void __clear_cache(wjsx_env& wj_env) {
 	swjsx_module::clean_working_module(wj_env.get_native_data_structure(FALSE));
 }
@@ -68,7 +85,7 @@ void gzip_compress_write(wjsx_env&wj_env) {
 /*[/zgip]*/
 void add_gscript(std::string& out_script) {
 	std::stringstream js_stream(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
-	sow_web_jsx::create_wj_core_extend_script(js_stream, TRUE);
+	fsys_web_jsx::create_wj_core_extend_script(js_stream, TRUE);
 	out_script.append(js_stream.str());
 	swap_obj(js_stream);
 	out_script +=
@@ -175,7 +192,7 @@ void _require(const v8::FunctionCallbackInfo<v8::Value>& args, int once) {
 		abs_path->append(".js");
 	}
 	if (__file_exists(abs_path->c_str()) == false) {
-		isolate->ThrowException(v8::Exception::Error(sow_web_jsx::concat_msg(isolate, "Module not found. Module# ", utf_abs_path_str.c_str())));
+		isolate->ThrowException(v8::Exception::Error(fsys_web_jsx::concat_msg(isolate, "Module not found. Module# ", utf_abs_path_str.c_str())));
 		_free_obj(abs_path); utf_abs_path_str.clear();
 		return;
 	}
@@ -189,7 +206,7 @@ void _require(const v8::FunctionCallbackInfo<v8::Value>& args, int once) {
 		return;
 	}
 	v8::HandleScope handle_scope(isolate);
-	v8::Local<v8::ObjectTemplate> v8_global = v8::ObjectTemplate::New(isolate);//sow_web_jsx::wrapper::create_v8_context_object(isolate);
+	v8::Local<v8::ObjectTemplate> v8_global = v8::ObjectTemplate::New(isolate);//fsys_web_jsx::wrapper::create_v8_context_object(isolate);
 	v8::Local<v8::ObjectTemplate> module_object = v8::ObjectTemplate::New(isolate);
 	module_object->Set(isolate, "exports", v8::ObjectTemplate::New(isolate));
 	v8_global->Set(isolate, "module", module_object);
@@ -277,7 +294,7 @@ V8_JS_METHOD(require) {
 V8_JS_METHOD(require_once) {
 	_require(args, TRUE);
 }
-v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_context(
+v8::Local<v8::ObjectTemplate> fsys_web_jsx::wrapper::get_context(
 	v8::Isolate* isolate, 
 	const std::map<std::string, std::map<std::string, std::string>> ctx
 ) {
@@ -403,7 +420,7 @@ v8::Local<v8::ObjectTemplate> wrapper::get_console_context(
 			return;
 		}
 		if (args[0]->IsNullOrUndefined()) {
-			fprintf_s(_stdout, "%s", sow_web_jsx::to_char_str(isolate, args[0]));
+			fprintf_s(_stdout, "%s", fsys_web_jsx::to_char_str(isolate, args[0]));
 			return;
 		}
 		if (!args[0]->IsString()) {

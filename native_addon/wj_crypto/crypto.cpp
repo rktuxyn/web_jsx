@@ -1,9 +1,26 @@
 //3:54 AM 11/30/2018
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 #pragma warning (disable : 4996)
 #	include "crypto.h"
@@ -170,8 +187,8 @@ int crypto::generate_key_iv(
 	_iv.reserve(AES_BLOCK_SIZE);
 	_key.append(reinterpret_cast<const char*>(key), AES_256_KEY_SIZE);
 	_iv.append(reinterpret_cast<const char*>(iv), AES_BLOCK_SIZE);
-	sow_web_jsx::base64::to_encode_str(_key, key_str);
-	sow_web_jsx::base64::to_encode_str(_iv, iv_str);
+	fsys_web_jsx::base64::to_encode_str(_key, key_str);
+	fsys_web_jsx::base64::to_encode_str(_iv, iv_str);
 	delete[] key; delete[] iv; _iv.clear(); _key.clear();
 	return TRUE;
 }
@@ -194,9 +211,9 @@ int crypto::encrypt(
 	std::stringstream source(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
 	source.write(plain_text, strlen(plain_text));
 	std::string* _key = new std::string();
-	sow_web_jsx::base64::to_decode_str(key, *_key);
+	fsys_web_jsx::base64::to_decode_str(key, *_key);
 	std::string* _iv = new std::string();
-	sow_web_jsx::base64::to_decode_str(iv, *_iv);
+	fsys_web_jsx::base64::to_decode_str(iv, *_iv);
 	dest.clear(); std::string error_str;
 	int res = evp_encrypt_decrypt(
 		TRUE, source, dest,
@@ -214,7 +231,7 @@ int crypto::encrypt(
 	std::string* encrypted_str = new std::string(dest.str().c_str(), res);
 	dest.clear(); std::stringstream().swap(dest);
 	std::string* base64_str = new std::string();
-	sow_web_jsx::base64::to_encode_str(*encrypted_str, *base64_str);
+	fsys_web_jsx::base64::to_encode_str(*encrypted_str, *base64_str);
 	_free_obj(encrypted_str);
 	res = (int)base64_str->size();
 	dest.write(base64_str->c_str(), res);
@@ -236,12 +253,12 @@ int crypto::decrypt(
 	}
 	std::stringstream source(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
 	std::string* str = new std::string();
-	sow_web_jsx::base64::to_decode_str(encrypt_text, *str);
+	fsys_web_jsx::base64::to_decode_str(encrypt_text, *str);
 	source.write(str->c_str(), str->size()); _free_obj(str);
 	std::string* _key = new std::string();
-	sow_web_jsx::base64::to_decode_str(key, *_key);
+	fsys_web_jsx::base64::to_decode_str(key, *_key);
 	std::string* _iv = new std::string();
-	sow_web_jsx::base64::to_decode_str(iv, *_iv);
+	fsys_web_jsx::base64::to_decode_str(iv, *_iv);
 	std::string error_str;
 	int res = evp_encrypt_decrypt(
 		FALSE, source, dest,
@@ -290,9 +307,9 @@ int crypto::evp_encrypt_decrypt_file(
 		return FALSE;
 	}
 	std::string* _key = new std::string();
-	sow_web_jsx::base64::to_decode_str(key, *_key);
+	fsys_web_jsx::base64::to_decode_str(key, *_key);
 	std::string* _iv = new std::string();
-	sow_web_jsx::base64::to_decode_str(iv, *_iv);
+	fsys_web_jsx::base64::to_decode_str(iv, *_iv);
 	int res = evp_encrypt_decrypt(
 		should_encrypt, *source_strem, *dest_strem,
 		reinterpret_cast<unsigned char*>(_key->data()),

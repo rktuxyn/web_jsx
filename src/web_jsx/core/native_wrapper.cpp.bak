@@ -1,8 +1,25 @@
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 //2:46 AM 11/21/2018
 #	include "web_jsx_global.h"
@@ -22,7 +39,7 @@
 #	include <fcgi_stdio.h>
 #	include <fcgio.h>
 
-using namespace sow_web_jsx;
+using namespace fsys_web_jsx;
 bool _is_interactive = false;
 bool _is_cli = false;
 V8_JS_METHOD(v8_gc) {
@@ -87,7 +104,7 @@ void get_req_process_info(v8::Local<v8::Context> ctx, v8::Isolate* isolate, v8::
 	//wait_for_exit
 	v8::Local<v8::Value> v8_bool = pi->Get(ctx, v8_str(isolate, "wait_for_exit")).ToLocalChecked();
 	if (v8_bool->IsBoolean()) {
-		pri.wait_for_exit = sow_web_jsx::to_boolean(isolate, v8_bool) ? 1 : -1;
+		pri.wait_for_exit = fsys_web_jsx::to_boolean(isolate, v8_bool) ? 1 : -1;
 	}
 	else {
 		pri.wait_for_exit = -1;
@@ -157,7 +174,7 @@ V8_JS_METHOD(native_create_process) {
 		pri.show_window = SW_SHOWNORMAL;
 		pri.dw_creation_flags = CREATE_NO_WINDOW;
 		pri.wait_for_exit = -1;
-		ret = sow_web_jsx::create_process(&pri);
+		ret = fsys_web_jsx::create_process(&pri);
 	}
 	else {
 		v8::Local<v8::Value> js_reader = pi->Get(ctx, v8_str(isolate, "reader")).ToLocalChecked();
@@ -174,7 +191,7 @@ V8_JS_METHOD(native_create_process) {
 			}
 			if (pri.dw_creation_flags == CREATE_NO_WINDOW)pri.wait_for_exit = -1;
 			swap_obj(ptype);
-			ret = sow_web_jsx::create_process(&pri);
+			ret = fsys_web_jsx::create_process(&pri);
 		}
 		else {
 			//ret = spawn_uv_child_process(*pri);
@@ -184,7 +201,7 @@ V8_JS_METHOD(native_create_process) {
 			v8::Local<v8::Object>global = args.Holder();
 			v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(isolate, cb);
 			//std::cout << "Creating child process and reading data..."  << std::endl;
-			ret = sow_web_jsx::read_child_process(&pri, [&](size_t i, const char* buff) {
+			ret = fsys_web_jsx::read_child_process(&pri, [&](size_t i, const char* buff) {
 				//std::cout << "Reading data from pipe:" << buff << std::endl;
 				v8::Handle<v8::Value> arg[2] = {
 					v8::Number::New(isolate, static_cast<double>(i)),
@@ -241,7 +258,7 @@ V8_JS_METHOD(native_create_child_process) {
 	native_string arg(isolate, args[1]);
 	//std::string arg = *utf_arg_str;
 	process_path = std::regex_replace(process_path, std::regex("(?:/)"), "\\");
-	long ret = sow_web_jsx::create_child_process(process_path.c_str(), arg.c_str());
+	long ret = fsys_web_jsx::create_child_process(process_path.c_str(), arg.c_str());
 	arg.clear(); swap_obj(process_path); utf_abs_path_str.clear();
 	if (ret < 0) {
 		throw_js_error(isolate, "Not found!!!");
@@ -264,7 +281,7 @@ V8_JS_METHOD(native_terminate_process) {
 	uint64_t pid = num->ToInteger(ctx).ToLocalChecked()->Value();
 	int rec = 0;
 #if defined(_WIN32)||defined(_WIN64)
-	rec = sow_web_jsx::terminate_process((DWORD)pid);
+	rec = fsys_web_jsx::terminate_process((DWORD)pid);
 #else
 #error Not Implemented
 #endif//_WINDOWS_
@@ -292,7 +309,7 @@ V8_JS_METHOD(native_process_is_running) {
 }
 V8_JS_METHOD(native_current_process_id) {
 	v8::Isolate* isolate = args.GetIsolate();
-	int rec = (int)sow_web_jsx::current_process_id();
+	int rec = (int)fsys_web_jsx::current_process_id();
 	args.GetReturnValue().Set(v8::Integer::New(isolate, rec));
 }
 //[FileSystem]
@@ -305,7 +322,7 @@ V8_JS_METHOD(native_exists_file) {
 	native_string utf_abs_path_str(isolate, args[0]);
 	wjsx_env* wj_env = ::unwrap_isolate_data<wjsx_env>(isolate);
 	std::string* abs_path = new std::string(wj_env->get_root_dir());
-	sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
+	fsys_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
 	int ret = 0;
 	if (__file_exists(abs_path->c_str()) == false) ret = 1;
 	_free_obj(abs_path); utf_abs_path_str.clear();
@@ -351,9 +368,9 @@ V8_JS_METHOD(native_read_file) {
 	native_string utf_abs_path_str(isolate, args[0]);
 	wjsx_env* wj_env = ::unwrap_isolate_data<wjsx_env>(isolate);
 	auto abs_path = new std::string(wj_env->get_root_dir());
-	sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
+	fsys_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
 	std::stringstream ssstream(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
-	size_t ret = sow_web_jsx::read_file(abs_path->c_str(), ssstream, true);
+	size_t ret = fsys_web_jsx::read_file(abs_path->c_str(), ssstream, true);
 	_free_obj(abs_path); utf_abs_path_str.clear();
 	v8::Handle<v8::Object> v8_result = v8::Object::New(isolate);
 	v8::Local<v8::Context>ctx = isolate->GetCurrentContext();
@@ -390,11 +407,11 @@ V8_JS_METHOD(native_write_from_file) {
 	native_string utf_abs_path_str(isolate, args[0]);
 	wjsx_env* wj_env = ::unwrap_isolate_data<wjsx_env>(isolate);
 	auto abs_path = new std::string(wj_env->get_root_dir());
-	sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
-	size_t ret = sow_web_jsx::read_file(abs_path->c_str(), wj_env->body(), true);
+	fsys_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
+	size_t ret = fsys_web_jsx::read_file(abs_path->c_str(), wj_env->body(), true);
 	utf_abs_path_str.clear();
 	if (is_error_code(ret) == TRUE) {
-		isolate->ThrowException(v8::Exception::Error(sow_web_jsx::concat_msg(isolate, "No file foud!!! Server absolute path==>", abs_path->c_str())));
+		isolate->ThrowException(v8::Exception::Error(fsys_web_jsx::concat_msg(isolate, "No file foud!!! Server absolute path==>", abs_path->c_str())));
 	}
 	_free_obj(abs_path);
 	return;
@@ -408,8 +425,8 @@ V8_JS_METHOD(exists_directory) {
 	native_string utf_abs_path_str(isolate, args[0]);
 	wjsx_env* wj_env = ::unwrap_isolate_data<wjsx_env>(isolate);
 	std::string* abs_path = new std::string(wj_env->get_root_dir());
-	sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
-	int rec = sow_web_jsx::dir_exists(abs_path->c_str());
+	fsys_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
+	int rec = fsys_web_jsx::dir_exists(abs_path->c_str());
 	abs_path->clear(); _free_obj(abs_path);
 	utf_abs_path_str.clear();
 	args.GetReturnValue().Set(v8::Number::New(isolate, (double)rec));
@@ -428,7 +445,7 @@ V8_JS_METHOD(read_directory_regx) {
 	native_string utf_abs_path_str(isolate, args[0]);
 	wjsx_env* wj_env = ::unwrap_isolate_data<wjsx_env>(isolate);
 	std::string* abs_path = new std::string(wj_env->get_root_dir());
-	sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
+	fsys_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
 	auto directorys = new  std::vector<std::string>();
 	int rec = 0;
 	native_string utf_ext_str(isolate, args[1]);
@@ -525,13 +542,13 @@ V8_JS_METHOD(native_delete_directory) {
 	native_string utf8_path_str(isolate, args[0]);
 	wjsx_env* wj_env = ::unwrap_isolate_data<wjsx_env>(isolate);
 	auto abs_dir = new std::string(wj_env->get_root_dir());
-	sow_web_jsx::get_server_map_path(utf8_path_str.c_str(), *abs_dir);
+	fsys_web_jsx::get_server_map_path(utf8_path_str.c_str(), *abs_dir);
 	int rec = ::delete_dir(abs_dir->c_str());
 	utf8_path_str.clear();
 	if (rec > 0)
 		args.GetReturnValue().Set(v8_str(isolate, "Success"));
 	else
-		isolate->ThrowException(v8::Exception::Error(sow_web_jsx::concat_msg(isolate, "Directory does not exists!!! Server absolute path==>", abs_dir->c_str())));
+		isolate->ThrowException(v8::Exception::Error(fsys_web_jsx::concat_msg(isolate, "Directory does not exists!!! Server absolute path==>", abs_dir->c_str())));
 	_free_obj(abs_dir);
 	return;
 
@@ -740,7 +757,7 @@ V8_JS_METHOD(base64_encode) {
 		return;
 	}
 	native_string utf_plain_text(isolate, args[0]);
-	//std::string bas64str = sow_web_jsx::base64::to_encode_str(reinterpret_cast<const unsigned char*>(utf_plain_text.c_str()), (int)utf_plain_text.size());
+	//std::string bas64str = fsys_web_jsx::base64::to_encode_str(reinterpret_cast<const unsigned char*>(utf_plain_text.c_str()), (int)utf_plain_text.size());
 	std::string* bas64str = new std::string();
 	::base64::to_encode_str(utf_plain_text.c_str(), *bas64str);
 	args.GetReturnValue().Set(v8_str(isolate, bas64str->c_str()));
@@ -782,7 +799,7 @@ V8_JS_METHOD(string_to_hex_js) {
 	native_string utf_plain_str(isolate, args[0]);
 	_NEW_STRA(plain_str, utf_plain_str.c_str());
 	_NEW_STR(hex_str);
-	sow_web_jsx::string_to_hex(*plain_str, *hex_str);
+	fsys_web_jsx::string_to_hex(*plain_str, *hex_str);
 	_free_obj(plain_str); utf_plain_str.clear();
 	args.GetReturnValue().Set(v8_str(isolate, hex_str->c_str()));
 	_free_obj(hex_str);
@@ -1004,14 +1021,14 @@ V8_JS_METHOD(require) {
 	}
 	utf_abs_path_str.clear();
 	if (__file_exists(abs_path->c_str()) == false) {
-		isolate->ThrowException(v8::Exception::Error(sow_web_jsx::concat_msg(isolate, "Module not found. Module# ", utf_abs_path_str.c_str())));
+		isolate->ThrowException(v8::Exception::Error(fsys_web_jsx::concat_msg(isolate, "Module not found. Module# ", utf_abs_path_str.c_str())));
 		_free_obj(abs_path);
 		return;
 	}
 	_NEW_STR(source_str);
 #if defined(WEB_JSX_CLIENT_BUILD)
 	if (is_encrypt) {
-		//size_t ret = sow_web_jsx::read_file(abs_path->c_str(), source_str, false);
+		//size_t ret = fsys_web_jsx::read_file(abs_path->c_str(), source_str, false);
 		int ret = ::read_file(abs_path->c_str(), *source_str);
 		if (is_error_code(ret) == TRUE) {
 			_free_obj(abs_path);
@@ -1024,7 +1041,7 @@ V8_JS_METHOD(require) {
 		decipher.clear();
 	}
 	else {
-		//size_t ret = sow_web_jsx::read_file(abs_path->c_str(), source_str, false);
+		//size_t ret = fsys_web_jsx::read_file(abs_path->c_str(), source_str, false);
 		int ret = ::read_file(abs_path->c_str(), *source_str);
 		if (is_error_code(ret) == TRUE) {
 			_free_obj(abs_path);
@@ -1034,7 +1051,7 @@ V8_JS_METHOD(require) {
 		}
 	}
 #else
-	//size_t ret = sow_web_jsx::read_file(abs_path->c_str(), source_str, false);
+	//size_t ret = fsys_web_jsx::read_file(abs_path->c_str(), source_str, false);
 	int ret = ::read_file(abs_path->c_str(), source_str);
 	if (is_error_code(ret) == TRUE) {
 		_free_obj(abs_path);
@@ -1043,7 +1060,7 @@ V8_JS_METHOD(require) {
 	}
 #endif//!WEB_JSX_CLIENT_BUILD
 	v8::HandleScope handle_scope(isolate);
-	v8::Local<v8::ObjectTemplate> v8_global = v8::ObjectTemplate::New(isolate);//sow_web_jsx::wrapper::create_v8_context_object(isolate);
+	v8::Local<v8::ObjectTemplate> v8_global = v8::ObjectTemplate::New(isolate);//fsys_web_jsx::wrapper::create_v8_context_object(isolate);
 	v8::Local<v8::ObjectTemplate> module_object = v8::ObjectTemplate::New(isolate);
 	module_object->Set(isolate, "exports", v8::ObjectTemplate::New(isolate));
 	v8_global->Set(isolate, "module", module_object);
@@ -1157,12 +1174,12 @@ void extend_global_js_func(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate>&v
 	js_engine_object->Set(v8_str(isolate, "name"), v8_str(isolate, "V8"), v8::PropertyAttribute::ReadOnly);
 	wjsx_assign_js_obj(isolate, v8_global, "engine", js_engine_object);
 }
-void sow_web_jsx::wrapper::extend_web_request_obj(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> object) {
+void fsys_web_jsx::wrapper::extend_web_request_obj(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> object) {
 	wjsx_assign_js_func(isolate, object, "_read_payload", ::read_payload);
 	wjsx_assign_js_func(isolate, object, "read_posted_file", ::read_http_posted_file);
 	wjsx_assign_js_func(isolate, object, "_write_file_from_payload", ::write_file_from_payload);
 }
-void sow_web_jsx::wrapper::extend_web_ctx_obj(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx_object) {
+void fsys_web_jsx::wrapper::extend_web_ctx_obj(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> ctx_object) {
 	/*[context.respons....]*/
 	v8::Local<v8::ObjectTemplate> response_object = v8::ObjectTemplate::New(isolate);
 	wjsx_assign_js_func(isolate, response_object, "_write", response_write);
@@ -1187,7 +1204,7 @@ void sow_web_jsx::wrapper::extend_web_ctx_obj(v8::Isolate* isolate, v8::Local<v8
 	ctx_object->Set(v8_str(isolate, "is_interactive"), v8::Boolean::New(isolate, false), v8::PropertyAttribute::ReadOnly);
 	wjsx_assign_js_obj(isolate, ctx_object, "response", response_object);
 }
-v8::Local<v8::ObjectTemplate> sow_web_jsx::wrapper::get_context(
+v8::Local<v8::ObjectTemplate> fsys_web_jsx::wrapper::get_context(
 	v8::Isolate* isolate, 
 	const std::map<std::string, std::map<std::string, std::string>> ctx
 ) {
@@ -1241,7 +1258,7 @@ V8_JS_METHOD(console_print) {
 		else {
 			std::cout << " ";
 		}
-		const char* cstr = sow_web_jsx::to_char_str(isolate, args[i]);
+		const char* cstr = fsys_web_jsx::to_char_str(isolate, args[i]);
 		std::cout << cstr;
 	}
 	std::cout << std::flush;
@@ -1302,7 +1319,7 @@ v8::Local<v8::ObjectTemplate> wrapper::get_console_context(
 			return;
 		}
 		if (args[0]->IsNullOrUndefined()) {
-			fprintf_s(_stdout, "%s", sow_web_jsx::to_char_str(isolate, args[0]));
+			fprintf_s(_stdout, "%s", fsys_web_jsx::to_char_str(isolate, args[0]));
 			return;
 		}
 		if (!args[0]->IsString()) {

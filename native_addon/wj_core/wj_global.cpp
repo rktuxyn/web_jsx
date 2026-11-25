@@ -1,8 +1,25 @@
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 //1:05 PM 3/9/2020
 #if defined(_MSC_VER)
@@ -13,7 +30,7 @@
 #	include <fstream>
 #pragma warning(push)
 #pragma warning(disable : 4996)
-wchar_t* sow_web_jsx::ccr2ws(const char* mbstr) {
+wchar_t* fsys_web_jsx::ccr2ws(const char* mbstr) {
 	mbstate_t state;
 	memset(&state, 0, sizeof state);
 	size_t len = sizeof(wchar_t) + mbsrtowcs(NULL, &mbstr, 0, &state);
@@ -22,7 +39,7 @@ wchar_t* sow_web_jsx::ccr2ws(const char* mbstr) {
 	return buf;
 }
 #pragma warning(pop)
-int sow_web_jsx::create_process(const process_info* pi) {
+int fsys_web_jsx::create_process(const process_info* pi) {
 	if (pi->process_path.empty())return -10;
 	if (__file_exists(pi->process_path.c_str()) == false)return -4;
 	PROCESS_INFORMATION pinfo;
@@ -92,7 +109,7 @@ int sow_web_jsx::create_process(const process_info* pi) {
 	//https://docs.microsoft.com/en-us/windows/desktop/debug/system-error-codes--0-499
 	return (int)GetLastError();
 }
-long sow_web_jsx::create_child_process(const char* process_path, const char* arg) {
+long fsys_web_jsx::create_child_process(const char* process_path, const char* arg) {
 	if (__file_exists(process_path) == false)return -1;
 	PCWSTR pszCmd = (PCWSTR)ccr2ws(process_path);
 	PWSTR pszApp;
@@ -127,7 +144,7 @@ long sow_web_jsx::create_child_process(const char* process_path, const char* arg
 	}
 	return (long)hr;
 }
-int sow_web_jsx::open_process(const char* process_path, const char* arg) {
+int fsys_web_jsx::open_process(const char* process_path, const char* arg) {
 	if (__file_exists(process_path) == false)
 		return -1;
 	std::string str("start ");
@@ -138,7 +155,7 @@ int sow_web_jsx::open_process(const char* process_path, const char* arg) {
 	str.clear(); std::string().swap(str);
 	return 1;
 }
-int sow_web_jsx::kill_process_by_name(const char* process_name) {
+int fsys_web_jsx::kill_process_by_name(const char* process_name) {
 	HANDLE hSnapShot = CreateToolhelp32Snapshot(TH32CS_SNAPALL, NULL);
 	if (hSnapShot == INVALID_HANDLE_VALUE || hSnapShot == NULL)return -1;
 	PROCESSENTRY32 pEntry;
@@ -162,17 +179,17 @@ int sow_web_jsx::kill_process_by_name(const char* process_name) {
 	_close_handle(hSnapShot);
 	return 1;
 }
-int sow_web_jsx::fprintf_stdout(const char* msg) {
+int fsys_web_jsx::fprintf_stdout(const char* msg) {
 	int rec = fprintf(stdout, "%s\n", msg);
 	fflush(stdout);
 	return rec;
 }
-int sow_web_jsx::fprintf_stderr(const char* msg) {
+int fsys_web_jsx::fprintf_stderr(const char* msg) {
 	int rec = fprintf_s(stderr, "%s\n", msg);
 	fflush(stderr);
 	return rec;
 }
-int sow_web_jsx::process_is_running(DWORD dwPid) {
+int fsys_web_jsx::process_is_running(DWORD dwPid) {
 	HANDLE hProcess = CreateToolhelp32Snapshot(TH32CS_SNAPALL, 0);
 	if (hProcess == INVALID_HANDLE_VALUE || hProcess == NULL)return -1;
 	PROCESSENTRY32 pe = { 0 };
@@ -189,7 +206,7 @@ int sow_web_jsx::process_is_running(DWORD dwPid) {
 	_close_handle(hProcess);
 	return ret;
 }
-int sow_web_jsx::terminate_process(DWORD dwPid) {
+int fsys_web_jsx::terminate_process(DWORD dwPid) {
 	HANDLE explorer;
 	explorer = OpenProcess(PROCESS_ALL_ACCESS, false, dwPid);
 	int ret = FALSE;
@@ -205,11 +222,11 @@ int sow_web_jsx::terminate_process(DWORD dwPid) {
 	}
 	return ret == FALSE ? -1 : ret;
 }
-DWORD sow_web_jsx::current_process_id() {
+DWORD fsys_web_jsx::current_process_id() {
 	return ::GetCurrentProcessId();
 }
 
-size_t sow_web_jsx::read_file(const char* absolute_path, std::stringstream& ssstream, bool check_file_exists) {
+size_t fsys_web_jsx::read_file(const char* absolute_path, std::stringstream& ssstream, bool check_file_exists) {
 	//size_t r_length = -1;
 	std::ifstream* file_stream = new std::ifstream(absolute_path, std::ifstream::binary);
 	//std::ifstream file_stream(absolute_path, std::ifstream::binary);
@@ -238,9 +255,9 @@ size_t sow_web_jsx::read_file(const char* absolute_path, std::stringstream& ssst
 	file_stream->close(); delete file_stream;
 	return total_len;
 }
-size_t sow_web_jsx::read_file(const char* absolute_path, std::string& str, bool check_file_exists) {
+size_t fsys_web_jsx::read_file(const char* absolute_path, std::string& str, bool check_file_exists) {
 	std::stringstream ssstream(std::stringstream::in | std::stringstream::out | std::stringstream::binary);
-	size_t ret = sow_web_jsx::read_file(absolute_path, ssstream, check_file_exists);
+	size_t ret = fsys_web_jsx::read_file(absolute_path, ssstream, check_file_exists);
 	str = std::string(ssstream.str());
 	std::stringstream().swap(ssstream);
 	return ret;

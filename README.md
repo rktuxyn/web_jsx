@@ -98,7 +98,7 @@ cout.flush();
 Connect WebJsx with PostgreSQL
 ```javascript
 //Read data from Postgres SQL
-let resp = npgsql.execute_io("Server=localhost; Port=5432; UserId=postgres;Password=1##$1@6Z;Database=sow; keepalive=10; CommandTimeout=100000;", 
+let resp = npgsql.execute_io("Server=localhost; Port=5432; UserId=postgres;Password=1##$1@6Z;Database=fsys; keepalive=10; CommandTimeout=100000;", 
 	"__sql_execute", JSON.stringify( {} ), JSON.stringify( {
 		"sql":"select * from jsx.community"
 	} )
@@ -276,4 +276,3 @@ context.response.write( `Decrypted:${dectext}` );
 //Decrypt file
 crypto.encrypt_decrypt_file( crypto_inf.key, crypto_inf.iv, "encrypted_source_file", "decrypted_dest_file", 0 );
 ```
-Learn more https://web_jsx.safeonline.world/ and https://www.youtube.com/channel/UCsEq3IcHPLJGFseuINsYs_w

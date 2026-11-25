@@ -1,8 +1,25 @@
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 #	include "bitmap.h"
 #	include <web_jsx/web_jsx.h>
@@ -237,7 +254,7 @@ int bitmap::load(const char* path) {
 int bitmap::from_base64(const char* data){
 	this->free_memory();
 	_NEW_STR(docoded_data);
-	int ret = sow_web_jsx::base64::to_decode_str(data, *docoded_data) == true ? TRUE : FALSE;
+	int ret = fsys_web_jsx::base64::to_decode_str(data, *docoded_data) == true ? TRUE : FALSE;
 	if (is_error_code(ret) == TRUE) {
 		docoded_data->clear(); delete docoded_data;
 		return ret;
@@ -291,7 +308,7 @@ int bitmap::to_base64(std::string& out) {
 	}
 	if (is_error_code(ret) == FALSE) {
 		std::string* data = new std::string(dest->data(), dest->size());
-		ret = sow_web_jsx::base64::to_encode_str(*data, out) == true ? TRUE : FALSE;
+		ret = fsys_web_jsx::base64::to_encode_str(*data, out) == true ? TRUE : FALSE;
 		_free_obj(data);
 	}
 	_free_obj(dest);
@@ -478,7 +495,7 @@ int bitmap::panic(const char* error, int error_code) {
 	_is_error = error_code;
 	return _is_error;
 }
-using namespace sow_web_jsx;
+using namespace fsys_web_jsx;
 void bitmap_export(v8::Isolate* isolate, v8::Handle<v8::Object> target) {
 	v8::Local<v8::FunctionTemplate> bit_map_tpl = v8::FunctionTemplate::New(isolate, [](const v8::FunctionCallbackInfo<v8::Value>& args) {
 		v8::Isolate* isolate = args.GetIsolate();
@@ -491,7 +508,7 @@ void bitmap_export(v8::Isolate* isolate, v8::Handle<v8::Object> target) {
 		if (args[0]->IsString()) {
 			native_string utf_str(isolate, args[0]);
 			std::string* abs_path = new std::string(wj_env->get_root_dir());
-			sow_web_jsx::get_server_map_path(utf_str.c_str(), *abs_path);
+			fsys_web_jsx::get_server_map_path(utf_str.c_str(), *abs_path);
 
 			bmp = new bitmap(abs_path->c_str(), image_format::BMP);
 			utf_str.clear(); _free_obj(abs_path);
@@ -603,7 +620,7 @@ void bitmap_export(v8::Isolate* isolate, v8::Handle<v8::Object> target) {
 			return;
 		}
 		v8::Isolate* isolate = args.GetIsolate();
-		bitmap* bmp = sow_web_jsx::unwrap<bitmap>(args);
+		bitmap* bmp = fsys_web_jsx::unwrap<bitmap>(args);
 		if (bmp == NULL) {
 			throw_js_error(isolate, "bitmap object disposed...");
 			return;
@@ -622,7 +639,7 @@ void bitmap_export(v8::Isolate* isolate, v8::Handle<v8::Object> target) {
 			throw_js_type_error(args.GetIsolate(), "File Path required....");
 			return;
 		}
-		bitmap* bmp = sow_web_jsx::unwrap<bitmap>(args);
+		bitmap* bmp = fsys_web_jsx::unwrap<bitmap>(args);
 		if (bmp == NULL) {
 			throw_js_error(args.GetIsolate(), "bitmap object disposed...");
 			return;
@@ -635,7 +652,7 @@ void bitmap_export(v8::Isolate* isolate, v8::Handle<v8::Object> target) {
 		native_string utf_abs_path_str(isolate, args[0]);
 		wjsx_env* wj_env = ::unwrap_wjsx_env(isolate);
 		std::string* abs_path = new std::string(wj_env->get_root_dir());
-		sow_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
+		fsys_web_jsx::get_server_map_path(utf_abs_path_str.c_str(), *abs_path);
 		int ret = bmp->save(abs_path->c_str(), image_format::BMP);
 		_free_obj(abs_path); utf_abs_path_str.clear();
 		if (is_error_code(ret) == TRUE) {
@@ -645,7 +662,7 @@ void bitmap_export(v8::Isolate* isolate, v8::Handle<v8::Object> target) {
 		args.GetReturnValue().Set(v8::Integer::New(isolate, ret));
 	});
 	set_prototype(isolate, prototype, "get_width", [](js_method_args) {
-		bitmap* bmp = sow_web_jsx::unwrap<bitmap>(args);
+		bitmap* bmp = fsys_web_jsx::unwrap<bitmap>(args);
 		if (bmp == NULL) {
 			throw_js_error(args.GetIsolate(), "bitmap object disposed...");
 			return;
@@ -658,7 +675,7 @@ void bitmap_export(v8::Isolate* isolate, v8::Handle<v8::Object> target) {
 		args.GetReturnValue().Set(v8::Integer::New(args.GetIsolate(), static_cast<int>(width)));
 	});
 	set_prototype(isolate, prototype, "get_height", [](js_method_args) {
-		bitmap* bmp = sow_web_jsx::unwrap<bitmap>(args);
+		bitmap* bmp = fsys_web_jsx::unwrap<bitmap>(args);
 		if (bmp == NULL) {
 			throw_js_error(args.GetIsolate(), "bitmap object disposed...");
 			return;
@@ -671,7 +688,7 @@ void bitmap_export(v8::Isolate* isolate, v8::Handle<v8::Object> target) {
 		args.GetReturnValue().Set(v8::Integer::New(args.GetIsolate(), static_cast<int>(height)));
 	});
 	set_prototype(isolate, prototype, "get_pixel", [](js_method_args) {
-		bitmap* bmp = sow_web_jsx::unwrap<bitmap>(args);
+		bitmap* bmp = fsys_web_jsx::unwrap<bitmap>(args);
 		if (bmp == NULL) {
 			throw_js_error(args.GetIsolate(), "bitmap object disposed...");
 			return;
@@ -701,7 +718,7 @@ void bitmap_export(v8::Isolate* isolate, v8::Handle<v8::Object> target) {
 		args.GetReturnValue().Set(v8_result); v8_result.Clear();
 	});
 	set_prototype(isolate, prototype, "resize", [](js_method_args) {
-		bitmap* bmp = sow_web_jsx::unwrap<bitmap>(args);
+		bitmap* bmp = fsys_web_jsx::unwrap<bitmap>(args);
 		if (bmp == NULL) {
 			throw_js_error(args.GetIsolate(), "bitmap object disposed...");
 			return;
@@ -735,7 +752,7 @@ void bitmap_export(v8::Isolate* isolate, v8::Handle<v8::Object> target) {
 		}
 	});
 	set_prototype(isolate, prototype, "create_canvas", [](js_method_args) {
-		bitmap* bmp = sow_web_jsx::unwrap<bitmap>(args);
+		bitmap* bmp = fsys_web_jsx::unwrap<bitmap>(args);
 		if (bmp == NULL) {
 			throw_js_error(args.GetIsolate(), "bitmap object disposed...");
 			return;
@@ -765,7 +782,7 @@ void bitmap_export(v8::Isolate* isolate, v8::Handle<v8::Object> target) {
 		}
 	});
 	set_prototype(isolate, prototype, "set_pixel", [](js_method_args) {
-		bitmap* bmp = sow_web_jsx::unwrap<bitmap>(args);
+		bitmap* bmp = fsys_web_jsx::unwrap<bitmap>(args);
 		if (bmp == NULL) {
 			throw_js_error(args.GetIsolate(), "bitmap object disposed...");
 			return;

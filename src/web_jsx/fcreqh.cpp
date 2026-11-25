@@ -1,8 +1,25 @@
 /**
-* Copyright (c) 2018, SOW (https://www.safeonline.world). (https://github.com/RKTUXYN) All rights reserved.
-* @author {SOW}
-* Copyrights licensed under the New BSD License.
-* See the accompanying LICENSE file for terms.
+* MIT License
+*
+* Copyright (c) 2022 FSys Tech Ltd.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
 */
 #	include "fcreqh.h"
 #	include "core/web_jsx_global.h"
@@ -11,7 +28,7 @@
 #	include <fcgio.h>
 #	include <fcgi_config.h>  // HAVE_IOSTREAM_WITHASSIGN_STREAMBUF
 
-using namespace sow_web_jsx;
+using namespace fsys_web_jsx;
 const char* fcgi_request::freq_env_c(const char* var_name, char** envp) {
 	char* env_val = FCGX_GetParam(var_name, envp);
 	if (env_val == NULL || strlen(env_val) == 0)return "";
@@ -103,7 +120,7 @@ void fcgi_request::not_found_response(
 	std::ostream& cout = wj_env->cout();
 	cout << "Content-Type:" << content_type << H_N_L;
 	cout << "Accept-Ranges:bytes" << H_N_L;
-	cout << "X-Powered-By:safeonline.world" << H_N_L;
+	cout << "X-Powered-By:fsys.tech" << H_N_L;
 	cout << "X-Process-By:web_jsx" << H_N_L;
 	cout << "Status: 404 Not found" << H_N_L;
 	cout << "WebJsx-Error-Code:404" << H_N_L;
